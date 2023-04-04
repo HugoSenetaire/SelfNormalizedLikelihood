@@ -1,0 +1,3 @@
+energy_name : 'fc'
+energy_param :
+  dims : [100, 50, 20]

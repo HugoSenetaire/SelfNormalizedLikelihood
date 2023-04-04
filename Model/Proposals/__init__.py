@@ -1,0 +1,1 @@
+from .proposal_getter import dic_proposals, get_proposal

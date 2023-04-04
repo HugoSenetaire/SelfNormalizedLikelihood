@@ -1,0 +1,1 @@
+from .energy_getter import dic_energy, get_energy
