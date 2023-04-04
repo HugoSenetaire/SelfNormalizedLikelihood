@@ -33,6 +33,12 @@ if __name__ == '__main__' :
     args_dict = vars(args)
     check_args_for_yaml(args_dict)
 
+    if "seed" in args_dict.keys() and args_dict["seed"] is not None:
+        pl.seed_everything(args_dict["seed"])
+        np.random.seed(args_dict["seed"])
+        torch.manual_seed(args_dict["seed"])
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     # Get Dataset :
     complete_dataset, complete_masked_dataset = get_dataset(args_dict,)
