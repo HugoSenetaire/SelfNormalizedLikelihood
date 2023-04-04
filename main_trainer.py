@@ -8,7 +8,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
+from lightning.pytorch.loggers import WandbLogger
 
 def find_last_version(dir):
     # Find all the version folders
@@ -26,10 +26,8 @@ def find_last_version(dir):
 
 
 
-
-
 if __name__ == '__main__' :
-    
+
     parser = default_args_main()
     args = parser.parse_args()
     args_dict = vars(args)
@@ -46,19 +44,27 @@ if __name__ == '__main__' :
 
     
     if args_dict['yamldataset'] is not None :
+        name = os.path.basename(args_dict['yamldataset']).split(".yaml")[0]
         save_dir = os.path.join(args_dict['output_folder'],os.path.basename(args_dict['yamldataset']).split(".yaml")[0])
     else :
+        name = args_dict['dataset_name']
         save_dir = os.path.join(args_dict['output_folder'],args_dict['dataset_name'])
+
+
+
 
     if args_dict['yamlebm'] is not None and len(args_dict['yamlebm'])>0:
         list_element = args_dict['yamlebm']
         list_element.sort()
         for element in list_element:
+            name = name + "_" + os.path.basename(element).split(".yaml")[0]
             save_dir = os.path.join(save_dir,os.path.basename(element).split(".yaml")[0])
     else :
+        name = name + "_" + args_dict['ebm_name']
         save_dir = os.path.join(save_dir,args_dict['ebm_name'])
 
-    
+    wandblogger = WandbLogger(project="ebm", name=name, save_dir=save_dir)    
+
 
     # Get EBM :
     ebm = get_model(args_dict, complete_dataset, complete_masked_dataset)    
@@ -100,6 +106,7 @@ if __name__ == '__main__' :
 
     # Train :
     trainer = pl.Trainer(accelerator=accelerator,
+                        logger=wandblogger,
                         default_root_dir=save_dir,
                         callbacks=[checkpoint_callback],
                         # devices = len(devices),
@@ -121,7 +128,6 @@ if __name__ == '__main__' :
         xx, yy = np.meshgrid(x, y)
         xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
         xy = torch.from_numpy(xy).float()
-        # xy = xy
         z = (-algo.ebm.energy(xy)).exp().detach().cpu().numpy()
         z = z.reshape(nx, ny)
         fig, axs = plt.subplots(1,3, figsize=(15,5))
@@ -134,12 +140,10 @@ if __name__ == '__main__' :
         # Add the colorbar to the figure
         fig.colorbar(axs[1].contourf(x, y, z, 100), ax=axs[1])
         plt.savefig(os.path.join(save_dir, "contour_last.png"))
+        wandblogger.log_image(key = "contour_last", images = [os.path.join(save_dir, "contour_last.png")])
         plt.close()
 
     
-    # print("Best model path : ", trainer.checkpoint_callback.best_model_path)
-    # print(torch.load(trainer.checkpoint_callback.best_model_path).keys())
-    # print(torch.load(trainer.checkpoint_callback.best_model_path)["state_dict"].keys())
     algo.load_state_dict(torch.load(trainer.checkpoint_callback.best_model_path)["state_dict"])
 
     if np.prod(complete_dataset.get_dim_input()) == 2:
@@ -150,7 +154,6 @@ if __name__ == '__main__' :
         xx, yy = np.meshgrid(x, y)
         xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
         xy = torch.from_numpy(xy).float()
-        # xy = xy
         z = (-algo.ebm.energy(xy)).exp().detach().cpu().numpy()
         z = z.reshape(nx, ny)
         fig, axs = plt.subplots(1,3, figsize=(15,5))
@@ -163,6 +166,8 @@ if __name__ == '__main__' :
         # Add the colorbar to the figure
         fig.colorbar(axs[1].contourf(x, y, z, 100), ax=axs[1])
         plt.savefig(os.path.join(save_dir, "contour_best.png"))
+        wandblogger.log_image(key = "contour_best", images = [os.path.join(save_dir, "contour_best.png")])
+
         plt.close()
 
   

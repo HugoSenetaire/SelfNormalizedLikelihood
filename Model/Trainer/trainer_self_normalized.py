@@ -10,6 +10,7 @@ class LitSelfNormalized(pl.LightningModule):
         self.ebm = ebm
         self.args_dict = args_dict
         self.hparams.update(args_dict)
+        self.save_hyperparameters()
         # Write args dict to save dir
         # with open(self. + '/args_dict.yaml', 'w') as f:
             # yaml.dump(args_dict, f)
