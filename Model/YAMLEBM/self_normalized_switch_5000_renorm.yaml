@@ -1,5 +1,6 @@
 ebm_name : 'self_normalized'
 max_steps : 20000
+switch_mode : 5000
 save_energy_every : 500
-batch_size : 512
 samples_every: 1000
+explicit_norm : True

@@ -1,0 +1,4 @@
+base_dist_name : 'Normal'
+base_dist_mu : 0.
+base_dist_logstd : 1.
+learn_base_dist : True
