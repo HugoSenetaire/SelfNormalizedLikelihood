@@ -36,9 +36,13 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
 def get_model(args_dict, complete_dataset, complete_masked_dataset):
     input_size = complete_dataset.get_dim_input()
 
+
+    if args_dict['base_dist_mu'] and args_dict['base_dist_logstd'] is not None:
+        base_dist = Normal(args_dict['base_dist_mu'], args_dict['base_dist_logstd'].exp())
     # Get energy function :
     energy = get_energy(input_size, args_dict)
-    energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
+    if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
+        energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
     
     # Get proposal :
     if args_dict['proposal_name'] is not None:

@@ -8,7 +8,7 @@ class KernelDensity():
         super().__init__()
         self.input_size = input_size
         
-        index = np.random.choice(len(dataset), 10000)
+        index = np.random.choice(len(dataset), 1000)
         data = torch.cat([dataset[i][0] for i in index]).numpy()
         self.kd = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwith).fit(data)
 

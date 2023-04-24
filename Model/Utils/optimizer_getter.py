@@ -1,4 +1,5 @@
 import torch 
+import dadaptation
 def get_optimizer(args_dict, model):
     """
         Get optimizer from PyTorch. This function reads a dictionary of parameters
@@ -14,12 +15,29 @@ def get_optimizer(args_dict, model):
     if "OPTIMIZER" not in args_dict:
         optim_function = getattr(torch.optim, "Adam")(model.parameters(), lr=1e-4)
     else :
-        if "NAME" not in args_dict["OPTIMIZER"] and "PARAMS" in args_dict["OPTIMIZER"]:
-            optim_function = getattr(torch.optim, "Adam")(**args_dict['OPTIMIZER']['PARAMS'])
-        elif "NAME" in args_dict["OPTIMIZER"] and "PARAMS" not in args_dict["OPTIMIZER"]:
-            optim_function = getattr(torch.optim, args_dict['OPTIMIZER']['NAME'])(model.parameters(), lr=1e-4)
+        try : 
+            optim_name = args_dict['OPTIMIZER']['NAME']
+        except KeyError:
+            optim_name = "Adam"
+        
+        if optim_name in torch.optim.__dict__.keys():
+            optim_function = getattr(torch.optim, optim_name)
+            if "PARAMS" not in args_dict["OPTIMIZER"]:
+                optim_function = optim_function(model.parameters(), lr=1e-4)
+            else :
+                optim_function = optim_function(model.parameters(), **args_dict['OPTIMIZER']['PARAMS'])
+            
+        elif optim_name in dadaptation.__dict__.keys():
+            optim_function = getattr(dadaptation, optim_name)
+            if "PARAMS" not in args_dict["OPTIMIZER"]:
+                optim_function = optim_function(model.parameters(), lr=1)
+            else :
+                if args_dict['OPTIMIZER']['PARAMS']['lr']!= 1 :
+                    print("Defazio recommends to use a laerning rate 1, currently {}".format(args_dict['OPTIMIZER']['PARAMS']['lr']) )
+                optim_function = optim_function(model.parameters(), **args_dict['OPTIMIZER']['PARAMS'])
         else :
-            optim_function = getattr(torch.optim, args_dict['OPTIMIZER']['NAME'])(model.parameters(), **args_dict['OPTIMIZER']['PARAMS'])
+            raise ValueError("Optimizer name not valid")
+        
     return optim_function
 
 def get_scheduler(args_dict, model, optim):
