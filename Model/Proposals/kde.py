@@ -9,7 +9,7 @@ class KernelDensity():
         self.input_size = input_size
         
         index = np.random.choice(len(dataset), 1000)
-        data = torch.cat([dataset[i][0] for i in index]).numpy()
+        data = torch.cat([dataset[i][0] for i in index]).flatten(1).numpy()
         self.kd = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwith).fit(data)
 
 
@@ -18,5 +18,5 @@ class KernelDensity():
         return samples
     
     def log_prob(self, x):
-        return torch.from_numpy(self.kd.score_samples(x.numpy())).to(x.device, x.dtype)
+        return torch.from_numpy(self.kd.score_samples(x.flatten(1).detach().numpy())).to(x.device, x.dtype)
     

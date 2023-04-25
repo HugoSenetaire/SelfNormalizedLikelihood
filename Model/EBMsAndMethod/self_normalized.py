@@ -11,14 +11,30 @@ class SelfNormalized(ImportanceWeightedEBM):
             self.type_z = "elbo"
             
     
-    def estimate_z(self, energy_samples, log_prob_samples):
-        nb_sample = energy_samples.shape[0]
+    def estimate_z(self, x, nb_sample):
+        samples = self.sample(nb_sample).to(x.device, x.dtype)
+
+        energy_samples = self.calculate_energy(samples, use_base_dist=(self.proposal != self.base_dist))
+
         if self.type_z == "elbo":
+            log_prob_samples = self.proposal.log_prob(samples)
             estimated_z = torch.logsumexp(-energy_samples-log_prob_samples, dim = 0) - torch.log(torch.tensor(nb_sample, dtype = torch.float32))
         elif self.type_z == 'self_normalized':
-            estimated_z = (-energy_samples-log_prob_samples).exp().mean()
-        return estimated_z
+            if self.base_dist == self.proposal:
+                log_prob_samples = None
+                estimated_z = (-energy_samples).exp().mean()
+            else :
+                log_prob_samples = self.proposal.log_prob(samples)
+                estimated_z = (-energy_samples-log_prob_samples).exp().mean()
+        
+        dic_output = {"energy_samples" : energy_samples, }
+        if log_prob_samples is not None :
+            dic_output["log_prob_samples"] = log_prob_samples
+
     
+        return estimated_z, dic_output
+
+
 
     def switch_mode(self, ):
         """

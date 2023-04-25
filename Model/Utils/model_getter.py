@@ -1,6 +1,7 @@
 from ..EBMsAndMethod import dic_ebm
 from ..Energy import get_energy
 from ..Proposals import get_proposal
+from ..BaseDist import get_base_dist
 from torch.distributions import Normal
 import torch
 import tqdm
@@ -37,8 +38,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     input_size = complete_dataset.get_dim_input()
 
 
-    if args_dict['base_dist_mu'] and args_dict['base_dist_logstd'] is not None:
-        base_dist = Normal(args_dict['base_dist_mu'], args_dict['base_dist_logstd'].exp())
+
     # Get energy function :
     energy = get_energy(input_size, args_dict)
     if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
@@ -47,7 +47,14 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         proposal = get_proposal(args_dict=args_dict, input_size=input_size, dataset = complete_dataset.dataset_train,)
+    else:
+        raise ValueError("No proposal given")
+    
+    # Get base_dist :
+    base_dist = get_base_dist(args_dict = args_dict, proposal=proposal, input_size=input_size,)
+    if args_dict['base_dist_name'] == 'proposal':
+        assert proposal == base_dist, "Proposal and base_dist should be the same"
 
-    ebm = dic_ebm[args_dict['ebm_name']](energy, proposal, **args_dict)
+    ebm = dic_ebm[args_dict['ebm_name']](energy = energy, proposal = proposal, base_dist = base_dist,**args_dict)
 
     return ebm

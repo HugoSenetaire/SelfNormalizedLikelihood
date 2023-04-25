@@ -17,12 +17,10 @@ def default_args_ebm(parser = None):
     parser.add_argument('--proposal_name', type=str, default='standard_gaussian', help='Name of the proposal', choices = dic_proposals.keys())
     parser.add_argument('--num_sample_proposal', type=float, default=512, help='Standard deviation of the proposal')
     parser.add_argument('--num_sample_proposal_test', type=float, default=1024, help='Standard deviation of the proposal')
-    parser.add_argument('--ebm_pretraining', type = str, default = 'standard_gaussian', help='Choose what type of pretraining is done on the network')
+    parser.add_argument('--ebm_pretraining', type = str, default = None, help='Choose what type of pretraining is done on the network')
     parser.add_argument('--switch_mode', type = int, default = None, help='Number of steps before switching loss to self-normalized')
 
-    parser.add_argument('--base_dist_mu', type = float, default = None, help='Mean of the base distribution to multiply the energy with')
-    parser.add_argument('--base_dist_logstd', type = float, default = None, help='Log standard deviation of the base distribution to multiply the energy with')
-    parser.add_argument('--learn_base_dist', type = bool, default = False, help='Learn the base distribution during training')
+    parser.add_argument('--base_dist_name', type=str, default='none', help='Base distribution to multiply the energy with', choices = ['none', 'Normal', 'proposal'])
     
 
     parser.add_argument('--output_folder', type=str, default='./Results', help='Output folder')

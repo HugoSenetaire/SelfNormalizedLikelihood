@@ -3,6 +3,7 @@ from Dataset.MissingDataDataset.prepare_data import get_dataset
 from Model.Utils.model_getter import get_model
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.Callbacks import EMA
+from Model.Utils.plot_utils import plot_energy_2d, plot_images
 from Model.Trainer import dic_trainer
 from Model.Sampler import nuts_sampler
 import pytorch_lightning as pl
@@ -139,30 +140,13 @@ if __name__ == '__main__' :
 
     trainer.test(algo, dataloaders=test_loader)
     
-
     if np.prod(complete_dataset.get_dim_input()) == 2:
-        nx = 1000
-        ny = 1000
-        x = np.linspace(-3, 3, nx)
-        y = np.linspace(-3, 3, ny)
-        xx, yy = np.meshgrid(x, y)
-        xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
-        xy = torch.from_numpy(xy).float()
-        z = (-algo.ebm.calculate_energy(xy)).exp().detach().cpu().numpy()
-        z = z.reshape(nx, ny)
-        fig, axs = plt.subplots(1,3, figsize=(15,5))
-        indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), 10000)
-        data = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in indexes_to_print], dim=0)
-        axs[0].scatter(data[:,0], data[:,1], s=1)
-        axs[1].contourf(x, y, z, 100)
-        axs[2].contourf(x, y, z, 100)
-        axs[2].scatter(data[:,0], data[:,1], s=1, color = 'red', alpha = 0.3)
-        # Add the colorbar to the figure
-        fig.colorbar(axs[1].contourf(x, y, z, 100), ax=axs[1])
-        plt.savefig(os.path.join(save_dir, "contour_best.png"))
-        algo.logger.log_image(key = "contour_best", images = [os.path.join(save_dir, "contour_best.png")])
-        plt.close()
+        samples = algo.samples(1000)
+        plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
+    else :
+        plot_images(algo, save_dir, name,)
+   
 
-  
+
 
         

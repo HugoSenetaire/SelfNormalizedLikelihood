@@ -1,5 +1,0 @@
-ebm_name : 'elbo'
-max_steps : 20000
-save_energy_every : 500
-samples_every: 1000
-batch_size : 512
