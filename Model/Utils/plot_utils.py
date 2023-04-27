@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import os
 import matplotlib.pyplot as plt
+import torchvision
 
-from ..Sampler import nuts_sampler
 
 def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', samples = [], samples_title = [], step=''):
     """
@@ -13,7 +13,7 @@ def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     if energy_function is None:
-        energy_function = lambda x: algo.ebm.calculate_energy(x)
+        energy_function = lambda x: algo.ebm.calculate_energy(x)[0]
     nx = 1000
     ny = 1000
     min_x, max_x = algo.min_x, algo.max_x
@@ -43,7 +43,7 @@ def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', 
     fig.colorbar(axs[0].contourf(x,y,z, 100), cax=axs[-1])
     plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try :
-        algo.logger.log_image(key = "{}_{}.png".format(name, step), images = [fig])
+        algo.logger.log_image(key = "{}.png".format(name,), images = [fig])
     except AttributeError as e :
         print(e, )
     plt.close()
@@ -52,11 +52,25 @@ def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', 
 
   
 
-def sample_from_energy(energy_function, input_size, proposal = None, num_samples = 1000):
-    torch.set_grad_enabled(True)
-    samples = nuts_sampler(energy_function, input_size = input_size, proposal=proposal, num_samples=num_samples, )
-    samples = samples[0]
-    return samples
+# def sample_from_energy(energy_function, input_size, proposal = None, num_samples = None):
+#     torch.set_grad_enabled(True)
+#     samples = nuts_sampler(energy_function, input_size = input_size, proposal=proposal, num_samples=num_samples, )
+#     samples = samples[0]
+#     return samples
 
-def plot_images():
-    raise NotImplementedError
+def plot_images(images, save_dir, transform_back = None, algo = None, name = 'samples', step='', ):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    if transform_back is not None :
+        images = transform_back(images)
+        if len(images.shape) == 3 :
+            images = images.unsqueeze(1)
+
+
+    grid = torchvision.utils.make_grid(images,)
+    torchvision.utils.save_image(grid, os.path.join(save_dir, "{}_{}.png".format(name, step)))
+    try :
+        algo.logger.log_image(key = "{}.png".format(name,), images = [grid])
+    except AttributeError as e :
+        print(e, )

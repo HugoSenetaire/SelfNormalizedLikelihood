@@ -17,6 +17,7 @@ class fc_energy(nn.Module):
 
 
     def forward(self, x):
+        x = x.flatten(1)
         out = self.linear(x)
         out = self.last_layer(out)
         if self.activation is not None :

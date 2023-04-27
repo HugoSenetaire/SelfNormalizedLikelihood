@@ -2,29 +2,54 @@
 import torch.nn as nn
 import torch.distributions as distributions
 import torch
+import numpy as np
+
 
 
 
 class Normal(nn.Module):
-    def __init__(self, dim, mu = None, logstd = None, learn_mu = False, learn_logstd = False, **kwargs):
-        super(Normal, self).__init__()
-        if mu is None:
-            mu = torch.zeros(dim)
-        if logstd is None:
-            logstd = torch.zeros(dim)
+    def __init__(self, input_size, dataset, mode_cov = 'diag', learn_mu = False, learn_logstd = False,  **kwargs) -> None:
+        super().__init__()
+        # assert False
+        self.input_size = input_size
         
-        self.mu = nn.Parameter(mu, requires_grad=learn_mu)
-        self.logstd = nn.Parameter(logstd, requires_grad=learn_logstd)
-        self.dim = dim
+        index = np.random.choice(len(dataset), 1000)
+        data = torch.cat([dataset[i][0] for i in index])
+        self.mode_cov = mode_cov
+
+        if mode_cov == 'diag':
+            self.logstd = data.std(0).log()
+            self.mu = data.mean(0)
+        elif mode_cov == 'spherical' :
+            self.mu = data.mean()
+            self.logstd = data.std().log()
+
+ 
+        self.mu = nn.Parameter(self.mu, requires_grad=learn_mu)
+        self.logstd = nn.Parameter(self.logstd, requires_grad=learn_logstd)
+
+        # print(self.mu)
+        # print(self.logstd)
+        # assert False   
 
     def sample(self, nb_sample = 1):
-        '''
-        Samples from the proposal distribution.
-        '''
-        return torch.randn(nb_sample, *self.dim) * self.logstd.exp() + self.mu
+        distribution = distributions.Normal(self.mu, self.logstd.exp())
+
+        if self.mode_cov == 'diag':
+            samples = distribution.rsample((nb_sample,))
+        elif self.mode_cov == 'spherical' :
+            samples = distribution.rsample((nb_sample,*self.input_size))
+        return samples
     
     def log_prob(self, x):
-        '''
-        Calculate energy of the samples from the energy function.
-        '''
-        return distributions.Normal(self.mu, self.logstd.exp()).log_prob(x).view(x.size(0), -1).sum(1)
+        distribution = distributions.Normal(self.mu, self.logstd.exp())
+        if self.mode_cov == 'diag':
+            log_p = distribution.log_prob(x).flatten(1).sum(1)
+        elif self.mode_cov == 'spherical' :
+            x_flatten = x.flatten()
+            log_p = distribution.log_prob(x_flatten)
+            log_p = log_p.reshape(x.shape[0],-1).sum(1)
+        # print(log_p.shape)
+        return log_p
+    
+    

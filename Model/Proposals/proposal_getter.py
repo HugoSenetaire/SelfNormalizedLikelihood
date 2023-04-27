@@ -1,10 +1,12 @@
 from .standard_gaussian import StandardGaussian
 from .kde import KernelDensity
+from .gaussian_mixture import GaussianMixtureProposal
 
 
 dic_proposals = {
     'standard_gaussian': StandardGaussian,
-    'kernel_density': KernelDensity
+    'kernel_density': KernelDensity,
+    'gaussian_mixture': GaussianMixtureProposal,
 }
 
 def get_proposal(args_dict, input_size, dataset):

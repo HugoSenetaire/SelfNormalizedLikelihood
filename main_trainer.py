@@ -5,7 +5,6 @@ from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.Callbacks import EMA
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
 from Model.Trainer import dic_trainer
-from Model.Sampler import nuts_sampler
 import pytorch_lightning as pl
 import os
 import torch
@@ -74,10 +73,7 @@ if __name__ == '__main__' :
         save_dir = os.path.join(save_dir,args_dict['ebm_name'])
 
     args_dict['save_dir'] = save_dir
-    # try :
-    # logger = WandbLogger(project="ebm", name=name, save_dir=save_dir)    
-    # except :
-    # logger = SummaryWriter(log_dir=save_dir)
+
 
 
     # Get EBM :
@@ -86,7 +82,7 @@ if __name__ == '__main__' :
 
 
     # Get Trainer :
-    algo = dic_trainer[args_dict['trainer_name']](ebm = ebm, args_dict = args_dict, complete_dataset=complete_dataset)
+    algo = dic_trainer[args_dict['trainer_name']](ebm = ebm, args_dict = args_dict, complete_dataset=complete_dataset,)
 
 
     nb_gpu = torch.cuda.device_count()
@@ -102,6 +98,8 @@ if __name__ == '__main__' :
     else:
         accelerator = None
         devices = None
+
+    # accelerator = 'mps'
 
 
     
@@ -122,6 +120,9 @@ if __name__ == '__main__' :
     if args_dict['decay_ema'] is not None and args_dict['decay_ema'] > 0:
         ema_callback = EMA(decay = args_dict['decay_ema'])
         checkpoints.append(ema_callback)
+
+
+
     # Train :
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
@@ -141,10 +142,11 @@ if __name__ == '__main__' :
     trainer.test(algo, dataloaders=test_loader)
     
     if np.prod(complete_dataset.get_dim_input()) == 2:
-        samples = algo.samples(1000)
+        samples = algo.samples_mcmc(1000)
         plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
     else :
-        plot_images(algo, save_dir, name,)
+        images = algo.samples_mcmc(100)
+        plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
    
 
 

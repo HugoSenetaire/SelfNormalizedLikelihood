@@ -1,7 +1,8 @@
 from .linear import fc_energy
-
+from .conv import ConvEnergy
 dic_energy = {
-    'fc': fc_energy
+    'fc': fc_energy,
+    'conv' : ConvEnergy,
 }
 
 def get_energy(input_size, args_dict):

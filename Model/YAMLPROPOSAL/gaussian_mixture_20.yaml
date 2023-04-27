@@ -1,0 +1,3 @@
+proposal_name : 'gaussian_mixture'
+proposal_config :
+  n_components : 20
