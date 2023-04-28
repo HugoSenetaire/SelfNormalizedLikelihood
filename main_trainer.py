@@ -10,7 +10,10 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from lightning.pytorch.loggers import WandbLogger
+try :
+    from pytorch_lightning.loggers import WandbLogger
+except :
+    from lighting.pytorch.loggers import WandbLogger
 from tensorboardX import SummaryWriter
 
 def find_last_version(dir):
