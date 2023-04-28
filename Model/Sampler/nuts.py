@@ -18,12 +18,12 @@ class NutsSampler():
         if num_samples is None :
             num_samples = self.num_samples
 
-        current_energy_function = lambda x: energy_function(x[0].unsqueeze(0))
+        # current_energy_function = lambda x: energy_function(x[0].unsqueeze(0))
         if proposal is None:
             x_init = dist.Normal(torch.zeros(self.input_size),torch.ones(self.input_size))(self.num_chains)
         else :
             x_init = proposal.sample(self.num_chains).to(torch.float32)
-        hmc_kernel = NUTS(potential_fn = current_energy_function, adapt_step_size=True, )
+        hmc_kernel = NUTS(potential_fn = energy_function, adapt_step_size=True, )
 
         mcmc = MCMC(hmc_kernel, num_samples=num_samples*self.thinning, warmup_steps=self.warmup_steps, initial_params = {0:x_init}, num_chains=self.num_chains)
         mcmc.run()

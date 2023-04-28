@@ -104,8 +104,27 @@ class ImportanceWeightedEBM(nn.Module):
 
         
         return log_z_estimate, dic_output
+    
+    def forward(self, x):
+        """
+        Hade to create a separate forward function in order to pickle the model and multiprocess HMM.
+        """
+        current_x = x[0]
+        current_energy = self.energy(current_x)
 
-    def forward(self, x, nb_sample = None):
+        if self.base_dist is not None :
+            if len(current_x.shape) == 1:
+                current_x = current_x.unsqueeze(0)
+            base_dist_log_prob = self.base_dist.log_prob(current_x).view(current_x.size(0), -1).sum(1).unsqueeze(1)
+            current_energy = - base_dist_log_prob
+
+        if self.bias_explicit :
+            return current_energy + self.log_bias
+        else:
+            return current_energy
+
+
+    def complete_pass(self, x, nb_sample = None):
         '''
         Forward pass of the model.
         '''

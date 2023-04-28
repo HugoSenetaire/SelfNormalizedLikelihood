@@ -16,7 +16,7 @@ class LitSelfNormalized(pl.LightningModule):
         self.args_dict = args_dict
         self.hparams.update(args_dict)
         self.last_save = -float('inf')
-        self.last_save_sample = 0
+        self.last_save_sample = -float('inf')
         self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
@@ -71,7 +71,7 @@ class LitSelfNormalized(pl.LightningModule):
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
             self.ebm.switch_mode()
         x = batch['data']
-        loss, dic_output = self.ebm(x)
+        loss, dic_output = self.ebm.complete_pass(x)
         loss = loss.mean()
         self.log('train_loss', loss)
         if self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0 :
@@ -93,7 +93,7 @@ class LitSelfNormalized(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx,):
         x = batch['data']
-        loss, dic_output = self.ebm(x,nb_sample = 0)
+        loss, dic_output = self.ebm.complete_pass(x,nb_sample = 0)
         return dic_output
         
     def update_dic_logger(self, outputs, name = 'val_'):
@@ -156,8 +156,7 @@ class LitSelfNormalized(pl.LightningModule):
                 self.last_save = self.global_step
 
     def samples_mcmc(self, num_samples = None):
-        energy_function = lambda x: self.ebm.calculate_energy(x)[0]
-        samples = self.sampler.sample(energy_function, self.ebm.proposal, num_samples = num_samples)
+        samples = self.sampler.sample(self.ebm, self.ebm.proposal, num_samples = num_samples)
         return samples
 
 
