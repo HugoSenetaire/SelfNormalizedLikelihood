@@ -58,7 +58,7 @@ def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', 
 #     samples = samples[0]
 #     return samples
 
-def plot_images(images, save_dir, transform_back = None, algo = None, name = 'samples', step='', ):
+def plot_images(images, save_dir, transform_back = None, algo = None, name = 'samples', init_samples= None, step='', ):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
@@ -67,7 +67,11 @@ def plot_images(images, save_dir, transform_back = None, algo = None, name = 'sa
         if len(images.shape) == 3 :
             images = images.unsqueeze(1)
 
-
+    if init_samples is not None :
+        init_samples = transform_back(init_samples)
+        if len(init_samples.shape) == 3 :
+            init_samples = init_samples.unsqueeze(1)
+        images = torch.cat([init_samples, images], dim = 0)
     grid = torchvision.utils.make_grid(images,)
     torchvision.utils.save_image(grid, os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try :

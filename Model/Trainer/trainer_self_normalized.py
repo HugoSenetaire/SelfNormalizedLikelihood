@@ -156,8 +156,8 @@ class LitSelfNormalized(pl.LightningModule):
                 self.last_save = self.global_step
 
     def samples_mcmc(self, num_samples = None):
-        samples = self.sampler.sample(self.ebm, self.ebm.proposal, num_samples = num_samples)
-        return samples
+        samples, x_init = self.sampler.sample(self.ebm, self.ebm.proposal, num_samples = num_samples)
+        return samples, x_init
 
 
     def plot_samples(self, num_samples = None):
@@ -167,12 +167,12 @@ class LitSelfNormalized(pl.LightningModule):
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            samples = self.samples_mcmc(num_samples = num_samples)
+            samples, init_samples = self.samples_mcmc(num_samples = num_samples)
 
             if np.prod(self.args_dict['input_size']) == 2:
                 plot_energy_2d(self, save_dir=save_dir, samples = [samples], samples_title=['HMC samples'], name='samples', step=self.global_step)
             elif len(self.args_dict['input_size']) == 3 :
-                plot_images(algo = self, save_dir=save_dir, images = samples, name='samples', step=self.global_step, transform_back=self.transform_back)
+                plot_images(algo = self, save_dir=save_dir, images = samples, name='samples', step=self.global_step, init_samples=init_samples, transform_back=self.transform_back)
             else :
                 raise NotImplementedError
             self.last_save_sample = self.global_step

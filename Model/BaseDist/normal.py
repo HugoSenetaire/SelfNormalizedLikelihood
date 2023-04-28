@@ -36,7 +36,7 @@ class Normal(nn.Module):
         distribution = distributions.Normal(self.mu, self.logstd.exp())
 
         if self.mode_cov == 'diag':
-            samples = distribution.rsample((nb_sample,))
+            samples = distribution.rsample((nb_sample,)).reshape(nb_sample,*self.input_size)
         elif self.mode_cov == 'spherical' :
             samples = distribution.rsample((nb_sample,*self.input_size))
         return samples

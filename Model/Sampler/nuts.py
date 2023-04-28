@@ -25,9 +25,12 @@ class NutsSampler():
             x_init = proposal.sample(self.num_chains).to(torch.float32)
         hmc_kernel = NUTS(potential_fn = energy_function, adapt_step_size=True, )
 
+
         mcmc = MCMC(hmc_kernel, num_samples=num_samples*self.thinning, warmup_steps=self.warmup_steps, initial_params = {0:x_init}, num_chains=self.num_chains)
         mcmc.run()
-        samples = mcmc.get_samples()[0][0:-1:self.thinning]
-        return samples
+
+        samples = mcmc.get_samples()[0] # 0 is because I have defined initial params as 0
+        samples = samples.reshape(self.num_chains, num_samples, self.thinning,*self.input_size)[:,:,0].flatten(0,1)
+        return samples, x_init
     
 

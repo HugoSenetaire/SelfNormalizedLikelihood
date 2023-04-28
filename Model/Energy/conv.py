@@ -34,10 +34,10 @@ class ConvEnergy(nn.Module):
 
     
     def __call__(self, x):
-        batch_size = x.shape[0]
+        x = x.view(-1, *self.input_size)
         for k in range(len(self.conv)):
             x = self.conv[k](x)
-        x = x.flatten(1)
+        x = x.view(x.shape[0],-1)
         x = self.elu(self.fc(x))
         x = self.fc2(x)
         if self.activation is not None :
