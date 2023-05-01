@@ -1,5 +1,4 @@
-from .self_normalized import *
-from .elbo import ELBO
+from .DistributionEstimation import SelfNormalized, ELBO
 
 dic_ebm = {
     'self_normalized': SelfNormalized,

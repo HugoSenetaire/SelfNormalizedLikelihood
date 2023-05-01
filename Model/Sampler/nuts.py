@@ -30,7 +30,7 @@ class NutsSampler():
         mcmc.run()
 
         samples = mcmc.get_samples()[0] # 0 is because I have defined initial params as 0
-        samples = samples.reshape(self.num_chains, num_samples, self.thinning,*self.input_size)[:,:,0].flatten(0,1)
+        samples = samples.reshape(num_samples, self.thinning,self.num_chains,*self.input_size)[:,0].flatten(0,1)
         return samples, x_init
     
 

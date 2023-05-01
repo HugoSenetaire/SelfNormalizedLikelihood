@@ -9,16 +9,14 @@ class ImportanceWeightedEBM(nn.Module):
         self.energy = energy
         self.proposal = proposal
         self.nb_sample = num_sample_proposal
-        self.nb_sample_bias_explicit = nb_sample_bias_explicit
+        self.nb_sample_bias_explicit = 1024
         self.base_dist = base_dist
         self.bias_explicit = bias_explicit
         
         if bias_explicit:
             self.log_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
-            log_z_estimate, _ = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
-            self.log_bias.data = -log_z_estimate
-
-
+            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
+            self.log_bias.data = log_z_estimate
 
             
     def sample(self, nb_sample = 1):
@@ -75,7 +73,6 @@ class ImportanceWeightedEBM(nn.Module):
         if self.bias_explicit :
             energy_samples = energy_samples + self.log_bias
         base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-
         dic_output['f_theta_samples'] = energy_samples
         if self.base_dist is not None :
             if self.base_dist != self.proposal :
@@ -83,7 +80,6 @@ class ImportanceWeightedEBM(nn.Module):
                 samples_log_prob = self.proposal.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
                 aux_prob = base_dist_log_prob - samples_log_prob 
                 log_z_estimate = torch.logsumexp(-energy_samples + aux_prob,dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
-                # print(log_z_estimate.shape)
                 z_estimate = log_z_estimate.exp()
                 dic_output.update({"base_dist_log_prob_samples" : base_dist_log_prob, "proposal_log_prob_samples" : samples_log_prob, "aux_prob_samples" : aux_prob})
             else :
@@ -95,12 +91,10 @@ class ImportanceWeightedEBM(nn.Module):
             log_z_estimate = torch.logsumexp(-energy_samples - samples_log_prob, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
             z_estimate = log_z_estimate.exp()
         
-        # print(z_estimate)
 
         dic_output['log_z_estimate'] = log_z_estimate
         
         dic_output['z_estimate'] = z_estimate
-
 
         
         return log_z_estimate, dic_output
@@ -109,58 +103,10 @@ class ImportanceWeightedEBM(nn.Module):
         """
         Hade to create a separate forward function in order to pickle the model and multiprocess HMM.
         """
-        current_x = x[0]
-        current_energy = self.energy(current_x)
-
-        if self.base_dist is not None :
-            if len(current_x.shape) == 1:
-                current_x = current_x.unsqueeze(0)
-            base_dist_log_prob = self.base_dist.log_prob(current_x).view(current_x.size(0), -1).sum(1).unsqueeze(1)
-            current_energy = - base_dist_log_prob
-
-        if self.bias_explicit :
-            return current_energy + self.log_bias
-        else:
-            return current_energy
+        energy, _ = self.calculate_energy(x[0])
+        return energy
 
 
-    def complete_pass(self, x, nb_sample = None):
-        '''
-        Forward pass of the model.
-        '''
-
-        dic_output = {}
-        # Evaluate energy from the batch
-        energy_batch, dic = self.calculate_energy(x)
-        dic_output.update({k + "_batch" : v for k, v in dic.items()})
-        
-        if nb_sample == 0 :
-            loss = energy_batch
-            likelihood = -loss.mean()
-            return loss, dic_output
-        
-        if nb_sample is None:
-            nb_sample = self.nb_sample
-        log_z_estimate, dic = self.estimate_log_z(x, nb_sample = nb_sample)
-        dic_output.update(dic)
-
-        if self.type_z == "log":
-            loss = energy_batch + log_z_estimate
-        elif self.type_z == "exp":
-            loss = energy_batch + dic['z_estimate']
-        else :
-            raise ValueError("type_z should be either log or exp")
-
-        # Evaluate energy from the samples
-        if nb_sample is None:
-            nb_sample = self.nb_sample
-
-        # Compute the estimated Z
-        likelihood = -loss.mean()
-        dic_output.update({"loss" : loss, "likelihood" : likelihood,  })
-        return loss, dic_output
-
-    
 
 
 

@@ -4,7 +4,7 @@ import numpy as np
 import math
 
 class ConvEnergy(nn.Module):
-    def __init__(self, input_size = (1,28,28), activation = None, last_layer_bias = True, **kwargs):
+    def __init__(self, input_size = (1,28,28), activation = None, last_layer_bias = False, **kwargs):
         super().__init__()
         self.input_size = input_size
         self.activation = activation

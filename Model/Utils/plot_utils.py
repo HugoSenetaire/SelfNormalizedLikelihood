@@ -18,14 +18,15 @@ def plot_energy_2d(algo, save_dir, energy_function=None, name = 'contour_best', 
     ny = 1000
     min_x, max_x = algo.min_x, algo.max_x
     min_y, max_y = algo.min_y, algo.max_y
-    for s in samples :
+
+    for s, title in zip(samples, samples_title) :
         min_x, max_x = min(torch.min(s[:,0],), min_x), max(torch.max(s[:,0]), max_x)
         min_y, max_y = min(torch.min(s[:,1],), min_y), max(torch.max(s[:,1]), max_y)
 
     x = np.linspace(min_x, max_x, nx)
     y = np.linspace(min_y, max_y, ny)
 
-
+    
     xx, yy = np.meshgrid(x, y)
     xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
     xy = torch.from_numpy(xy).float()
