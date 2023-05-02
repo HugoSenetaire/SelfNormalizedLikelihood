@@ -1,0 +1,1 @@
+from .resnet_extractor import Resnet18_FeatureExtractor

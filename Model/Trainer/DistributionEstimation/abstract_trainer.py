@@ -136,6 +136,25 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
                 plot_energy_2d(self, save_dir=save_dir, samples = [self.example, self.example_proposal], samples_title=['Samples from dataset','Samples from proposal'], name='contour', step=self.global_step)
+                ebm_function_list = [lambda x,: self.ebm.calculate_energy(x,)[1]['f_theta'],]
+                ebm_function_name = ['f_theta',]
+
+                # if self.ebm.bias_explicit :
+                #     ebm_function_list.append(lambda x,: self.ebm.calculate_energy(x,)[1]['log_bias_explicit'])
+                #     ebm_function_name.append('b')
+                
+
+                
+                for ebm_function, ebm_name in zip(ebm_function_list, ebm_function_name):
+                    plot_energy_2d(self,
+                                    save_dir=save_dir,
+                                    energy_function=ebm_function,
+                                    samples = [self.example, self.example_proposal],
+                                    samples_title=['Samples from dataset','Samples from proposal'],
+                                    name=ebm_name,
+                                    step=self.global_step,
+                                    energy_type = False,)
+                
                 self.last_save = self.global_step
 
     def samples_mcmc(self, num_samples = None):

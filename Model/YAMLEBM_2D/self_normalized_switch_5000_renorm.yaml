@@ -1,8 +1,0 @@
-ebm_name : 'self_normalized'
-max_steps : 2001
-switch_mode_index : 5000
-save_energy_every : 500
-samples_every: 1000
-explicit_norm : True
-nb_sample_bias_explicit : 1024
-bias_explicit : True

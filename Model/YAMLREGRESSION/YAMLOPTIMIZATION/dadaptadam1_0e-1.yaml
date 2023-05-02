@@ -1,0 +1,6 @@
+OPTIMIZER:
+  NAME: 'DAdaptAdam'
+  PARAMS:
+    lr: 1.0e-1
+    weight_decay: 1.0e-3 # Recommended by Defazio to have higher weight decay when using Dadapt.
+

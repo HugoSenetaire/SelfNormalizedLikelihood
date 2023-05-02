@@ -1,0 +1,12 @@
+OPTIMIZER:
+  NAME: 'Adam'
+  PARAMS:
+    lr: 1.0e-5
+    weight_decay: 5.0e-4
+# SCHEDULER :
+#   NAME: 'CyclicLR'
+#   PARAMS : 
+#     base_lr: 1e-4
+#     max_lr : 1e-2
+#     step_size_up : 2000
+  

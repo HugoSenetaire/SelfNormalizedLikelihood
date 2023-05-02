@@ -1,1 +1,1 @@
-from .energy_getter import dic_energy, get_energy
+from .energy_getter import dic_energy, get_energy, get_energy_regression, get_feature_extractor
