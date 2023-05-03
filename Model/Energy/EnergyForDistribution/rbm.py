@@ -49,7 +49,7 @@ class EnergyRBM(nn.Module):
         self.c = nn.parameter.Parameter(torch.randn(prod(input_size)))
 
     def forward(
-        self, x: Float[torch.Tensor, "batch_size"]
+        self, x: Float[torch.Tensor, "batch_size *dim"]
     ) -> Float[torch.Tensor, "batch_size"]:
         """Compute the energy of the RBM
 
@@ -62,5 +62,5 @@ class EnergyRBM(nn.Module):
         x = x.flatten(1)
         return (
             -torch.sum(F.softplus(torch.matmul(x, self.W.T) + self.b), dim=1)
-            - self.c @ x
+            - x @ self.c
         )
