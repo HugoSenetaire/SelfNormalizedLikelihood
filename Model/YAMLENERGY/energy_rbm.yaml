@@ -1,0 +1,3 @@
+energy_name: 'rbm'
+energy_param:
+  hidden_dim: 100
