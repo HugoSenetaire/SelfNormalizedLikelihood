@@ -1,0 +1,4 @@
+energy_name : 'toy'
+feature_extractor_name : 'toy'
+energy_param :
+  last_layer_bias : False

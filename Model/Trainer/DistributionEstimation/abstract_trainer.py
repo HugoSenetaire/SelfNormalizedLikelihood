@@ -23,6 +23,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.nb_sample_train_estimate = nb_sample_train_estimate
         self.initialize_examples(complete_dataset=complete_dataset)
         self.proposal_visualization()
+        self.automatic_optimization = False
 
 
 
@@ -69,12 +70,25 @@ class AbstractDistributionEstimation(pl.LightningModule):
         raise NotImplementedError
         
     def configure_optimizers(self):
-        res = {}
-        res['optimizer'] = get_optimizer(model = self.ebm, args_dict = self.args_dict)
-        scheduler = get_scheduler(args_dict = self.args_dict, model = self.ebm, optim = res['optimizer'])
-        if scheduler is not None:
-            res['lr_scheduler'] = scheduler
-        return res        
+        params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+        
+        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
+        proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
+
+        ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
+        proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
+        if ebm_sch is not None and proposal_sch is not None :
+            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]      
+        elif ebm_sch is not None :
+            return [ebm_opt, proposal_opt], ebm_sch
+        elif proposal_sch is not None :
+            return [ebm_opt, proposal_opt], proposal_sch
+        else :
+            return [ebm_opt, proposal_opt]
+
+          
+   
 
     def validation_step(self, batch, batch_idx,):
         raise NotImplementedError

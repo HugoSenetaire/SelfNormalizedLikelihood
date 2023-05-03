@@ -15,6 +15,9 @@ class LitSelfNormalized(AbstractDistributionEstimation):
        
 
     def training_step(self, batch, batch_idx):
+        # Get parameters
+        ebm_opt, proposal_opt = self.optimizers()
+
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
             self.ebm.switch_mode()
         x = batch['data']
@@ -32,6 +35,14 @@ class LitSelfNormalized(AbstractDistributionEstimation):
         loss_total = loss_energy + loss_estimate_z
         self.log('train_loss', loss_total)
 
+
+        # Update the parameters
+        ebm_opt.zero_grad()
+        proposal_opt.zero_grad()
+        self.manual_backward(loss_total)
+        ebm_opt.step()
+        proposal_opt.step()
+        
         # Add some estimates of the log likelihood with a fixed number of samples
         if self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0 :
             estimate_log_z, _= self.ebm.estimate_log_z(x, nb_sample = self.nb_sample_train_estimate)
@@ -39,7 +50,7 @@ class LitSelfNormalized(AbstractDistributionEstimation):
             self.log('train_log_likelihood_fix_z', log_likelihood_fix_z)
         for key in dic_output:
             self.log(f'train_{key}_mean', dic_output[key].mean().item())
-
+        
         return loss_total
     
     def validation_step(self, batch, batch_idx):

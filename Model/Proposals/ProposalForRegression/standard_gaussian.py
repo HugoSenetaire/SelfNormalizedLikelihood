@@ -12,12 +12,12 @@ class StandardGaussianRegression(nn.Module):
         index = np.random.choice(len(dataset), 100)
         data = torch.cat([dataset[i][1].reshape(1, self.input_size_y) for i in index])
         if mean == 'dataset' :
-            self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=False)
+            self.mean = nn.parameter.Parameter(data.mean(0),)
         else :
             raise NotImplementedError
         
         if std == 'dataset' :
-            self.std = nn.parameter.Parameter(data.std(0), requires_grad=False)
+            self.std = nn.parameter.Parameter(data.std(0),)
         else :
             raise NotImplementedError
         
@@ -26,7 +26,7 @@ class StandardGaussianRegression(nn.Module):
 
     def sample(self, x_feature, nb_sample = 1):
         batch_size = x_feature.shape[0]
-        samples = self.distribution.sample((batch_size, nb_sample,)).reshape(batch_size, nb_sample, self.input_size_y)
+        samples = self.distribution.sample((batch_size, nb_sample,)).reshape(batch_size, nb_sample, self.input_size_y).detach()
         return samples
     
     def log_prob(self, x_feature, y):

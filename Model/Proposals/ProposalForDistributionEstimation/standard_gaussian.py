@@ -25,7 +25,7 @@ class StandardGaussian(nn.Module):
         print("Init Standard Gaussian... end")
 
     def sample(self, nb_sample = 1):
-        samples = self.distribution.sample((nb_sample,)).reshape(nb_sample, *self.input_size)
+        samples = self.distribution.sample((nb_sample,)).reshape(nb_sample, *self.input_size).detach()
         return samples
     
     def log_prob(self, x):
