@@ -1,5 +1,5 @@
 from ..EBMsAndMethod import dic_ebm, dic_ebm_regression
-from ..Energy import get_energy, get_feature_extractor, get_energy_regression
+from ..Energy import get_energy, get_feature_extractor, get_energy_regression, get_explicit_bias_regression
 from ..Proposals import get_proposal, get_proposal_regression
 from ..BaseDist import get_base_dist, get_base_dist_regression
 from torch.distributions import Normal
@@ -106,9 +106,11 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
         for param in proposal.parameters():
             param.requires_grad = False
 
+    explicit_bias = get_explicit_bias_regression(args_dict=args_dict, input_size_x=input_size_x_feature,)
+
     # Get EBM :
     print("Get EBM")
-    ebm = dic_ebm_regression[args_dict['ebm_name']](energy = energy, proposal = proposal, feature_extractor= feature_extractor, base_dist = base_dist, **args_dict)
+    ebm = dic_ebm_regression[args_dict['ebm_name']](energy = energy, proposal = proposal, feature_extractor= feature_extractor, base_dist = base_dist, explicit_bias = explicit_bias, **args_dict)
     print("Get EBM... end")
 
     return ebm

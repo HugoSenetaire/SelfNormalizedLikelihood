@@ -4,18 +4,15 @@ import torch
 import torch.distributions as distributions
 
 class EBMRegression(nn.Module):
-    def __init__(self, energy, proposal, feature_extractor, num_sample_proposal, base_dist = None,  **kwargs):
+    def __init__(self, energy, proposal, feature_extractor, num_sample_proposal, base_dist = None, explicit_bias = None,  **kwargs):
         super(EBMRegression, self).__init__()
         self.energy = energy
         self.proposal = proposal
         self.feature_extractor = feature_extractor
         self.nb_sample = num_sample_proposal
         self.base_dist = base_dist
-        if self.feature_extractor is not None :
-            self.explicit_bias = nn.Sequential(nn.Linear(self.feature_extractor.output_size, 1), )
-        else :
-            self.explicit_bias = nn.Sequential(nn.Linear(self.energy.input_dim_x, 1), )
-
+        self.explicit_bias = explicit_bias
+        
         
     def sample(self, x, nb_sample = 1):
         '''
