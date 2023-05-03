@@ -1,10 +1,19 @@
-from .EnergyForDistribution import ConvEnergy, fc_energy
+from .EnergyForDistribution import (
+    ConvEnergy,
+    EnergyCategoricalDistrib,
+    EnergyPoissonDistribution,
+    EnergyRBM,
+    fc_energy,
+)
 from .EnergyForRegression import EnergyNetworkRegression
 from .FeatureExtractor import resnet_extractor
 
 dic_energy = {
     "fc": fc_energy,
     "conv": ConvEnergy,
+    "rbm": EnergyRBM,
+    "categorical": EnergyCategoricalDistrib,
+    "poisson": EnergyPoissonDistribution,
 }
 
 dic_energy_regression = {
