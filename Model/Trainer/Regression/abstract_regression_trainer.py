@@ -7,6 +7,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import yaml
+import itertools
 
 
 class AbstractRegression(pl.LightningModule):
@@ -20,10 +21,17 @@ class AbstractRegression(pl.LightningModule):
         self.last_save_sample = 0
         self.initialize_examples(complete_dataset)
         self.proposal_visualization()
+        self.train_proposal = self.args_dict['train_proposal']
 
-        # print(self.args_dict['save_energy_every'])
-        # assert False
+        if not self.train_proposal :
+            for param in self.ebm.proposal.parameters():
+                param.requires_grad = False
+        else :
+            for param in self.ebm.proposal.parameters():
+                param.requires_grad = True
 
+
+        self.automatic_optimization = False
 
 
     def training_step(self, batch, batch_idx):
@@ -41,11 +49,11 @@ class AbstractRegression(pl.LightningModule):
                 indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), min(10000, len(complete_dataset.dataset_train)), replace=False)
                 self.example_x = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in indexes_to_print], dim=0)
                 self.example_y = torch.cat([complete_dataset.dataset_train.__getitem__(i)[1].unsqueeze(0) for i in indexes_to_print], dim=0)
-                self.min_x, self.max_x = min(torch.min(self.example_x,), -3), max(torch.max(self.example_x), 3)
-                self.min_y, self.max_y = min(torch.min(self.example_y,), -3), max(torch.max(self.example_y), 3)
+                self.min_x, self.max_x = min(torch.min(self.example_x,), 0), max(torch.max(self.example_x), 1)
+                self.min_y, self.max_y = min(torch.min(self.example_y,), 0), max(torch.max(self.example_y), 1)
             else :
                 self.example_x, self.example_y = None, None
-                self.min_x, self.max_x, self.min_y, self.max_y = -3, 3, -3, 3
+                self.min_x, self.max_x, self.min_y, self.max_y = 0, 1, 0, 1
             if self.ebm.proposal is not None :
                 self.example_proposal_x = torch.arange(self.min_x, self.max_x, 0.1).unsqueeze(1)
                 batch_size = self.example_proposal_x.shape[0]
@@ -70,7 +78,7 @@ class AbstractRegression(pl.LightningModule):
             # else :
             #     self.example_proposal = None
 
-    def proposal_visualization(self,):
+    def proposal_visualization(self, step = ''):
         if self.ebm.proposal is not None :
 
             if np.prod(self.args_dict['input_size_x']) == 1 and np.prod(self.args_dict['input_size_y']) == 1:
@@ -85,15 +93,26 @@ class AbstractRegression(pl.LightningModule):
                                             samples_x=[self.example_x, self.example_proposal_x],
                                             samples_y=[self.example_y, self.example_proposal_y],
                                             samples_title=['data', 'proposal'],
+                                            step=step,
                                             )
         
     def configure_optimizers(self):
-        res = {}
-        res['optimizer'] = get_optimizer(model = self.ebm, args_dict = self.args_dict)
-        scheduler = get_scheduler(args_dict = self.args_dict, model = self.ebm, optim = res['optimizer'])
-        if scheduler is not None:
-            res['lr_scheduler'] = scheduler
-        return res        
+        params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+        
+        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
+        proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
+
+        ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
+        proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
+        if ebm_sch is not None and proposal_sch is not None :
+            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]      
+        elif ebm_sch is not None :
+            return [ebm_opt, proposal_opt], ebm_sch
+        elif proposal_sch is not None :
+            return [ebm_opt, proposal_opt], proposal_sch
+        else :
+            return [ebm_opt, proposal_opt]
 
         
     def update_dic_logger(self, outputs, name = 'val_'):
@@ -114,6 +133,8 @@ class AbstractRegression(pl.LightningModule):
 
         self.update_dic_logger(outputs, name = 'val_')
         self.plot_energy()
+        if self.train_proposal :
+            self.proposal_visualization(step = self.global_step)
 
 
         

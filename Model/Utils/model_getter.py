@@ -76,12 +76,11 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
     args_dict['input_size_x'] = input_size_x
     args_dict['input_size_y'] = input_size_y
 
-    feature_extractor = get_feature_extractor(input_size_x, args_dict)
+    feature_extractor = get_feature_extractor(input_size_x=input_size_x, args_dict=args_dict)
     if feature_extractor is not None :
-        input_size_x_feature = feature_extractor.output_size()
+        input_size_x_feature = feature_extractor.output_size
     else :
         input_size_x_feature = input_size_x
-
 
     # Get energy function :
     print("Get energy function")
@@ -102,6 +101,10 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
     print("Get base_dist... end")
+    if args_dict['base_dist_name'] == 'proposal':
+        assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
+        for param in proposal.parameters():
+            param.requires_grad = False
 
     # Get EBM :
     print("Get EBM")

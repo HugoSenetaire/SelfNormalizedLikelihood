@@ -25,7 +25,7 @@ class GaussianMixtureProposal(nn.Module):
         
     def sample(self, nb_sample = 1):
         samples,y = self.gmm.sample(nb_sample)
-        samples = samples.reshape(nb_sample, *self.input_size)
+        samples = samples.reshape(nb_sample, *self.input_size).detach()
         return samples
     
     def log_prob(self, x):

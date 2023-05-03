@@ -6,9 +6,10 @@ from .EnergyForDistribution import (
     EnergyRBM,
     fc_energy,
 )
-from .EnergyForRegression import EnergyNetworkRegression
-from .FeatureExtractor import resnet_extractor
+from .EnergyForRegression import EnergyNetworkRegression_Large, EnergyNetworkRegression_Toy
+from .FeatureExtractor import resnet_extractor, ToyFeatureNet
 
+import numpy as np
 dic_energy = {
     "fc": fc_energy,
     "conv": ConvEnergy,
@@ -19,7 +20,8 @@ dic_energy = {
 }
 
 dic_energy_regression = {
-    "fc": EnergyNetworkRegression,
+    'fc': EnergyNetworkRegression_Large,
+    'toy': EnergyNetworkRegression_Toy,
 }
 
 
@@ -54,7 +56,8 @@ def get_energy_regression(input_size_x, input_size_y, args_dict):
 
 
 dic_feature_extractor = {
-    "resnet": resnet_extractor,
+    'resnet' : resnet_extractor,
+    'toy' : ToyFeatureNet,
 }
 
 
@@ -66,11 +69,9 @@ def get_feature_extractor(
         return None
     if args_dict["feature_extractor_name"] not in dic_feature_extractor:
         raise ValueError("Feature extractor name not valid")
-
-    feature_extractor = dic_feature_extractor[args_dict["feature_extractor_name"]]
-    if "feature_extractor_params" not in args_dict.keys():
-        args_dict["feature_extractor_params"] = {}
-    feature_extractor = feature_extractor(
-        input_size=input_size_x, **args_dict["feature_extractor_params"]
-    )
+    
+    feature_extractor = dic_feature_extractor[args_dict['feature_extractor_name']]
+    if 'feature_extractor_params' not in args_dict.keys():
+        args_dict['feature_extractor_params'] = {}
+    feature_extractor = feature_extractor(input_dim=np.prod(input_size_x), **args_dict['feature_extractor_params'])
     return feature_extractor

@@ -14,11 +14,13 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         super().__init__(ebm, args_dict, complete_dataset = complete_dataset, **kwargs)
 
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx,):
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
             self.ebm.switch_mode()
 
-        
+        # Get parameters
+        ebm_opt, proposal_opt = self.optimizers()
+
         x = batch['data']
         y = batch['target']
         energy_data, dic_output = self.ebm.calculate_energy(x, y)
@@ -29,6 +31,18 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
             estimate_log_z = estimate_log_z.exp() - 1
 
         loss_total = (energy_data + estimate_log_z).mean()
+
+        # Update the parameters
+        ebm_opt.zero_grad()
+        proposal_opt.zero_grad()
+        self.manual_backward(loss_total, retain_graph=True)
+        ebm_opt.step()
+
+        if self.train_proposal :
+            proposal_opt.zero_grad()
+            self.manual_backward(estimate_log_z.mean(),)
+            proposal_opt.step()
+
         self.log('train_loss', loss_total)
         for key in dic_output.keys():
             self.log(f'train_{key}', dic_output[key].mean())

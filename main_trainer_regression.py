@@ -136,7 +136,7 @@ if __name__ == '__main__' :
                         callbacks=checkpoints,
                         # devices = len(devices),
                         strategy = strategy,
-                        precision=16,
+                        precision=64,
                         max_steps = args_dict['max_steps'],
                         resume_from_checkpoint = ckpt_path,
                         log_every_n_steps=20,

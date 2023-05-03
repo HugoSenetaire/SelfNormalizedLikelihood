@@ -10,7 +10,7 @@ import os
 
 
 
-class EnergyNetworkRegression(nn.Module):
+class EnergyNetworkRegression_Large(nn.Module):
 
     def __init__(self, input_dim_x, input_dim_y):
         super().__init__()
@@ -48,3 +48,41 @@ class EnergyNetworkRegression(nn.Module):
 
 
 
+
+class EnergyNetworkRegression_Toy(nn.Module):
+    def __init__(self, input_dim_x=10, input_dim_y=1, ):
+        super().__init__()
+        self.input_dim_y = np.prod(input_dim_y)
+        self.input_dim_x = np.prod(input_dim_x)
+        self.fc1_y = nn.Linear(self.input_dim_y, self.input_dim_x)
+        self.fc2_y = nn.Linear(self.input_dim_x, self.input_dim_x)
+
+        self.fc1_xy = nn.Linear(2*self.input_dim_x, self.input_dim_x)
+        self.fc2_xy = nn.Linear(self.input_dim_x, self.input_dim_x)
+        self.fc3_xy = nn.Linear(self.input_dim_x, 1)
+
+    def forward(self, x_feature, y):
+        # (x_feature has shape: (batch_size, hidden_dim))
+        # (y has shape (batch_size, num_samples)) (num_sampes==1 when running on (x_i, y_i))
+
+        assert x_feature.shape[0] == y.shape[0]
+        assert x_feature.shape[1] == self.input_dim_x
+        assert y.shape[1] == self.input_dim_y
+
+
+
+        # resize to batch dimension
+        x_feature = x_feature.reshape(-1, self.input_dim_x) # (shape: (batch_size*num_samples, hidden_dim))
+        y = y.reshape(-1, self.input_dim_y) # (shape: (batch_size*num_samples, 1))
+
+        # print(x_feature.mean())
+        # print(y.mean())
+        y_feature = F.relu(self.fc1_y(y)) # (shape: (batch_size*num_samples, hidden_dim))
+        y_feature = F.relu(self.fc2_y(y_feature)) # (shape: (batch_size*num_samples, hidden_dim))
+
+        xy_feature = torch.cat([x_feature, y_feature], 1) # (shape: (batch_size*num_samples, 2*hidden_dim))
+        # print(xy_feature.shape)
+        xy_feature = F.relu(self.fc1_xy(xy_feature)) # (shape: (batch_size*num_samples, hidden_dim))
+        xy_feature = F.relu(self.fc2_xy(xy_feature)) + xy_feature # (shape: (batch_size*num_samples, hidden_dim))
+        score = self.fc3_xy(xy_feature) # (shape: (batch_size*num_samples, 1))
+        return score

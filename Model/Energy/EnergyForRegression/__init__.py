@@ -1,1 +1,1 @@
-from .energy_for_regression import EnergyNetworkRegression
+from .energy_for_regression import EnergyNetworkRegression_Large, EnergyNetworkRegression_Toy

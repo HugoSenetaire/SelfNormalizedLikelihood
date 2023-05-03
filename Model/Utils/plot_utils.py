@@ -74,7 +74,7 @@ def plot_energy_1d_regression(algo, save_dir, energy_function = None, name = 'co
     
     xx, yy = np.meshgrid(x, y)
     xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
-    xy = torch.from_numpy(xy).float()
+    xy = torch.from_numpy(xy).to(algo.dtype)
     if energy_type :
         z = (-energy_function(xy[:,0,None,], xy[:,1, None])).exp().detach().cpu().numpy()
     else :

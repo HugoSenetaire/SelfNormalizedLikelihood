@@ -6,4 +6,4 @@ batch_size : 32
 nb_sample_bias_explicit : 1024
 bias_explicit : True
 num_sample_proposal : 8
-train_proposal : False
+train_proposal : True
