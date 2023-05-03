@@ -1,6 +1,7 @@
 from .EnergyForDistribution import (
     ConvEnergy,
     EnergyCategoricalDistrib,
+    EnergyIsing,
     EnergyPoissonDistribution,
     EnergyRBM,
     fc_energy,
@@ -14,6 +15,7 @@ dic_energy = {
     "rbm": EnergyRBM,
     "categorical": EnergyCategoricalDistrib,
     "poisson": EnergyPoissonDistribution,
+    "ising": EnergyIsing,
 }
 
 dic_energy_regression = {
