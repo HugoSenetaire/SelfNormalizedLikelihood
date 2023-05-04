@@ -62,18 +62,19 @@ class AbstractRegression(pl.LightningModule):
     
     def resample_proposal(self):
         if self.ebm.proposal is not None :
-            if self.input_type_x == 'images':
-                self.example_proposal_x = self.example_x_default
-                self.example_proposal_y = self.ebm.proposal.sample(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y']))
-                self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x']).reshape(-1, 100, *self.args_dict['input_size_x'])
-                self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
-            elif self.input_type_x == '1d' :
-                self.example_proposal_x = torch.arange(self.min_x, self.max_x, (self.max_x-self.min_x)/100).reshape(-1, 1)
-                self.example_proposal_y = self.ebm.proposal.sample(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y']))
-                self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, -1).reshape(-1, 100, 1)
-                self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
-            else :
-                return None
+            if self.input_type_y != 'other':
+                if self.input_type_x == 'images':
+                    self.example_proposal_x = self.example_x_default
+                    self.example_proposal_y = self.ebm.proposal.sample(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y']))
+                    self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x']).reshape(-1, 100, *self.args_dict['input_size_x'])
+                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
+                elif self.input_type_x == '1d' :
+                    self.example_proposal_x = torch.arange(self.min_x, self.max_x, (self.max_x-self.min_x)/100).reshape(-1, 1)
+                    self.example_proposal_y = self.ebm.proposal.sample(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y']))
+                    self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, -1).reshape(-1, 100, 1)
+                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
+                else :
+                    return None
     
     def initialize_examples(self, complete_dataset):
         if any([self.input_type_x=='other', self.input_type_y == 'other']):
