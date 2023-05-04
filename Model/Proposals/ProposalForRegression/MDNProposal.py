@@ -26,7 +26,6 @@ class MDNProposal_Network(nn.Module):
 
     def forward(self, x_feature):
         # (x_feature has shape: (batch_size, hidden_dim))
-
         means = F.relu(self.fc1_mean(x_feature))  # (shape: (batch_size, hidden_dim))
         means = self.fc2_mean(means)  # (shape: batch_size, K))
 
@@ -41,7 +40,7 @@ class MDNProposal_Network(nn.Module):
     
         
 class MDNProposalRegression(nn.Module):
-    def __init__(self, input_size_x, input_size_y, K = 4,):
+    def __init__(self, input_size_x, input_size_y, dataset, K = 4,):
         super().__init__()
         self.K = K
         self.input_size_x = np.prod(input_size_x)
@@ -64,8 +63,8 @@ class MDNProposalRegression(nn.Module):
         inds = torch.transpose(inds, 1, 0) # (shape: (num_samples, batch_size, self.input_size_y, 1))
         y_samples = y_samples_K.gather(3, inds).squeeze(3) # (shape: (num_samples, batch_size, self.input_size_y))
         y_samples = y_samples.detach()
-        y_samples = torch.transpose(y_samples, 1, 0).reshape(batch_size, nb_sample, self.input_size_y) # (shape: (batch_size, num_samples, input_size_y ))
-
+        y_samples = torch.transpose(y_samples, 1, 0).reshape(batch_size, nb_sample, self.input_size_y).detach() # (shape: (batch_size, num_samples, input_size_y ))
+        return y_samples
 
 
     def log_prob(self, x_feature, y):

@@ -156,11 +156,6 @@ def plot_energy_image_1d_regression(algo, save_dir,  samples_x, energy_function 
     except AttributeError as e :
         print(e, )
     plt.close()
-
-  
-        
-
-    
     
 def plot_images(images, save_dir, transform_back = None, algo = None, name = 'samples', init_samples= None, step='', ):
     if not os.path.exists(save_dir):
