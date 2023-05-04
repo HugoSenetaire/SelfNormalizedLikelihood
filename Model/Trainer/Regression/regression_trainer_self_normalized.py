@@ -46,7 +46,6 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         self.log('train_loss', loss_total)
         for key in dic_output.keys():
             self.log(f'train_{key}', dic_output[key].mean())
-            # print(f'train_{key}', dic_output[key].mean().item())
         return loss_total
 
 

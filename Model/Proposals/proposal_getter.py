@@ -3,6 +3,7 @@ from .ProposalForDistributionEstimation.kde import KernelDensity
 from .ProposalForDistributionEstimation.gaussian_mixture import GaussianMixtureProposal
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
 from .ProposalForRegression.MDNProposal import MDNProposalRegression
+from .ProposalForRegression.uniform import UniformRegression
 
 dic_proposals = {
     'standard_gaussian': StandardGaussian,
@@ -22,6 +23,7 @@ def get_proposal(args_dict, input_size, dataset):
 dic_proposals_regression = {
     'standard_gaussian': StandardGaussianRegression,
     'mdn': MDNProposalRegression,
+    'uniform': UniformRegression,
 }
     
 def get_proposal_regression(args_dict, input_size_x, input_size_y, dataset):

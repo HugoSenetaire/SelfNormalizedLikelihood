@@ -1,0 +1,7 @@
+ebm_name : 'eubo'
+max_steps : 1001
+save_energy_every : 100
+samples_every: 500
+batch_size : 512
+nb_sample_bias_explicit : 1024
+bias_explicit : True

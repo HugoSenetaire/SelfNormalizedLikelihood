@@ -43,15 +43,15 @@ class EnergyPoissonDistribution(nn.Module):
         self.lambda_ = nn.parameter.Parameter(lambda_, requires_grad=learn_lambda)
 
     def forward(
-        self, x: Float[torch.Tensor, "batch_size"]
-    ) -> Float[torch.Tensor, "batch_size"]:
+        self, x: Float[torch.Tensor, "batch_size 1 1"]
+    ) -> Float[torch.Tensor, "batch_size 1"]:
         """Compute the energy of the poisson distribution
 
         Args:
-            x: Float[torch.Tensor, "batch_size"], batch input of the energy.
+            x: Float[torch.Tensor, "batch_size 1"], batch input of the energy.
 
         Returns:
-            Float[torch.Tensor, "batch_size"], E(x), the energy of the poisson distribution
+            Float[torch.Tensor, "batch_size 1"], E(x), the energy of the poisson distribution
         """
-
+        x = x.flatten(1)
         return torch.lgamma(x + 1) - x * torch.log(self.lambda_)

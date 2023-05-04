@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from Dataset.MissingDataDataset.default_args import default_args_missingdatadataset
 from Model.default_args import default_args_ebm
 import yaml
+import torch
 
 def default_args_main(parser = None):
     if parser is None :

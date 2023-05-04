@@ -2,3 +2,4 @@ energy_name : 'fc'
 energy_param :
   last_layer_bias : False
 feature_extractor_name : 'resnet'
+explicit_bias_name : '2_layer_fc'

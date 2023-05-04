@@ -7,8 +7,10 @@ import torchvision.models as models
 
 import os
 
+
+
 class Resnet18_FeatureExtractor(nn.Module):
-    def __init__(self):
+    def __init__(self, input_dim):
         super().__init__()
 
         resnet18 = models.resnet18(pretrained=True)
@@ -19,7 +21,6 @@ class Resnet18_FeatureExtractor(nn.Module):
 
     def forward(self, x):
         # (x has shape (batch_size, 3, img_size, img_size))
-
         x_feature = self.resnet18(x) # (shape: (batch_size, 512, img_size/32, img_size/32))
         x_feature = self.avg_pool(x_feature) # (shape: (batch_size, 512, 1, 1))
         x_feature = x_feature.squeeze(2).squeeze(2) # (shape: (batch_size, 512))

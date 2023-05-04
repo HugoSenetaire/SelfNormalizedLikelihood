@@ -1,6 +1,0 @@
-proposal_name : 'kernel_density'
-proposal_params: 
-  kernel : 'gaussian'
-  bandwidth : 'scott'
-  nb_center : 20
-  nb_sample : 1000

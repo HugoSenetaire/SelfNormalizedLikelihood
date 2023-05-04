@@ -15,7 +15,10 @@ class NormalRegression(nn.Module):
         self.input_size_y = input_size_y
         
         index = np.random.choice(len(dataset), 1000)
-        data = torch.cat([dataset[i][1] for i in index])
+        try :
+            data = torch.cat([dataset[i][1] for i in index])
+        except RuntimeError:
+            data = torch.cat([dataset[i][1].reshape(1, *self.input_size_y) for i in index])
         self.mode_cov = mode_cov
 
         if mode_cov == 'diag':
@@ -42,10 +45,10 @@ class NormalRegression(nn.Module):
     
     def log_prob(self, x_feature, y):
         assert x_feature.shape[0] == y.shape[0]
-
+        batch_size = x_feature.shape[0]
         distribution = distributions.Normal(self.mu, self.logstd.exp())
         if self.mode_cov == 'diag':
-            log_p = distribution.log_prob(y).flatten(1).sum(1)
+            log_p = distribution.log_prob(y).reshape(batch_size, -1).sum(1)
         elif self.mode_cov == 'spherical' :
             y_flatten = y.flatten()
             log_p = distribution.log_prob(y_flatten)
