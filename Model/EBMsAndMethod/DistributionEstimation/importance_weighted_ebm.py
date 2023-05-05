@@ -9,14 +9,18 @@ class ImportanceWeightedEBM(nn.Module):
         self.energy = energy
         self.proposal = proposal
         self.nb_sample = num_sample_proposal
-        self.nb_sample_bias_explicit = 1024
+        self.nb_sample_bias_explicit = nb_sample_bias_explicit
         self.base_dist = base_dist
         self.bias_explicit = bias_explicit
         
         if bias_explicit:
-            self.log_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+            self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
-            self.log_bias.data = log_z_estimate
+            self.explicit_bias.data = log_z_estimate
+        else :
+            self.explicit_bias = None
+
+        
 
             
     def sample(self, nb_sample = 1):
@@ -30,9 +34,13 @@ class ImportanceWeightedEBM(nn.Module):
         Calculate energy of x with the energy function
         '''
         dic_output = {}
+       
         out_energy = self.energy(x)
         dic_output['f_theta'] = out_energy
+        if self.training and self.proposal is not None and hasattr(self.proposal, 'set_x',):
+            self.proposal.set_x(x)
 
+        
         if self.base_dist is not None and use_base_dist :
             if len(x.shape) == 1:
                 x = x.unsqueeze(0)
@@ -40,16 +48,17 @@ class ImportanceWeightedEBM(nn.Module):
             dic_output['base_dist_log_prob'] = base_dist_log_prob
         else :
             base_dist_log_prob = torch.zeros_like(out_energy)
+
+        
         current_energy = out_energy - base_dist_log_prob
         dic_output['energy'] = current_energy
 
-        if self.bias_explicit :
-            dic_output.update({"log_bias_explicit" : self.log_bias})
-            return current_energy + self.log_bias, dic_output
+        if self.explicit_bias is not None :
+            dic_output.update({"log_bias_explicit" : self.explicit_bias})
+            return current_energy + self.explicit_bias, dic_output
         else:
             return current_energy, dic_output
         
-    
 
     def switch_mode(self, ):
         '''
@@ -71,13 +80,13 @@ class ImportanceWeightedEBM(nn.Module):
 
         energy_samples = self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         if self.bias_explicit :
-            energy_samples = energy_samples + self.log_bias
+            energy_samples = energy_samples + self.explicit_bias
         base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         dic_output['f_theta_samples'] = energy_samples
         if self.base_dist is not None :
             if self.base_dist != self.proposal :
                 base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-                samples_log_prob = self.proposal.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
+                samples_log_prob = self.proposal.log_prob(samples).reshape(samples.shape[0], -1).sum(1).unsqueeze(1)
                 aux_prob = base_dist_log_prob - samples_log_prob 
                 log_z_estimate = torch.logsumexp(-energy_samples + aux_prob,dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
                 z_estimate = log_z_estimate.exp()
@@ -103,15 +112,6 @@ class ImportanceWeightedEBM(nn.Module):
         """
         Hade to create a separate forward function in order to pickle the model and multiprocess HMM.
         """
-        energy, _ = self.calculate_energy(x[0])
+        current_x = x[0].to(next(self.energy.parameters()).device, next(self.energy.parameters()).dtype)
+        energy, _ = self.calculate_energy(current_x)
         return energy
-
-
-
-
-
-
-
-
-
-    

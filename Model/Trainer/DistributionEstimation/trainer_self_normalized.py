@@ -10,9 +10,13 @@ import yaml
 from .abstract_trainer import AbstractDistributionEstimation
 
 class LitSelfNormalized(AbstractDistributionEstimation):
+    """
+    Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
+    Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
+    """
     def __init__(self, ebm, args_dict, complete_dataset = None, nb_sample_train_estimate= 1024, **kwargs):
         super().__init__(ebm = ebm, args_dict = args_dict, complete_dataset = complete_dataset, nb_sample_train_estimate= nb_sample_train_estimate, **kwargs)
-       
+
 
     def training_step(self, batch, batch_idx):
         # Get parameters
@@ -22,10 +26,8 @@ class LitSelfNormalized(AbstractDistributionEstimation):
             self.ebm.switch_mode()
         x = batch['data']
         energy_samples, dic_output = self.ebm.calculate_energy(x)
-
         
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
-        dic_output.update(dic)
         if self.ebm.type_z == 'log':
             loss_estimate_z = estimate_log_z
         elif self.ebm.type_z == 'exp':
@@ -36,13 +38,30 @@ class LitSelfNormalized(AbstractDistributionEstimation):
         self.log('train_loss', loss_total)
 
 
-        # Update the parameters
+        # Backward ebm
         ebm_opt.zero_grad()
         proposal_opt.zero_grad()
-        self.manual_backward(loss_total)
+        self.manual_backward(loss_total, retain_graph=True, )
+
+
+        # Update the parameters of the proposal
+        proposal_opt.zero_grad()
+        if self.train_proposal :
+            logprob_proposal = self.ebm.proposal.logprob(x,)
+            self.log('train_proposal_log_likelihood', logprob_proposal.mean())
+            loss_proposal = - logprob_proposal.mean()
+            self.manual_backward((loss_proposal).mean(), inputs= list(self.ebm.proposal.parameters()))
+            proposal_opt.step()
+
+        # Update the parameters of the ebm
         ebm_opt.step()
-        proposal_opt.step()
-        
+        dic_output.update(dic)
+
+        # Just in case it's an adaptive proposal that requires x
+        if hasattr(self.ebm.proposal, 'set_x'):
+            self.ebm.proposal.set_x(None)
+
+
         # Add some estimates of the log likelihood with a fixed number of samples
         if self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0 :
             estimate_log_z, _= self.ebm.estimate_log_z(x, nb_sample = self.nb_sample_train_estimate)
