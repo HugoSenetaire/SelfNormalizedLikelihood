@@ -1,5 +1,6 @@
 from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussian
 from .ProposalForDistributionEstimation.kde import KernelDensity
+from .ProposalForDistributionEstimation.kde_adaptive import KernelDensityAdaptive
 from .ProposalForDistributionEstimation.gaussian_mixture import GaussianMixtureProposal
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
 from .ProposalForRegression.MDNProposal import MDNProposalRegression
@@ -9,6 +10,7 @@ dic_proposals = {
     'standard_gaussian': StandardGaussian,
     'kernel_density': KernelDensity,
     'gaussian_mixture': GaussianMixtureProposal,
+    'kernel_density_adaptive': KernelDensityAdaptive,
 }
 
 
