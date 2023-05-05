@@ -8,6 +8,9 @@ import tqdm
 import time
 
 def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
+    '''
+    Initialize the energy to a standard gaussian to make sure it's integrable
+    '''
     # dist = Normal(0, 1)
     optimizer = torch.optim.SGD(energy.parameters(), lr=2e-2)
 
@@ -34,6 +37,34 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     print("=====================================")
     return energy
 
+
+def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataset, args_dict):
+    '''
+    Initialize the energy to a standard gaussian to make sure it's integrable
+    '''
+    optimizer = torch.optim.SGD(energy.parameters(), lr=2e-2)
+    if feature_extractor is not None :
+        data_x_feature = torch.cat([feature_extractor(dataset[i][0]) for i in range(len(dataset))])
+    else :
+        data_x_feature = torch.cat([dataset[i][0] for i in range(len(dataset))])
+
+    data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
+    dist_y = Normal(data_y.mean(0), data_y.std(0))
+    dist_x_feature = Normal(data_x_feature.mean(0), data_x_feature.std(0))
+    ranges= tqdm.tqdm(range(10000))
+    batch_size = args_dict['batch_size']
+    for k in ranges:
+        x_feature = dist_x_feature.sample((batch_size,))
+        y = dist_y.sample((batch_size, ))
+        target_energy = dist_y.log_prob(y).sum(dim=1)
+        current_energy = energy(x_feature, y).flatten()
+        loss = ((current_energy + target_energy)**2).mean()
+        optimizer.zero_grad()
+        loss.backward()
+        ranges.set_description(f'Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}')
+        optimizer.step()
+
+
 def get_model(args_dict, complete_dataset, complete_masked_dataset):
     input_size = complete_dataset.get_dim_input()
 
@@ -43,10 +74,6 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     print("Get energy function... end")
 
 
-    if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
-        print("Init energy to standard gaussian")
-        energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
-        print("Init energy to standard gaussian... end")
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         print("Get proposal")
@@ -60,7 +87,18 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     base_dist = get_base_dist(args_dict = args_dict, proposal=proposal, input_size=input_size, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
+        assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
+        for param in proposal.parameters():
+            param.requires_grad = False
     print("Get base_dist... end")
+
+    if base_dist is None and ('ebm_pretraining' in args_dict.keys() or args_dict['ebm_pretraining'] is None):
+        print("Careful, no base_dist given, the energy might not be well initialized")
+
+    if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
+        print("Init energy to standard gaussian")
+        energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
+        print("Init energy to standard gaussian... end")
 
     # Get EBM :
     print("Get EBM")
@@ -86,6 +124,11 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
     print("Get energy function")
     energy = get_energy_regression(input_size_x_feature, input_size_y, args_dict)
     print("Get energy function... end")
+
+    if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
+        print("Init energy to standard gaussian")
+        energy = init_energy_to_gaussian_regression(feature_extractor = feature_extractor, energy = energy, input_size_x = input_size_x, input_size_y = input_size_y, dataset = complete_dataset.dataset_train, args_dict = args_dict)
+        print("Init energy to standard gaussian... end")
 
     # Get proposal :
     if args_dict['proposal_name'] is not None:
