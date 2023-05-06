@@ -36,9 +36,9 @@ class EnergyCategoricalDistrib(nn.Module):
         learn_theta: bool = False,
     ) -> None:
         super().__init__()
-        assert prod(input_size) == len(theta), "input_size and theta do not match"
         if theta is None:
             theta = [1 / prod(input_size)] * prod(input_size)
+        assert prod(input_size) == len(theta), "input_size and theta do not match"
         theta_ = torch.Tensor(theta)
         self.theta = nn.parameter.Parameter(theta_, requires_grad=learn_theta)
 
