@@ -1,0 +1,3 @@
+proposal_name: 'poisson'
+proposal_params:
+  lambda_: 10.
