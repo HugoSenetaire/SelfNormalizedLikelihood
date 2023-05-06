@@ -1,10 +1,14 @@
-from .ProposalForDistributionEstimation.categorical import Categorical
+from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussian
+from .ProposalForDistributionEstimation.kde import KernelDensity
+from .ProposalForDistributionEstimation.kde_adaptive import KernelDensityAdaptive
 from .ProposalForDistributionEstimation.gaussian_mixture import GaussianMixtureProposal
 from .ProposalForDistributionEstimation.kde import KernelDensity
 from .ProposalForDistributionEstimation.poisson import Poisson
 from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussian
 from .ProposalForRegression.MDNProposal import MDNProposalRegression
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
+from .ProposalForDistributionEstimation.categorical import Categorical
+
 
 dic_proposals = {
     "standard_gaussian": StandardGaussian,
@@ -12,7 +16,9 @@ dic_proposals = {
     "gaussian_mixture": GaussianMixtureProposal,
     "poisson": Poisson,
     "uniform_categorical": Categorical,
+    'kernel_density_adaptive': KernelDensityAdaptive,
 }
+
 
 
 def get_proposal(args_dict, input_size, dataset):
@@ -22,10 +28,12 @@ def get_proposal(args_dict, input_size, dataset):
     else:
         return proposal(input_size, dataset)
 
+from .ProposalForRegression import UniformRegression
 
 dic_proposals_regression = {
-    "standard_gaussian": StandardGaussianRegression,
-    "mdn": MDNProposalRegression,
+    'standard_gaussian': StandardGaussianRegression,
+    'mdn': MDNProposalRegression,
+    'uniform': UniformRegression,
 }
 
 

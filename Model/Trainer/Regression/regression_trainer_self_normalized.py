@@ -24,9 +24,8 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         x = batch['data']
         y = batch['target']
         energy_data, dic_output = self.ebm.calculate_energy(x, y)
-        
+        logprob_proposal = self.ebm.logprob_proposal(x,y)
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
-        dic_output.update(dic)
         if self.ebm.type_z == 'exp':
             estimate_log_z = estimate_log_z.exp() - 1
 
@@ -35,18 +34,17 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         # Update the parameters
         ebm_opt.zero_grad()
         proposal_opt.zero_grad()
-        self.manual_backward(loss_total, retain_graph=True)
-        ebm_opt.step()
-
+        self.manual_backward(loss_total, retain_graph=True, )
         if self.train_proposal :
             proposal_opt.zero_grad()
-            self.manual_backward(estimate_log_z.mean(),)
+            self.manual_backward((- logprob_proposal).mean(), inputs= list(self.ebm.proposal.parameters()))
             proposal_opt.step()
+        ebm_opt.step()
+        dic_output.update(dic)
 
         self.log('train_loss', loss_total)
         for key in dic_output.keys():
             self.log(f'train_{key}', dic_output[key].mean())
-            # print(f'train_{key}', dic_output[key].mean().item())
         return loss_total
 
 

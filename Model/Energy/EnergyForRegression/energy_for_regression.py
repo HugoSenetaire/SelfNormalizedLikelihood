@@ -29,7 +29,11 @@ class EnergyNetworkRegression_Large(nn.Module):
         # (y has shape (batch_size, input_dim_y)) 
         assert x_feature.shape[0] == y.shape[0]
         assert x_feature.shape[1] == self.input_dim_x
-        assert y.shape[1] == self.input_dim_y
+        try :
+            assert y.shape[1] == self.input_dim_y
+        except IndexError:
+            y = y.unsqueeze(1)
+            assert y.shape[1] == self.input_dim_y
 
 
         # replicate:

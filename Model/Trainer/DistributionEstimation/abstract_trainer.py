@@ -15,59 +15,117 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.ebm = ebm
         self.args_dict = args_dict
         self.hparams.update(args_dict)
-        self.last_save = -float('inf')
-        # self.last_save_sample = -float('inf')
-        self.last_save_sample = 0
+        self.last_save = -float('inf') # To save the energy contour plot 
+        self.last_save_sample = -float('inf') # To save the samples
         self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
+
+
+        if np.prod(self.args_dict['input_size'])==2 :
+            self.input_type = '2d'
+        elif len(self.args_dict['input_size'])==1:
+            self.input_type = '1d'
+        elif len(self.args_dict['input_size'])==3:
+            self.input_type = 'image'
+        else :
+            self.input_type = 'other'
+
+
         self.initialize_examples(complete_dataset=complete_dataset)
         self.proposal_visualization()
         self.automatic_optimization = False
+        self.train_proposal = self.args_dict['train_proposal']
+
+        if not self.train_proposal :
+            for param in self.ebm.proposal.parameters():
+                param.requires_grad = False
+        else :
+            for param in self.ebm.proposal.parameters():
+                param.requires_grad = True
+
+    
+    def training_step(self, batch, batch_idx):
+        raise NotImplementedError
+
+    def validation_step(self, batch, batch_idx,):
+        raise NotImplementedError
+        
+    def validation_epoch_end(self, outputs):
+        self.update_dic_logger(outputs, name = 'val_')
+        self.proposal_visualization()
+        self.plot_energy()
+        self.plot_samples()
+        
+       
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
+        
+        
+    def test_epoch_end(self, outputs):
+       self.update_dic_logger(outputs, name = 'test_')
+        
 
 
-
+    def resample_proposal(self, ):
+        '''Proposal might be changing and need to be resampled during training'''
+        if self.ebm.proposal is not None :
+            if self.input_type == '2d' :
+                self.example_proposal = self.ebm.proposal.sample(1000).flatten(1)
+                self.min_x, self.max_x = min(torch.min(self.example_proposal[:,0],), self.min_x), max(torch.max(self.example_proposal[:,0]), self.max_x)
+                self.min_y, self.max_y = min(torch.min(self.example_proposal[:,1],), self.min_y), max(torch.max(self.example_proposal[:,1]), self.max_y)
+            elif self.input_type == '1d' :
+                self.example_proposal = self.ebm.proposal.sample(1000)
+                self.min_x, self.max_x = min(torch.min(self.example_proposal), self.min_x), max(torch.max(self.example_proposal), self.max_x)
+            elif self.input_type == 'image' :
+                self.example_proposal = self.ebm.proposal.sample(64)
+        else :
+            self.example_proposal = None
 
 
     def initialize_examples(self, complete_dataset):
-        if np.prod(self.args_dict['input_size'])==2 :
-            if complete_dataset is not None :
+        '''
+        Initialize the examples used for the visualization of the energy function.
+        Making sure we have appropriate range for visualization and evaluation.
+        '''
+        self.min_x, self.max_x, self.min_y, self.max_y = -3, 3, -3, 3
+        if complete_dataset is not None :
+            if self.input_type =='2d' :
                 indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), 10000)
                 self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in indexes_to_print], dim=0)
                 self.min_x, self.max_x = min(torch.min(self.example[:,0],), -3), max(torch.max(self.example[:,0]), 3)
                 self.min_y, self.max_y = min(torch.min(self.example[:,1],), -3), max(torch.max(self.example[:,1]), 3)
-            else :
-                self.example = None
-                self.min_x, self.max_x, self.min_y, self.max_y = -3, 3, -3, 3
-            if self.ebm.proposal is not None :
-                self.example_proposal = self.ebm.proposal.sample(1000).flatten(1)
-                self.min_x, self.max_x = min(torch.min(self.example_proposal[:,0],), self.min_x), max(torch.max(self.example_proposal[:,0]), self.max_x)
-                self.min_y, self.max_y = min(torch.min(self.example_proposal[:,1],), self.min_y), max(torch.max(self.example_proposal[:,1]), self.max_y)
-            else :
-                self.example_proposal = None
-        elif len(self.args_dict['input_size'])==3:
-            if complete_dataset is not None :
-                self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in range(64)], dim=0)
-                plot_images(self.example, save_dir=self.args_dict['save_dir'], name='example', transform_back=self.transform_back)
-            else :
-                self.example = None
+
+            elif self.input_type =='1d' :
+                indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), 10000)
+                self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in indexes_to_print], dim=0)
+                self.min_x, self.max_x = min(torch.min(self.example[:,0],), -3), max(torch.max(self.example[:,0]), 3)
+
+            elif self.input_type =='image' :
+                if complete_dataset is not None :
+                    self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in range(64)], dim=0)
+                    plot_images(self.example, save_dir=self.args_dict['save_dir'], name='example', transform_back=self.transform_back)
+        else :
+            self.example = None
             
-            if self.ebm.proposal is not None :
-                self.example_proposal = self.ebm.proposal.sample(64)
-                plot_images(self.example_proposal, save_dir=self.args_dict['save_dir'], name='example_proposal', transform_back=self.transform_back)
-            else :
-                self.example_proposal = None
 
     def proposal_visualization(self):
-        if np.prod(self.args_dict['input_size']) == 2:
-            energy_function = lambda x: -self.ebm.proposal.log_prob(x)
-            save_dir = self.args_dict['save_dir']
+        '''Visualize the proposal'''
+        energy_function = lambda x: -self.ebm.proposal.log_prob(x)
+        if self.input_type == '2d' :
+            self.resample_proposal()
+            save_dir = os.path.join(self.args_dict['save_dir'], "proposal")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             plot_energy_2d(self, energy_function=energy_function, save_dir=save_dir, samples = [self.example, self.example_proposal], samples_title=['Samples from dataset','Samples from proposal'], name='proposal',)
+        elif self.input_type == 'image' :
+            self.resample_proposal()
+            save_dir = os.path.join(self.args_dict['save_dir'], "proposal")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            plot_images(self.example_proposal, save_dir=save_dir, name='proposal_samples', transform_back=self.transform_back, step = self.global_step,)
+        
 
-    def training_step(self, batch, batch_idx):
-        raise NotImplementedError
         
     def configure_optimizers(self):
         params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
@@ -88,11 +146,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             return [ebm_opt, proposal_opt]
 
           
-   
 
-    def validation_step(self, batch, batch_idx,):
-        raise NotImplementedError
-        
     def update_dic_logger(self, outputs, name = 'val_'):
         list_keys = list(outputs[0].keys())
         dic_output = {}
@@ -125,24 +179,13 @@ class AbstractDistributionEstimation(pl.LightningModule):
         for key in dic_output:
             self.log(key, dic_output[key])
 
-    def validation_epoch_end(self, outputs):
-        self.update_dic_logger(outputs, name = 'val_')
 
-        if np.prod(self.args_dict['input_size']) == 2:
-            self.plot_energy()
-        self.plot_samples()
-        
-       
-    def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
-        
-        
-    def test_epoch_end(self, outputs):
-       self.update_dic_logger(outputs, name = 'test_')
-        
 
 
     def plot_energy(self, ):
+        '''
+        If possible show the current energy function and the samples from the proposal and dataset
+        '''
         if np.prod(self.args_dict['input_size']) == 2:
             if self.global_step - self.last_save > self.args_dict['save_energy_every'] :
                 save_dir = self.args_dict['save_dir']
@@ -152,12 +195,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 plot_energy_2d(self, save_dir=save_dir, samples = [self.example, self.example_proposal], samples_title=['Samples from dataset','Samples from proposal'], name='contour', step=self.global_step)
                 ebm_function_list = [lambda x,: self.ebm.calculate_energy(x,)[1]['f_theta'],]
                 ebm_function_name = ['f_theta',]
-
-                # if self.ebm.bias_explicit :
-                #     ebm_function_list.append(lambda x,: self.ebm.calculate_energy(x,)[1]['log_bias_explicit'])
-                #     ebm_function_name.append('b')
-                
-
                 
                 for ebm_function, ebm_name in zip(ebm_function_list, ebm_function_name):
                     plot_energy_2d(self,
@@ -177,6 +214,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
 
     def plot_samples(self, num_samples = None):
+        '''
+        Plot the samples from the EBM distribution using the sampler
+        '''
         torch.set_grad_enabled(True)
         if self.global_step - self.last_save_sample > self.args_dict['samples_every'] :
             save_dir = self.args_dict['save_dir']

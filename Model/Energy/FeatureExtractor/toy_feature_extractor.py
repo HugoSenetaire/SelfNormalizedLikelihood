@@ -1,12 +1,12 @@
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as np
 
 class ToyFeatureNet(nn.Module):
     def __init__(self, input_dim=1, hidden_dim=10):
         super().__init__()
-
-        self.fc1_x = nn.Linear(input_dim, hidden_dim)
+        self.input_dim = np.prod(input_dim)
+        self.fc1_x = nn.Linear(self.input_dim, hidden_dim)
         self.fc2_x = nn.Linear(hidden_dim, hidden_dim)
         self.output_size = hidden_dim
 

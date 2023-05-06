@@ -4,24 +4,36 @@ import torch
 import torch.distributions as distributions
 
 class EBMRegression(nn.Module):
-    def __init__(self, energy, proposal, feature_extractor, num_sample_proposal, base_dist = None,  **kwargs):
+    def __init__(self, energy, proposal, feature_extractor, num_sample_proposal, base_dist = None, explicit_bias = None,  **kwargs):
         super(EBMRegression, self).__init__()
         self.energy = energy
         self.proposal = proposal
         self.feature_extractor = feature_extractor
         self.nb_sample = num_sample_proposal
         self.base_dist = base_dist
-        if self.feature_extractor is not None :
-            self.explicit_bias = nn.Sequential(nn.Linear(self.feature_extractor.output_size, 1), )
-        else :
-            self.explicit_bias = nn.Sequential(nn.Linear(self.energy.input_dim_x, 1), )
-
+        self.explicit_bias = explicit_bias
         
-    def sample(self, x, nb_sample = 1):
+        
+    def sample_proposal(self, x, nb_sample = 1):
         '''
         Samples from the proposal distribution.
         '''
-        return self.proposal.sample(x, nb_sample)
+        if self.feature_extractor is not None:
+            x_feature = self.feature_extractor(x)
+        else :
+            x_feature = x
+        samples = self.proposal.sample(x_feature, nb_sample)
+        return samples
+
+    def logprob_proposal(self, x, y):
+        '''
+        Calculate the log probability of x with the proposal distribution.
+        '''
+        if self.feature_extractor is not None:
+            x_feature = self.feature_extractor(x)
+        else :
+            x_feature = x
+        return self.proposal.log_prob(x_feature, y)
     
     def calculate_energy(self, x, y, use_base_dist = True):
         '''
@@ -72,7 +84,7 @@ class EBMRegression(nn.Module):
             x_feature = self.feature_extractor(x)
         else :
             x_feature = x
-        samples = self.sample(x_feature, nb_sample).to(x.device, x.dtype)
+        samples = self.proposal.sample(x_feature, nb_sample).to(x.device, x.dtype)
         samples = samples.reshape(x.shape[0]*nb_sample, -1) #(batch_size, num_samples, y_size)
         x_feature_expanded = x_feature.unsqueeze(1).expand(-1, nb_sample, -1).reshape(x.shape[0]*nb_sample, -1) #(batch_size * num_samples, x_size)
 

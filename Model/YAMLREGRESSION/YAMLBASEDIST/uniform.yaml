@@ -1,0 +1,4 @@
+base_dist_name : 'uniform'
+base_dist_parameters :
+  min : 0
+  max : 70
