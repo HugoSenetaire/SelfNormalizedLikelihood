@@ -5,5 +5,5 @@ samples_every: 10
 batch_size : 32
 nb_sample_bias_explicit : 1024
 bias_explicit : True
-num_sample_proposal : 8
+num_sample_proposal : 32
 train_proposal : True

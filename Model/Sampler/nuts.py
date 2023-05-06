@@ -20,7 +20,7 @@ class NutsSampler():
 
         # current_energy_function = lambda x: energy_function(x[0].unsqueeze(0))
         if proposal is None:
-            x_init = dist.Normal(torch.zeros(self.input_size),torch.ones(self.input_size))(self.num_chains)
+            x_init = dist.Normal(torch.zeros(self.input_size),torch.ones(self.input_size))(self.num_chains).to(torch.float32)
         else :
             x_init = proposal.sample(self.num_chains).to(torch.float32)
         hmc_kernel = NUTS(potential_fn = energy_function, adapt_step_size=True, )
