@@ -81,9 +81,10 @@ class ImportanceWeightedEBM(nn.Module):
         energy_samples = self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         if self.bias_explicit :
             energy_samples = energy_samples + self.explicit_bias
-        base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         dic_output['f_theta_samples'] = energy_samples
+        
         if self.base_dist is not None :
+            base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
             if self.base_dist != self.proposal :
                 base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
                 samples_log_prob = self.proposal.log_prob(samples).reshape(samples.shape[0], -1).sum(1).unsqueeze(1)
