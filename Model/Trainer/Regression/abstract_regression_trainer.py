@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_1d_1d_regression, plot_energy_image_1d_regression
+from ...Utils.proposal_loss import log_prob_kl_loss_regression, kl_loss_regression, log_prob_loss_regression
 from ...Sampler import get_sampler
 import numpy as np
 import os
@@ -49,6 +50,16 @@ class AbstractRegression(pl.LightningModule):
             for param in self.ebm.proposal.parameters():
                 param.requires_grad = True
 
+        self.proposal_loss_name = args_dict['proposal_loss_name']
+        if self.proposal_loss_name == 'log_prob' :
+            self.proposal_loss = log_prob_loss_regression
+        elif self.proposal_loss_name == 'kl' :
+            self.proposal_loss = kl_loss_regression
+        elif self.proposal_loss_name == 'log_prob_kl' :
+            self.proposal_loss = log_prob_kl_loss_regression
+        else :
+            raise ValueError('Proposal loss name not recognized')
+
 
         self.automatic_optimization = False
 
@@ -67,19 +78,20 @@ class AbstractRegression(pl.LightningModule):
                     self.example_proposal_x = self.example_x_default.to(dtype=self.dtype)
                     self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y'])).to(dtype=self.dtype)
                     self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x']).reshape(-1, 100, *self.args_dict['input_size_x']).to(dtype=self.dtype)
-                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
+                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y_original), max(torch.max(self.example_proposal_y), self.max_y_original)
                 elif self.input_type_x == '1d' :
-                    self.example_proposal_x = torch.arange(self.min_x, self.max_x, (self.max_x-self.min_x)/100).reshape(-1, 1)
+                    self.example_proposal_x = torch.arange(self.min_x_original, self.max_x_original, (self.max_x_original-self.min_x_original)/100).reshape(-1, 1)
                     self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y']))
                     self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, -1).reshape(-1, 100, 1)
-                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y), max(torch.max(self.example_proposal_y), self.max_y)
+                    self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y_original), max(torch.max(self.example_proposal_y), self.max_y_original)
                 else :
                     return None
     
     def initialize_examples(self, complete_dataset):
         if any([self.input_type_x=='other', self.input_type_y == 'other']):
             return None
-        self.min_x, self.max_x, self.min_y, self.max_y = 0, 1, 0, 1
+        self.min_x_original, self.max_x_original, self.min_y_original, self.max_y_original = 0, 1, 0, 1
+        self.min_x, self.max_x, self.min_y, self.max_y = self.min_x_original, self.max_x_original, self.min_y_original, self.max_y_original
 
         if complete_dataset is not None :
             if self.input_type_x == '1d' :
@@ -94,11 +106,12 @@ class AbstractRegression(pl.LightningModule):
             self.example_y = torch.cat([complete_dataset.dataset_train.__getitem__(i)[1].unsqueeze(0) for i in indexes_to_print], dim=0).reshape(-1, np.prod(self.args_dict['input_size_y'])).unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_y'])
             self.example_y = self.example_y.to(dtype=self.dtype)
             if self.input_type_x == '1d' :
-                self.min_x, self.max_x = min(torch.min(self.example_x), self.min_x), max(torch.max(self.example_x), self.max_x)
+                self.min_x_original, self.max_x_original = min(torch.min(self.example_x), self.min_x_original), max(torch.max(self.example_x), self.max_x_original)
             if self.input_type_y == '1d' or self.input_type_y == '2d':
-                self.min_y, self.max_y = min(torch.min(self.example_y), self.min_y), max(torch.max(self.example_y), self.max_y)
+                self.min_y_original, self.max_y_original = min(torch.min(self.example_y), self.min_y_original), max(torch.max(self.example_y), self.max_y_original)
         else :
             self.example_x, self.example_y = None, None
+
 
 
 
@@ -106,7 +119,7 @@ class AbstractRegression(pl.LightningModule):
 
         if self.ebm.proposal is not None :
             self.resample_proposal()
-            energy_function = lambda x,y: -self.ebm.logprob_proposal(x,y)
+            energy_function = lambda x,y: -self.ebm.log_prob_proposal(x,y)
             save_dir = self.args_dict['save_dir']
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)

@@ -1,1 +1,3 @@
 from .regression_trainer_self_normalized import RegressionTrainerSelfNormalized
+from .proposal_trainer import ProposalRegressionTrainer
+from .NCE_trainer import RegressionTrainerNCE

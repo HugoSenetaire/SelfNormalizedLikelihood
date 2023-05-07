@@ -9,10 +9,13 @@ import matplotlib.pyplot as plt
 import yaml
 from .abstract_regression_trainer import AbstractRegression
 
-class RegressionTrainerSelfNormalized(AbstractRegression):
+class ProposalRegressionTrainer(AbstractRegression):
     def __init__(self, ebm, args_dict, complete_dataset = None, **kwargs):
+        '''
+        Train a only the proposal from the model
+        '''
+        args_dict['train_proposal'] = True
         super().__init__(ebm, args_dict, complete_dataset = complete_dataset, **kwargs)
-
 
     def training_step(self, batch, batch_idx,):
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
@@ -23,32 +26,14 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
 
         x = batch['data']
         y = batch['target']
-        energy_data, dic_output = self.ebm.calculate_energy(x, y)
-        energy_data.reshape(x.shape[0], 1, -1)
-        log_prob_proposal = self.ebm.log_prob_proposal(x,y).reshape(x.shape[0], 1, -1)
-        estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
-        estimate_log_z = estimate_log_z.reshape(x.shape[0], 1, -1)
-        if self.ebm.type_z == 'exp':
-            estimate_log_z = estimate_log_z.exp() - 1
-
-        loss_total = (energy_data + estimate_log_z).mean()
-
-        # Update the parameters
-        ebm_opt.zero_grad()
+        log_prob_proposal = self.ebm.log_prob_proposal(x,y)
         proposal_opt.zero_grad()
-        self.manual_backward(loss_total, retain_graph=True, )
-        if self.train_proposal :
-            proposal_opt.zero_grad()
-            proposal_loss = self.proposal_loss(log_prob_proposal=log_prob_proposal, log_estimate_z=estimate_log_z)
-            self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))
-            proposal_opt.step()
-        ebm_opt.step()
-        dic_output.update(dic)
+        proposal_loss = self.proposal_loss(log_prob_proposal=log_prob_proposal, log_estimate_z=None)
+        self.manual_backward(proposal_loss, inputs= list(self.ebm.proposal.parameters()))
+        proposal_opt.step()
 
-        self.log('train_loss', loss_total)
-        for key in dic_output.keys():
-            self.log(f'train_{key}', dic_output[key].mean())
-        return loss_total
+        self.log('train_loss', proposal_loss)
+        return proposal_loss
 
 
     def validation_step(self, batch, batch_idx,):

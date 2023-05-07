@@ -25,7 +25,7 @@ class EBMRegression(nn.Module):
         samples = self.proposal.sample(x_feature, nb_sample)
         return samples
 
-    def logprob_proposal(self, x, y):
+    def log_prob_proposal(self, x, y):
         '''
         Calculate the log probability of x with the proposal distribution.
         '''
@@ -50,19 +50,17 @@ class EBMRegression(nn.Module):
 
         if self.explicit_bias is not None :
             b = self.explicit_bias(x_feature).reshape(out_energy.shape)
-            # print(b)
             out_energy = out_energy + b
             dic_output['b'] = b
-        # assert False
+
         if self.base_dist is not None and use_base_dist :
-            if len(x.shape) == 1:
-                x = x.unsqueeze(0)
-            base_dist_log_prob = self.base_dist.log_prob(x, y).view(x.size(0), -1).sum(1).unsqueeze(1)
-            # print(base_dist_log_prob.flatten())
-            # assert False
+            if len(x_feature.shape) == 1:
+                x_feature = x_feature.unsqueeze(0)
+            base_dist_log_prob = self.base_dist.log_prob(x_feature, y).view(x_feature.size(0), -1).sum(1).unsqueeze(1)
             dic_output['base_dist_log_prob'] = base_dist_log_prob
         else :
             base_dist_log_prob = torch.zeros_like(out_energy)
+        
         current_energy = out_energy - base_dist_log_prob
         dic_output['energy'] = current_energy
 

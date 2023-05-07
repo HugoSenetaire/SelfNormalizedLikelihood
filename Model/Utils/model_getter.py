@@ -5,6 +5,7 @@ from ..BaseDist import get_base_dist, get_base_dist_regression
 from torch.distributions import Normal
 import torch
 import tqdm
+import numpy as np
 import time
 
 def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
@@ -42,28 +43,33 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     '''
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
-    optimizer = torch.optim.SGD(energy.parameters(), lr=2e-2)
+    dtype = torch.float32
+    optimizer = torch.optim.SGD(energy.parameters(), lr=2e-4)
     if feature_extractor is not None :
-        data_x_feature = torch.cat([feature_extractor(dataset[i][0]) for i in range(len(dataset))])
+        indexes = np.random.choice(len(dataset), 5000)
+        data_x_feature = []
+        for index in tqdm.tqdm(indexes):
+            data_x_feature.append(feature_extractor(dataset[index][0].unsqueeze(0)))
+        data_x_feature = torch.cat(data_x_feature).reshape(-1, feature_extractor.output_size)
     else :
         data_x_feature = torch.cat([dataset[i][0] for i in range(len(dataset))])
-
     data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
     dist_y = Normal(data_y.mean(0), data_y.std(0))
     dist_x_feature = Normal(data_x_feature.mean(0), data_x_feature.std(0))
     ranges= tqdm.tqdm(range(10000))
     batch_size = args_dict['batch_size']
     for k in ranges:
-        x_feature = dist_x_feature.sample((batch_size,))
-        y = dist_y.sample((batch_size, ))
-        target_energy = dist_y.log_prob(y).sum(dim=1)
-        current_energy = energy(x_feature, y).flatten()
-        loss = ((current_energy + target_energy)**2).mean()
+        x_feature = dist_x_feature.sample((batch_size,)).to(dtype)
+        y = dist_y.sample((batch_size, )).to(dtype)
+        target_energy = -dist_y.log_prob(y).reshape(batch_size, -1).to(dtype)
+        current_energy = energy(x_feature, y).reshape(batch_size, -1)
+        loss = ((current_energy - target_energy)**2).sum(1).mean()
         optimizer.zero_grad()
         loss.backward()
         ranges.set_description(f'Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}')
         optimizer.step()
 
+    return energy
 
 def get_model(args_dict, complete_dataset, complete_masked_dataset):
     input_size = complete_dataset.get_dim_input()

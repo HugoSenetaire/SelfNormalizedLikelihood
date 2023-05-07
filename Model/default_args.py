@@ -18,6 +18,11 @@ def default_args_ebm(parser = None):
     parser.add_argument('--num_sample_proposal', type=float, default=512, help='Standard deviation of the proposal')
     parser.add_argument('--num_sample_proposal_test', type=float, default=1024, help='Standard deviation of the proposal')
     parser.add_argument('--train_proposal', action='store_true', help='Train the proposal')
+    parser.add_argument('--proposal_loss_name', type = str, default = 'log_prob', choices=['log_prob', 'kl', 'log_prob_kl'],
+                        help='Loss used to train the proposal, \
+                            log prob simply consider maximizing the likelihood of the proposal with the data \
+                            kl consider maximizing the KL divergence between the proposal and the base distribution and the ebm \
+                            log_prob_kl consider maximizing the likelihood of the proposal with the data and the KL divergence between the proposal and the ebm')
     parser.add_argument('--ebm_pretraining', type = str, default = None, help='Choose what type of pretraining is done on the network')
     parser.add_argument('--switch_mode', type = int, default = None, help='Number of steps before switching loss to self-normalized')
 

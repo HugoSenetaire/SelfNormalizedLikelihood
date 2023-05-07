@@ -83,6 +83,7 @@ dic_explicit_bias_regression = {
     '1_layer_fc' : Layer1FC,
     '2_layer_fc' : Layer2FC,
     '3_layer_fc' : Layer3FC,
+    'none' : None,
 }
 
 def get_explicit_bias_regression(args_dict,
@@ -92,6 +93,8 @@ def get_explicit_bias_regression(args_dict,
         return None
     if args_dict['explicit_bias_name'] not in dic_explicit_bias_regression:
         raise ValueError('Explicit bias name not valid')
+    if args_dict['explicit_bias_name'] is None or args_dict['explicit_bias_name'] == 'none' :
+            return None
     explicit_bias = dic_explicit_bias_regression[args_dict['explicit_bias_name']]
     if 'explicit_bias_params' not in args_dict.keys():
         args_dict['explicit_bias_params'] = {}

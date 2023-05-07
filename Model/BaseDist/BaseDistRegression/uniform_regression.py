@@ -8,27 +8,27 @@ import numpy as np
 
 
 class UniformRegression(nn.Module):
-    def __init__(self, input_size_x, input_size_y, dataset, min = 'dataset', max='dataset',  learn_min = False, learn_max = False, **kwargs) -> None:
+    def __init__(self, input_size_x, input_size_y, dataset, min_data = 'dataset', max_data='dataset',  learn_min = False, learn_max = False, **kwargs) -> None:
         super().__init__()
         # assert False
         self.input_size_x = input_size_x
         self.input_size_y = input_size_y
         
-        index = np.random.choice(len(dataset), 10000)
-        try :
-            data = torch.cat([dataset[i][1] for i in index])
-        except RuntimeError:
-            data = torch.cat([dataset[i][1].reshape(1, *self.input_size_y) for i in index])
+        if min_data == 'dataset' :
+            self.min_data = float('inf') 
+            for i in range(len(dataset)):
+                self.min_data = min(self.min_data, dataset[i][1])
 
-        if min == 'dataset' :
-            self.min = data.min(0).values
+            self.min_data = torch.tensor(self.min_data -1, dtype=torch.float32)
         else :
-            self.min = torch.tensor(min)
-
-        if max == 'dataset' :
-            self.max = data.max(0).values
+            self.min_data = torch.tensor(min_data, dtype=torch.float32)
+        if max_data == 'dataset' :
+            self.max_data = float('-inf') 
+            for i in range(len(dataset)):
+                self.max_data = max(self.max_data, dataset[i][1])
+            self.max_data= torch.tensor(self.max_data +1, dtype=torch.float32)
         else :
-            self.max = torch.tensor(max)
+            self.max_data = torch.tensor(max_data, dtype=torch.float32)
 
  
         self.min = nn.Parameter(self.min, requires_grad=learn_min)
