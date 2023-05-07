@@ -44,7 +44,7 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     return energy
 
 
-def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataset, args_dict):
+def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataloader, dataset, args_dict):
     '''
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
@@ -54,32 +54,33 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     else :
         device = torch.device('cpu')
     energy = energy.to(device)
+    feature_extractor = feature_extractor.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
     
-    if feature_extractor is not None :
-        indexes = np.random.choice(len(dataset), 5000)
-        data_x_feature = []
-        for index in tqdm.tqdm(indexes):
-            data_x_feature.append(feature_extractor(dataset[index][0].unsqueeze(0)))
-        data_x_feature = torch.cat(data_x_feature).reshape(-1, feature_extractor.output_size)
-    else :
-        data_x_feature = torch.cat([dataset[i][0] for i in range(len(dataset))])
     data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
     dist_y = Normal(data_y.mean(0), data_y.std(0))
-    dist_x_feature = Normal(data_x_feature.mean(0), data_x_feature.std(0))
-    ranges= tqdm.tqdm(range(10000))
+    epochs = 20
     batch_size = args_dict['batch_size']
-    for k in ranges:
-        x_feature = dist_x_feature.sample((batch_size,)).to(device, dtype,)
-        y = dist_y.sample((batch_size, )).to(device, dtype)
-        target_energy = -dist_y.log_prob(y).reshape(batch_size, -1).to(device, dtype)
-        current_energy = energy(x_feature, y).reshape(batch_size, -1)
-        loss = ((current_energy - target_energy)**2).sum(1).mean()
-        optimizer.zero_grad()
-        loss.backward()
-        ranges.set_description(f'Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}')
-        optimizer.step()
+    for k in range(epochs):
+        ranges = tqdm.tqdm(enumerate(dataloader))
+        for batch_idx, batch in ranges:
+            x = batch['data'].to(device, dtype)
+            if feature_extractor is not None :
+                x_feature = feature_extractor(x)
+            else :
+                x_feature = x
+            y = dist_y.sample((x.shape[0], )).to(device, dtype).reshape(x.shape[0], -1)
+
+            target_energy = -dist_y.log_prob(y).reshape(x.shape[0], -1).to(device, dtype)
+            current_energy = energy(x_feature, y).reshape(x.shape[0], -1)
+            loss = ((current_energy - target_energy)**2).sum(1).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            if batch_idx % 10 == 0 :
+                ranges.set_description(f'Loss : {loss.item()} Norm energy : {current_energy.mean().item()} Norm target energy : {target_energy.mean().item()}')
+            optimizer.step()
     energy = energy.to(torch.device('cpu'))
+    feature_extractor = feature_extractor.to(torch.device('cpu'))
     return energy
 
 def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
@@ -174,7 +175,7 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
 
     if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
         print("Init energy to standard gaussian")
-        energy = init_energy_to_gaussian_regression(feature_extractor = feature_extractor, energy = energy, input_size_x = input_size_x, input_size_y = input_size_y, dataset = complete_dataset.dataset_train, args_dict = args_dict)
+        energy = init_energy_to_gaussian_regression(feature_extractor = feature_extractor, energy = energy, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, dataset = complete_dataset.dataset_train, args_dict = args_dict)
         print("Init energy to standard gaussian... end")
 
     # Get proposal :
