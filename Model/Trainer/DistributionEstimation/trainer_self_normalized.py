@@ -47,9 +47,9 @@ class LitSelfNormalized(AbstractDistributionEstimation):
         # Update the parameters of the proposal
         proposal_opt.zero_grad()
         if self.train_proposal :
-            logprob_proposal = self.ebm.proposal.logprob(x,)
-            self.log('train_proposal_log_likelihood', logprob_proposal.mean())
-            loss_proposal = - logprob_proposal.mean()
+            log_prob_proposal = self.ebm.proposal.log_prob(x,)
+            self.log('train_proposal_log_likelihood', log_prob_proposal.mean())
+            loss_proposal = - log_prob_proposal.mean()
             self.manual_backward((loss_proposal).mean(), inputs= list(self.ebm.proposal.parameters()))
             proposal_opt.step()
 
