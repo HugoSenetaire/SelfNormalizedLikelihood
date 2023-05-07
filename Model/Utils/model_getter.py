@@ -54,7 +54,8 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     else :
         device = torch.device('cpu')
     energy = energy.to(device)
-    feature_extractor = feature_extractor.to(device)
+    if feature_extractor is not None :
+        feature_extractor = feature_extractor.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
     
     data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
@@ -80,7 +81,8 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
                 ranges.set_description(f'Loss : {loss.item()} Norm energy : {current_energy.mean().item()} Norm target energy : {target_energy.mean().item()}')
             optimizer.step()
     energy = energy.to(torch.device('cpu'))
-    feature_extractor = feature_extractor.to(torch.device('cpu'))
+    if feature_extractor is not None :
+        feature_extractor = feature_extractor.to(torch.device('cpu'))
     return energy
 
 def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
@@ -91,6 +93,8 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
         device = torch.device('cpu')
 
     proposal = proposal.to(device)
+    if feature_extractor is not None :
+        feature_extractor = feature_extractor.to(device)
     for param in proposal.parameters():
         param.requires_grad = True
     optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-4)
@@ -99,10 +103,10 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
         tqdm_range = tqdm.tqdm(dataloader)
         for batch in tqdm_range:
             x, y = batch['data'], batch['target']
-            if feature_extractor is not None :
-                x = feature_extractor(x)
             x = x.to(device, dtype)
             y = y.to(device, dtype)
+            if feature_extractor is not None :
+                x = feature_extractor(x)
             log_prob = proposal.log_prob(x, y).reshape(-1)
             loss = (-log_prob).mean()
             tqdm_range.set_description(f'Loss : {loss.item()}')
@@ -110,6 +114,8 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
             loss.backward()
             optimizer.step()
     proposal = proposal.to(torch.device('cpu'))
+    if feature_extractor is not None :
+        feature_extractor = feature_extractor.to(torch.device('cpu'))
     print("Init proposal to data... end")
     return proposal
 
