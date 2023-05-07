@@ -51,31 +51,7 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         return loss_total
 
 
-    def validation_step(self, batch, batch_idx,):
-        x = batch['data']
-        y = batch['target']
-        energy_data, dic_output = self.ebm.calculate_energy(x,y)
 
-        energy_function = lambda x: -self.ebm.proposal.log_prob(x)
-        save_dir = self.args_dict['save_dir']
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        
-        estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
-        dic_output.update(dic)
-        if self.ebm.type_z == 'exp':
-            estimate_log_z = estimate_log_z.exp() - 1
-
-
-        dic_output['loss'] = (energy_data + estimate_log_z)
-        dic_output['likelihood'] = - dic_output['loss']
-        loss_total = (energy_data + estimate_log_z).mean()
-        self.log('val_loss', loss_total)
-
-        return dic_output
-        
-        
     
     
         

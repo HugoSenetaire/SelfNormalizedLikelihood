@@ -18,6 +18,7 @@ class AbstractRegression(pl.LightningModule):
         self.args_dict = args_dict
         self.hparams.update(args_dict)
         self.last_save = -float('inf')
+        self.num_samples_val = self.args_dict['num_sample_proposal_val']
       
 
         if np.prod(self.args_dict['input_size_x']) == 1 :
@@ -67,9 +68,33 @@ class AbstractRegression(pl.LightningModule):
     def training_step(self, batch, batch_idx): 
         raise NotImplementedError
     
+    
+    def validation_step(self, batch, batch_idx, ):
+        x = batch['data']
+        y = batch['target']
+        energy_data, dic_output = self.ebm.calculate_energy(x,y)
+        log_prob_proposal_data = self.ebm.proposal.log_prob(x,y)
+        save_dir = self.args_dict['save_dir']
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
 
-    def validation_step(self, batch, batch_idx,):
-        raise NotImplementedError
+        
+        estimate_log_z, dic=self.ebm.estimate_log_z(x, num_samples = self.num_samples_val,)
+        dic_output.update(dic)
+
+
+
+        dic_output['loss_self_normalized'] = (energy_data + estimate_log_z.exp() - 1).reshape(x.shape[0])
+        dic_output['log_likelihood_self_normalized'] = - dic_output['loss_self_normalized'].reshape(x.shape[0])
+        dic_output['loss_importance'] = (energy_data + estimate_log_z).reshape(x.shape[0])
+        dic_output['log_likelihood_importance'] = - dic_output['loss_importance'].reshape(x.shape[0])
+        dic_output['log_likelihood_proposal'] = log_prob_proposal_data.reshape(x.shape[0])
+        if self.ebm.type_z == 'exp':
+            estimate_log_z = estimate_log_z.exp() - 1
+        loss_total = (energy_data + estimate_log_z).mean()
+        self.log('val_loss', loss_total)
+
+        return dic_output
     
     def resample_proposal(self):
         if self.ebm.proposal is not None :
@@ -180,7 +205,6 @@ class AbstractRegression(pl.LightningModule):
             self.log(key, dic_output[key])
 
     def validation_epoch_end(self, outputs):
-
         self.update_dic_logger(outputs, name = 'val_')
         self.plot_energy()
         if self.train_proposal :
@@ -190,7 +214,8 @@ class AbstractRegression(pl.LightningModule):
         
        
     def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
+        self.num_samples_val = self.args_dict['num_sample_proposal_test']
+        return self.validation_step(batch, batch_idx, )
         
         
     def test_epoch_end(self, outputs):
