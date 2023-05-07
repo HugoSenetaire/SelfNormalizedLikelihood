@@ -128,7 +128,9 @@ if __name__ == '__main__' :
         checkpoints.append(ema_callback)
 
 
-
+    if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
+        max_steps = args_dict["max_epoch"] * len(train_loader)
+        args_dict["max_steps"] = max_steps
     # Train :
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
