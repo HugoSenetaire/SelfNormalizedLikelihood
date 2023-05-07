@@ -37,11 +37,10 @@ dic_proposals_regression = {
 }
 
 
-def get_proposal_regression(args_dict, input_size_x, input_size_y, dataset):
+def get_proposal_regression(args_dict, input_size_x, input_size_y, dataset,):
     proposal = dic_proposals_regression[args_dict["proposal_name"]]
     if "proposal_params" in args_dict:
-        return proposal(
-            input_size_x, input_size_y, dataset, **args_dict["proposal_params"]
-        )
+        proposal = proposal(input_size_x, input_size_y, dataset, **args_dict["proposal_params"])
+        return proposal
     else:
         return proposal(input_size_x, input_size_y, dataset)

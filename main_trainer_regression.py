@@ -83,7 +83,7 @@ if __name__ == '__main__' :
 
 
     # Get EBM :
-    ebm = get_model_regression(args_dict, complete_dataset, complete_masked_dataset)    
+    ebm = get_model_regression(args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader)    
 
 
 

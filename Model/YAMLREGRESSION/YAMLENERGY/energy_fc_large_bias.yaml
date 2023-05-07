@@ -1,4 +1,4 @@
 energy_name : 'fc'
 energy_param :
-  last_layer_bias : False
+  last_layer_bias : True
 feature_extractor_name : 'resnet'

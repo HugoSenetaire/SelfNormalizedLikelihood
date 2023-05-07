@@ -1,0 +1,6 @@
+OPTIMIZER:
+  NAME: 'Adam'
+  PARAMS:
+    lr: 1.0e-1
+    weight_decay: 5.0e-4
+

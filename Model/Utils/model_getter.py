@@ -13,7 +13,12 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
     # dist = Normal(0, 1)
-    optimizer = torch.optim.SGD(energy.parameters(), lr=2e-2)
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else :
+        device = torch.device('cpu')
+    energy = energy.to(device)
+    optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
 
     data = torch.cat([dataset[i][0] for i in range(len(dataset))])
     dist = Normal(data.mean(0), data.std(0))
@@ -44,7 +49,13 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
     dtype = torch.float32
-    optimizer = torch.optim.SGD(energy.parameters(), lr=2e-4)
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else :
+        device = torch.device('cpu')
+    energy = energy.to(device)
+    optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
+    
     if feature_extractor is not None :
         indexes = np.random.choice(len(dataset), 5000)
         data_x_feature = []
@@ -68,8 +79,36 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
         loss.backward()
         ranges.set_description(f'Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}')
         optimizer.step()
-
+    energy = energy.to(torch.device('cpu'))
     return energy
+
+def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
+    dtype = torch.float32
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else :
+        device = torch.device('cpu')
+
+    proposal = proposal.to(device)
+    for param in proposal.parameters():
+        param.requires_grad = True
+    optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-3)
+    print("Init proposal to data")
+    for epoch in range(1):
+        for batch in tqdm.tqdm(dataloader):
+            x, y = batch['data'], batch['target']
+            if feature_extractor is not None :
+                x = feature_extractor(x)
+            x = x.to(device, dtype)
+            y = y.to(device, dtype)
+            log_prob = proposal.log_prob(x, y).reshape(-1)
+            loss = (-log_prob).mean()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+    proposal = proposal.to(torch.device('cpu'))
+    print("Init proposal to data... end")
+    return proposal
 
 def get_model(args_dict, complete_dataset, complete_masked_dataset):
     input_size = complete_dataset.get_dim_input()
@@ -114,7 +153,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     return ebm
 
 
-def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
+def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, loader_train):
     input_size_x = complete_dataset.get_dim_input()
     input_size_y = complete_dataset.get_dim_output()
     args_dict['input_size_x'] = input_size_x
@@ -143,6 +182,11 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset):
         print("Get proposal... end")
     else:
         raise ValueError("No proposal given")
+    
+    if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
+        print("Init proposal to standard gaussian")
+        proposal = init_proposal_to_data(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, args_dict = args_dict)
+        print("Init proposal to standard gaussian... end")
     
     # Get base_dist :
     print("Get base_dist")

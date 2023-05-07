@@ -1,8 +1,8 @@
 ebm_name : 'self_normalized'
+trainer_name : 'just_proposal'
 max_epoch : 75
 save_energy_every : 10
 samples_every: 10
 batch_size : 32
-bias_explicit : Layer1FC
 num_sample_proposal : 32
-train_proposal : False
+explicit_bias_name : None

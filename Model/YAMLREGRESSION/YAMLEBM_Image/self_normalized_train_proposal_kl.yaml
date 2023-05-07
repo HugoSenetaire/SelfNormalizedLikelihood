@@ -3,6 +3,7 @@ max_epoch : 75
 save_energy_every : 10
 samples_every: 10
 batch_size : 32
-bias_explicit : Layer1FC
+explicit_bias_name : '2_layer_fc'
 num_sample_proposal : 32
-train_proposal : False
+train_proposal : True
+proposal_loss_name : 'kl'
