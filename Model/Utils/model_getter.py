@@ -25,10 +25,10 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     ranges= tqdm.tqdm(range(10000))
     for k in ranges:
         x = dist.sample((1000,))
-        target_energy = dist.log_prob(x).sum(dim=1)
+        target_energy = -dist.log_prob(x).sum(dim=1)
         # target_energy =  0.5 * (x**2).flatten(1).sum(dim=1)
         current_energy = energy(x).flatten()
-        loss = ((current_energy + target_energy)**2).mean()
+        loss = ((current_energy - target_energy)**2).mean()
         optimizer.zero_grad()
         loss.backward()
         ranges.set_description(f'Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}')
@@ -92,10 +92,11 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
     proposal = proposal.to(device)
     for param in proposal.parameters():
         param.requires_grad = True
-    optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-4)
     print("Init proposal to data")
-    for epoch in range(1):
-        for batch in tqdm.tqdm(dataloader):
+    for epoch in range(10):
+        tqdm_range = tqdm.tqdm(dataloader)
+        for batch in tqdm_range:
             x, y = batch['data'], batch['target']
             if feature_extractor is not None :
                 x = feature_extractor(x)
@@ -103,6 +104,7 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
             y = y.to(device, dtype)
             log_prob = proposal.log_prob(x, y).reshape(-1)
             loss = (-log_prob).mean()
+            tqdm_range.set_description(f'Loss : {loss.item()}')
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
