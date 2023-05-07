@@ -73,17 +73,20 @@ class AbstractRegression(pl.LightningModule):
         x = batch['data']
         y = batch['target']
         energy_data, dic_output = self.ebm.calculate_energy(x,y)
-        log_prob_proposal_data = self.ebm.proposal.log_prob(x,y)
+        energy_data = energy_data.reshape(x.shape[0],)
+        if self.ebm.feature_extractor is not None:
+            x_feature = self.ebm.feature_extractor(x)
+        else :
+            x_feature = x
+        log_prob_proposal_data = self.ebm.proposal.log_prob(x_feature,y).reshape(x.shape[0],)
         save_dir = self.args_dict['save_dir']
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
         
-        estimate_log_z, dic=self.ebm.estimate_log_z(x, num_samples = self.num_samples_val,)
+        estimate_log_z, dic=self.ebm.estimate_log_z(x, nb_sample = self.num_samples_val,)
+        estimate_log_z = estimate_log_z.reshape(x.shape[0],)
         dic_output.update(dic)
-
-
-
         dic_output['loss_self_normalized'] = (energy_data + estimate_log_z.exp() - 1).reshape(x.shape[0])
         dic_output['log_likelihood_self_normalized'] = - dic_output['loss_self_normalized'].reshape(x.shape[0])
         dic_output['loss_importance'] = (energy_data + estimate_log_z).reshape(x.shape[0])

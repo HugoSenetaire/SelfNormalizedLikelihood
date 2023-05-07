@@ -75,7 +75,7 @@ class MDNProposalRegression(nn.Module):
     def sample(self, x_feature, nb_sample = 1, ):
         batch_size = x_feature.size(0)
 
-        means, log_sigma2s, weights = self.network(x_feature)
+        means, log_sigma2s, weights = self.network(x_feature.reshape(batch_size, self.input_size_x))
         sigmas = torch.exp(log_sigma2s/2.0)
 
         means = means.reshape(-1, self.input_size_y, self.K) # (shape: (batch_size, self.input_size_y, K))
