@@ -38,7 +38,7 @@ Model/YAMLREGRESSION/YAMLENERGY/energy_fc_large_nobias.yaml Model/YAMLREGRESSION
 
 
 # NCE Test
-python main_trainer_regression.py --proposal_pretraining data \
+python main_trainer_regression.py --ebm_pretraining standard_gaussian --proposal_pretraining data \
 --yamldataset 'Dataset/MissingDataDataset/YAMLExamples/cell_count.yaml' \
 --yamlebm Model/YAMLREGRESSION/YAMLEBM_Image/nce_train_proposal_both.yaml Model/YAMLREGRESSION/YAMLPROPOSAL/mdn_k4.yaml \
 Model/YAMLREGRESSION/YAMLBASEDIST/none.yaml \
