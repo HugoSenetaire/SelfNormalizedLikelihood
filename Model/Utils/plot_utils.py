@@ -127,7 +127,7 @@ def plot_energy_image_1d_regression(algo, save_dir,  samples_x, energy_function 
     fig, axs = plt.subplots(min(batch_size, 10), len(samples_y)+2, figsize=((len(samples_y)+2)*5, min(batch_size, 10)*5,))
     for k in range(min(batch_size, 10)) :
         current_image = samples_x[k]  
-        energy = energy_function(current_image.to(algo.dtype), range_y).reshape(nb_sample, 1)
+        energy = energy_function(current_image.to(dtype=algo.dtype, device=algo.device), range_y).reshape(nb_sample, 1)
         if energy_type :
             energy = (-energy).exp()
         energy = energy.detach().cpu().numpy()

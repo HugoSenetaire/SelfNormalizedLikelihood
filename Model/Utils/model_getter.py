@@ -70,9 +70,9 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     ranges= tqdm.tqdm(range(10000))
     batch_size = args_dict['batch_size']
     for k in ranges:
-        x_feature = dist_x_feature.sample((batch_size,)).to(dtype)
-        y = dist_y.sample((batch_size, )).to(dtype)
-        target_energy = -dist_y.log_prob(y).reshape(batch_size, -1).to(dtype)
+        x_feature = dist_x_feature.sample((batch_size,)).to(device, dtype,)
+        y = dist_y.sample((batch_size, )).to(device, dtype)
+        target_energy = -dist_y.log_prob(y).reshape(batch_size, -1).to(device, dtype)
         current_energy = energy(x_feature, y).reshape(batch_size, -1)
         loss = ((current_energy - target_energy)**2).sum(1).mean()
         optimizer.zero_grad()
