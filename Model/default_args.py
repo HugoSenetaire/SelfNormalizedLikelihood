@@ -37,8 +37,8 @@ def default_args_ebm(parser = None):
 
     parser.add_argument('--max_steps', type=int, default=3000, help='Number of steps')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
-    parser.add_argument('--num_workers', type=int, default=0, help='Number of workers')
+    parser.add_argument('--num_workers', type=int, default=2, help='Number of workers')
     parser.add_argument('--dataloader_name', type=str, default='default', help='Name of the dataloader')
     parser.add_argument('--decay_ema', type=float, default=None, help='Decay of the EMA') # reg 0.999
-
+    parser.add_argument('--just_test', action='store_true', help='Just test the model')
     return parser
