@@ -5,5 +5,5 @@ save_energy_every : 10
 samples_every: 10
 batch_size : 32
 explicit_bias_name : 'none'
-num_sample_proposal : 32
+num_sample_proposal : 1024
 train_proposal : False

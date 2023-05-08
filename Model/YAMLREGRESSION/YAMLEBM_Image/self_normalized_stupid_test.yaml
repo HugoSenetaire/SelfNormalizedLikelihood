@@ -1,9 +1,8 @@
 ebm_name : 'self_normalized'
-max_epoch : 75
+max_epoch : 1
 save_energy_every : 10
 samples_every: 10
 batch_size : 32
 explicit_bias_name : '2_layer_fc'
 num_sample_proposal : 1024
-train_proposal : True
-proposal_loss_name : 'log_prob_kl'
+train_proposal : False
