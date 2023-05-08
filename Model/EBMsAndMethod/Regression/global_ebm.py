@@ -3,6 +3,12 @@ import torch.nn as nn
 import torch
 import torch.distributions as distributions
 import numpy as np
+
+
+
+key_per_sample = ['base_dist_log_prob_samples', 'proposal_log_prob_samples', 'aux_log_prob_samples', 'f_theta_samples', 'b_samples', 'energy']
+key_per_batch = ['log_z_estimate', 'z_estimate']
+
 class EBMRegression(nn.Module):
     def __init__(self, energy, proposal, feature_extractor, num_sample_proposal, base_dist = None, explicit_bias = None,  **kwargs):
         super(EBMRegression, self).__init__()
@@ -136,18 +142,34 @@ class EBMRegression(nn.Module):
                     current_nb_sample = last_iter_remaining
                 _, current_dic_output = self.estimate_log_z_onepass(x_feature, nb_sample = current_nb_sample)
                 for key in current_dic_output :
-                    if 'log' in key :
-                        new_value = current_dic_output[key] + torch.log(torch.tensor(current_nb_sample, dtype=x_feature.dtype, device=x_feature.device))
-                    else :
-                        new_value = current_dic_output[key]*torch.tensor(current_nb_sample, dtype=x_feature.dtype, device=x_feature.device)
-                    if key in dic_output :
-                        dic_output[key] = dic_output[key] + new_value
-                    else :
-                        dic_output[key] = new_value
+                    if key in key_per_sample :
+                        if key in dic_output.keys() :
+                            dic_output[key] +=[current_dic_output[key].clone().detach()]
+                        else :
+                            dic_output[key] = [current_dic_output[key].clone().detach()]
 
-        for key in dic_output :
-            dic_output[key] = dic_output[key] - torch.log(torch.tensor(nb_sample, dtype=x_feature.dtype, device=x_feature.device))
-
+                    elif key in key_per_batch :
+                        if key == 'log_z_estimate' :
+                            new_value = current_dic_output[key].clone().detach() + torch.log(torch.tensor(current_nb_sample, dtype=x_feature.dtype, device=x_feature.device))
+                            if key in dic_output.keys() :
+                                dic_output[key] = torch.logsumexp(torch.cat([new_value.unsqueeze(1), dic_output[key].unsqueeze(1)], dim = 1), dim = 1)
+                            else :
+                                dic_output[key] = new_value
+                        elif key == 'z_estimate' :
+                            new_value = current_dic_output[key].clone().detach()*torch.tensor(current_nb_sample, dtype=x_feature.dtype, device=x_feature.device)
+                            if key in dic_output.keys() :
+                                dic_output[key] += new_value
+                            else :
+                                dic_output[key] = new_value
+                   
+        # assert False  
+        for key in dic_output.keys() :
+            if key == 'log_z_estimate' :
+                dic_output[key] = dic_output[key] - torch.log(torch.tensor(nb_sample, dtype=x_feature.dtype, device=x_feature.device))
+            elif key == 'z_estimate' :
+                dic_output[key] = dic_output[key]/torch.tensor(nb_sample, dtype=x_feature.dtype, device=x_feature.device)
+            elif key in key_per_sample :
+                dic_output[key] = torch.cat(dic_output[key], dim=1)
         return dic_output['log_z_estimate'], dic_output
 
     

@@ -68,7 +68,7 @@ class AbstractRegression(pl.LightningModule):
         raise NotImplementedError
     
     
-    def validation_step(self, batch, batch_idx, ):
+    def validation_step(self, batch, batch_idx, name = 'val'):
         x = batch['data']
         y = batch['target']
         energy_data, dic_output = self.ebm.calculate_energy(x,y)
@@ -94,7 +94,7 @@ class AbstractRegression(pl.LightningModule):
         if self.ebm.type_z == 'exp':
             estimate_log_z = estimate_log_z.exp() - 1
         loss_total = (energy_data + estimate_log_z).mean()
-        self.log('val_loss', loss_total)
+        self.log(f'{name}_loss', loss_total)
 
         return dic_output
     
@@ -217,7 +217,7 @@ class AbstractRegression(pl.LightningModule):
        
     def test_step(self, batch, batch_idx):
         self.num_samples_val = self.args_dict['num_sample_proposal_test']
-        return self.validation_step(batch, batch_idx, )
+        return self.validation_step(batch, batch_idx, name = 'test')
         
         
     def test_epoch_end(self, outputs):
