@@ -28,7 +28,7 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         log_prob_proposal_data = self.ebm.log_prob_proposal(x,y).reshape(x.shape[0], 1, -1)
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
         dic_output.update(dic)
-        dic_output.update('log_prob_proposal_data', log_prob_proposal_data)
+        dic_output.update({'log_prob_proposal_data': log_prob_proposal_data.mean()})
         estimate_log_z = estimate_log_z.reshape(x.shape[0], 1, -1)
         if self.ebm.type_z == 'exp':
             estimate_log_z = estimate_log_z.exp() - 1
@@ -44,7 +44,7 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
             proposal_loss = self.proposal_loss(log_prob_proposal=log_prob_proposal_data, log_estimate_z=estimate_log_z)
             self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))
             self.log('train_proposal_loss', proposal_loss.mean())
-            dic_output.update({"proposal_loss" : proposal_loss})
+            dic_output.update({"proposal_loss" : proposal_loss.mean()})
             proposal_opt.step()
         ebm_opt.step()
         dic_output.update(dic)

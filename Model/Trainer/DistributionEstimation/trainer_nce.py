@@ -34,7 +34,7 @@ class LitSelfNormalized(AbstractDistributionEstimation):
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
         estimate_log_z_expanded = estimate_log_z.reshape(1).expand(x.shape[0],)
 
-        nce_numerator = energy_data - log_prob_proposal_data
+        nce_numerator = - energy_data - log_prob_proposal_data
         nce_numerator= nce_numerator.reshape(x.shape[0],1)
         nce_denominator = (estimate_log_z_expanded + torch.log(torch.tensor(self.ebm.nb_sample, dtype=x.dtype, device=x.device))).reshape(x.shape[0],1)
         nce_denominator = torch.logsumexp(torch.cat([nce_numerator, nce_denominator], dim=1),dim=1, keepdim=True)
