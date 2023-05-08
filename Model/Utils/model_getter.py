@@ -172,7 +172,7 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
     if feature_extractor is not None :
         input_size_x_feature = feature_extractor.output_size
     else :
-        input_size_x_feature = input_size_x
+        input_size_x_feature = np.prod(input_size_x)
 
     # Get energy function :
     print("Get energy function")

@@ -121,7 +121,7 @@ class EBMRegression(nn.Module):
         batch_size = x.shape[0]
         dic_output = {}
         if self.feature_extractor is not None:
-            x_feature = self.feature_extractor(x).detach()
+            x_feature = self.feature_extractor(x)
         else :
             x_feature = x
         

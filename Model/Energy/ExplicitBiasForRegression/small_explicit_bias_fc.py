@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 class Layer1FC(nn.Module):
     def __init__(self, input_size_x) -> None:
@@ -18,7 +18,7 @@ class Layer2FC(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, 1)
     
     def forward(self, x):
-        x = self.fc1(x)
+        x = F.relu(self.fc1(x))
         return self.fc2(x)
 
 class Layer3FC(nn.Module):
@@ -30,6 +30,6 @@ class Layer3FC(nn.Module):
         self.fc3 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
-        x = nn.ReLU(self.fc1(x))
-        x = nn.ReLU(self.fc2(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         return self.fc3(x)

@@ -54,16 +54,17 @@ class EnergyNetworkRegression_Large(nn.Module):
 
 
 class EnergyNetworkRegression_Toy(nn.Module):
-    def __init__(self, input_dim_x=10, input_dim_y=1, ):
+    def __init__(self, input_dim_x=10, input_dim_y=1, hidden_dim = 50):
         super().__init__()
         self.input_dim_y = np.prod(input_dim_y)
         self.input_dim_x = np.prod(input_dim_x)
-        self.fc1_y = nn.Linear(self.input_dim_y, self.input_dim_x)
-        self.fc2_y = nn.Linear(self.input_dim_x, self.input_dim_x)
+        hidden_dim = max(self.input_dim_x, hidden_dim)
+        self.fc1_y = nn.Linear(self.input_dim_y, hidden_dim)
+        self.fc2_y = nn.Linear(hidden_dim, hidden_dim)
 
-        self.fc1_xy = nn.Linear(2*self.input_dim_x, self.input_dim_x)
-        self.fc2_xy = nn.Linear(self.input_dim_x, self.input_dim_x)
-        self.fc3_xy = nn.Linear(self.input_dim_x, 1)
+        self.fc1_xy = nn.Linear(hidden_dim + self.input_dim_x, hidden_dim)
+        self.fc2_xy = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3_xy = nn.Linear(hidden_dim, 1)
 
     def forward(self, x_feature, y):
         # (x_feature has shape: (batch_size, hidden_dim))
@@ -85,8 +86,7 @@ class EnergyNetworkRegression_Toy(nn.Module):
         y_feature = F.relu(self.fc2_y(y_feature)) # (shape: (batch_size*num_samples, hidden_dim))
 
         xy_feature = torch.cat([x_feature, y_feature], 1) # (shape: (batch_size*num_samples, 2*hidden_dim))
-        # print(xy_feature.shape)
         xy_feature = F.relu(self.fc1_xy(xy_feature)) # (shape: (batch_size*num_samples, hidden_dim))
-        xy_feature = F.relu(self.fc2_xy(xy_feature)) + xy_feature # (shape: (batch_size*num_samples, hidden_dim))
+        xy_feature = F.relu(self.fc2_xy(xy_feature)) # (shape: (batch_size*num_samples, hidden_dim))
         score = self.fc3_xy(xy_feature) # (shape: (batch_size*num_samples, 1))
         return score

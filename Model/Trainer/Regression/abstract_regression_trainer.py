@@ -19,7 +19,6 @@ class AbstractRegression(pl.LightningModule):
         self.hparams.update(args_dict)
         self.last_save = -float('inf')
         self.num_samples_val = self.args_dict['num_sample_proposal_val']
-      
 
         if np.prod(self.args_dict['input_size_x']) == 1 :
             self.input_type_x = '1d'

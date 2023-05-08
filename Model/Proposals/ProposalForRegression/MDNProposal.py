@@ -14,7 +14,7 @@ class MDNProposal_Network(nn.Module):
 
         self.K = K
         self.input_size_y = input_size_y
-        self.hidden_dim = hidden_dim
+        self.hidden_dim = max(hidden_dim,10)
 
         self.fc1_mean = nn.Linear(hidden_dim, hidden_dim)
         self.fc2_mean = nn.Linear(hidden_dim, self.input_size_y*self.K)
