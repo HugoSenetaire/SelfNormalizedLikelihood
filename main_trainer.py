@@ -80,6 +80,9 @@ if __name__ == '__main__' :
 
 
     # Get EBM :
+    if args_dict['just_test']:
+        args_dict['ebm_pretraining'] = False
+        args_dict['proposal_pretraining'] = False
     ebm = get_model(args_dict, complete_dataset, complete_masked_dataset)    
 
 
@@ -106,18 +109,18 @@ if __name__ == '__main__' :
 
 
     
-    if args.load_from_checkpoint:
-        version_dir = os.path.join(save_dir, "lightning_logs")
-        last_version = find_last_version(version_dir)
-        ckpt_dir = os.path.join(version_dir, f"version_{last_version}/checkpoints/")
+    if args.load_from_checkpoint or args_dict['just_test']:
+        ckpt_dir = os.path.join(save_dir,'val_checkpoint')        
         last_checkpoint = os.listdir(ckpt_dir)[-1]
         ckpt_path = os.path.join(ckpt_dir, last_checkpoint)
-        assert os.path.exists(ckpt_path)
+        print("Loading from checkpoint : ", ckpt_path)
+        assert os.path.exists(ckpt_path), "The checkpoint path does not exist"
+        algo.load_state_dict(torch.load(ckpt_path)["state_dict"])
     else :
         ckpt_path = None
-
+    
     # Checkpoint callback :
-    checkpoint_callback_val = pl.callbacks.ModelCheckpoint(dirpath=save_dir, save_top_k=2, monitor="val_loss")
+    checkpoint_callback_val = pl.callbacks.ModelCheckpoint(dirpath=os.path.join(save_dir,'val_checkpoint'), save_top_k=2, monitor="val_loss")
     checkpoint_callback_train = pl.callbacks.ModelCheckpoint(dirpath=os.path.join(save_dir,"train_checkpoint"), save_top_k=2, monitor="train_loss")
     checkpoints = [checkpoint_callback_val, checkpoint_callback_train]
     if args_dict['decay_ema'] is not None and args_dict['decay_ema'] > 0:
@@ -137,10 +140,9 @@ if __name__ == '__main__' :
                         max_steps = args_dict['max_steps'],
                         resume_from_checkpoint = ckpt_path)
     
-    trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    # algo = algo.load_from_checkpoint(checkpoint_callback_val.best_model_path)
-    # checkpoint_callback_val.best_model_path
-    algo.load_state_dict(torch.load(checkpoint_callback_val.best_model_path)["state_dict"])
+    if not args_dict['just_test']:
+        trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        algo.load_state_dict(torch.load(checkpoint_callback_val.best_model_path)["state_dict"])
 
     trainer.test(algo, dataloaders=test_loader)
     
