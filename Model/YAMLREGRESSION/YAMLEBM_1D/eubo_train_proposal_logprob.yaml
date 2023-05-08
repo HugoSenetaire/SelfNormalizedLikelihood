@@ -7,4 +7,5 @@ batch_size : 32
 nb_sample_bias_explicit : 1024
 explicit_bias_name : 'none'
 num_sample_proposal : 32
-train_proposal : False
+train_proposal : True
+proposal_loss_name : 'log_prob'

@@ -1,5 +1,5 @@
-ebm_name : 'eubo'
-max_steps : 2000
+ebm_name : 'self_normalized'
+trainer_name : 'nce'
 max_epochs : 25
 save_energy_every : 10
 samples_every: 10
@@ -7,4 +7,5 @@ batch_size : 32
 nb_sample_bias_explicit : 1024
 explicit_bias_name : 'none'
 num_sample_proposal : 32
-train_proposal : False
+train_proposal : True
+proposal_loss_name : 'log_prob_kl'
