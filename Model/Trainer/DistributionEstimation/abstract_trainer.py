@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
+from ...Utils.proposal_loss import log_prob_kl_loss, kl_loss, log_prob_loss
 from ...Sampler import get_sampler
 import numpy as np
 import os
@@ -31,6 +32,16 @@ class AbstractDistributionEstimation(pl.LightningModule):
         else :
             self.input_type = 'other'
 
+        self.proposal_loss_name = args_dict['proposal_loss_name']
+        if self.proposal_loss_name == 'log_prob' :
+            self.proposal_loss = log_prob_loss
+        elif self.proposal_loss_name == 'kl' :
+            self.proposal_loss = kl_loss
+        elif self.proposal_loss_name == 'log_prob_kl' :
+            self.proposal_loss = log_prob_kl_loss
+        else :
+            raise ValueError('Proposal loss name not recognized')
+
 
         self.initialize_examples(complete_dataset=complete_dataset)
         self.proposal_visualization()
@@ -48,9 +59,27 @@ class AbstractDistributionEstimation(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         raise NotImplementedError
 
-    def validation_step(self, batch, batch_idx,):
-        raise NotImplementedError
-        
+    def post_train_step_handler(self, x, dic_output):
+        '''
+        Function called at the end of a train_step
+        '''
+        # Just in case it's an adaptive proposal that requires x
+        if hasattr(self.ebm.proposal, 'set_x'):
+            self.ebm.proposal.set_x(None)
+
+        # Add some estimates of the log likelihood with a fixed number of samples
+        if self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0 :
+            estimate_log_z, _= self.ebm.estimate_log_z(x, nb_sample = self.nb_sample_train_estimate)
+            log_likelihood_fix_z = -dic_output['energy'].mean() - estimate_log_z + 1
+            self.log('train_log_likelihood_fix_z', log_likelihood_fix_z)
+        for key in dic_output:
+            self.log(f'train_{key}_mean', dic_output[key].mean().item())
+
+    def validation_step(self, batch, batch_idx):
+        x = batch['data']
+        energy_samples, dic_output = self.ebm.calculate_energy(x)
+        return dic_output
+    
     def validation_epoch_end(self, outputs):
         self.update_dic_logger(outputs, name = 'val_')
         self.proposal_visualization()
