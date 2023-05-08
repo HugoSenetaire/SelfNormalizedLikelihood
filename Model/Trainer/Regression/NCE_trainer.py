@@ -29,6 +29,8 @@ class RegressionTrainerNCE(AbstractRegression):
         energy_data, dic_output = self.ebm.calculate_energy(x, y)
         energy_data = energy_data.reshape(x.shape[0], 1, -1)
         log_prob_proposal_data = self.ebm.log_prob_proposal(x,y).reshape(x.shape[0], 1, -1)
+        dic_output.update(dic)
+        dic_output.update('log_prob_proposal_data', log_prob_proposal_data)
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
 
         nce_numerator = energy_data - log_prob_proposal_data
@@ -45,6 +47,9 @@ class RegressionTrainerNCE(AbstractRegression):
             proposal_opt.zero_grad()
             proposal_loss = self.proposal_loss(log_prob_proposal=log_prob_proposal_data, log_estimate_z=estimate_log_z)
             self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))
+            self.log('train_proposal_loss', proposal_loss.mean())
+            dic_output.update({"proposal_loss" : proposal_loss})
+
             proposal_opt.step()
         ebm_opt.step()
         dic_output.update(dic)

@@ -89,8 +89,8 @@ class MDNProposalRegression(nn.Module):
         inds = torch.transpose(inds, 1, 0) # (shape: (num_samples, batch_size, self.input_size_y, 1))
         y_samples = y_samples_K.gather(3, inds).squeeze(3) # (shape: (num_samples, batch_size, self.input_size_y))
         y_samples = y_samples.detach()
-        y_samples = torch.transpose(y_samples, 1, 0).reshape(batch_size, nb_sample, self.input_size_y).detach() # (shape: (batch_size, num_samples, input_size_y ))
-        return y_samples
+        y_samples = torch.transpose(y_samples, 1, 0).reshape(batch_size, nb_sample, self.input_size_y) # (shape: (batch_size, num_samples, input_size_y ))
+        return y_samples.detach()
 
 
     def log_prob(self, x_feature, y):
