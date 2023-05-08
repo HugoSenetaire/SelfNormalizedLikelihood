@@ -97,7 +97,7 @@ class ImportanceWeightedEBM(nn.Module):
                 z_estimate = log_z_estimate.exp()
         else :
             samples_log_prob = self.proposal.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-            dic_output.update({"proposal_log_prob_samples" : samples_log_prob, "aux_prob_samples" : aux_prob})
+            dic_output.update({"proposal_log_prob_samples" : samples_log_prob, })
             log_z_estimate = torch.logsumexp(-energy_samples - samples_log_prob, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
             z_estimate = log_z_estimate.exp()
         
