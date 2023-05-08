@@ -113,7 +113,7 @@ if __name__ == '__main__' :
 
     
     if args.load_from_checkpoint or args_dict['just_test']:
-        ckpt_dir = save_dir
+        ckpt_dir = os.path.join(save_dir, 'val_checkpoint')
         last_checkpoint = os.listdir(ckpt_dir)[-1]
         ckpt_path = os.path.join(ckpt_dir, last_checkpoint)
         print("Loading from checkpoint : ", ckpt_path)
