@@ -98,7 +98,7 @@ class EBMRegression(nn.Module):
                 base_dist_log_prob = self.base_dist.log_prob(x_feature_expanded, samples).view(batch_size, nb_sample, -1).sum(2) #(batch_size, num_samples)
                 samples_log_prob = self.proposal.log_prob(x_feature_expanded, samples).view(batch_size, nb_sample, -1).sum(2) #(batch_size, num_samples)
                 aux_log_prob = base_dist_log_prob - samples_log_prob 
-                log_z_estimate = torch.logsumexp(-energy_samples + aux_log_prob,dim=1) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
+                log_z_estimate = torch.logsumexp(-energy_samples + aux_log_prob,dim=1) - torch.log(torch.tensor(nb_sample, dtype=x_feature.dtype, device=x_feature.device)) 
                 z_estimate = log_z_estimate.exp()
                 dic_output.update({"base_dist_log_prob_samples" : base_dist_log_prob, "proposal_log_prob_samples" : samples_log_prob, "aux_log_prob_samples" : aux_log_prob})
             else :
