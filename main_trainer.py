@@ -138,7 +138,7 @@ if __name__ == '__main__' :
                         strategy = strategy,
                         precision=16,
                         max_steps = args_dict['max_steps'],
-                        resume_from_checkpoint = ckpt_path)
+                        # resume_from_checkpoint = ckpt_path)
     
     if not args_dict['just_test']:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
