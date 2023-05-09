@@ -103,7 +103,7 @@ if __name__ == "__main__":
     if nb_gpu > 1 and algo.config["MULTIGPU"] == "ddp":
         strategy = "ddp"
     else:
-        strategy = None
+        strategy = "auto"
     if nb_gpu > 0:
         accelerator = "gpu"
         devices = [k for k in range(nb_gpu)]
