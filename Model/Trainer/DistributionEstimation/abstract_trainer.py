@@ -62,6 +62,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 for param in self.ebm.proposal.parameters():
                     param.requires_grad = False
         else:
+            if len(list(self.ebm.proposal.parameters())) == 0:
+                raise ValueError("No parameters to train in the proposal")
             for param in self.ebm.proposal.parameters():
                 param.requires_grad = True
 
