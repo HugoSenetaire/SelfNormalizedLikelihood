@@ -13,6 +13,7 @@ class Poisson(nn.Module):
     def __init__(
         self, input_size: Tuple[int], dataset: Dataset, lambda_: float = 10.0
     ) -> None:
+        super(Poisson, self).__init__()
         self.input_size = input_size
         self.distribution = poisson.Poisson(lambda_)
 

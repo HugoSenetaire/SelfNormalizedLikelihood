@@ -11,6 +11,7 @@ class Categorical(nn.Module):
     """Module that implements a uniform categorical distribution"""
 
     def __init__(self, input_size: Tuple[int], dataset: Dataset) -> None:
+        super(Categorical, self).__init__()
         self.input_size = input_size
         self.num_classes = dataset.num_classes
         self.distribution = categorical.Categorical(
