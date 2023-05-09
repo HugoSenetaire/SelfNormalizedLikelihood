@@ -26,7 +26,7 @@ class LitSelfNormalized(AbstractDistributionEstimation):
             self.ebm.switch_mode()
         x = batch['data']
         if hasattr(self.ebm.proposal, 'set_x'):
-            self.ebm.proposal.set_x(None)
+            self.ebm.proposal.set_x(x)
         energy_samples, dic_output = self.ebm.calculate_energy(x)
         
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
