@@ -130,6 +130,9 @@ if __name__ == '__main__' :
 
 
     # Train :
+    if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
+        max_steps = args_dict["max_epoch"] * len(train_loader)
+        args_dict["max_steps"] = max_steps
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
                         default_root_dir=save_dir,
@@ -150,7 +153,7 @@ if __name__ == '__main__' :
         samples = algo.samples_mcmc()[0].flatten(1)
         plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
     else :
-        images = algo.samples_mcmc()
+        images = algo.samples_mcmc()[0]
         plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
    
 
