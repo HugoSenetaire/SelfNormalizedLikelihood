@@ -108,8 +108,8 @@ if __name__ == "__main__":
         accelerator = "gpu"
         devices = [k for k in range(nb_gpu)]
     else:
-        accelerator = None
-        devices = None
+        accelerator = "auto"
+        devices = "auto"
 
     # accelerator = 'mps'
 
