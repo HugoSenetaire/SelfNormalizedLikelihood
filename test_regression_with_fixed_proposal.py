@@ -51,7 +51,6 @@ if __name__ == '__main__' :
     complete_dataset, complete_masked_dataset = get_dataset(args_dict,)
     
     train_loader = get_dataloader(complete_masked_dataset.dataset_train, args_dict, shuffle = True)
-    val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
     
     input_size_x = complete_dataset.get_dim_input()
@@ -67,6 +66,7 @@ if __name__ == '__main__' :
     else :
         name = args_dict['dataset_name']
         save_dir = os.path.join(args_dict['output_folder'],args_dict['dataset_name'])
+    
 
 
 
@@ -80,6 +80,9 @@ if __name__ == '__main__' :
     else :
         name = name + "_" + args_dict['ebm_name']
         save_dir = os.path.join(save_dir,args_dict['ebm_name'])
+    if "seed" in args_dict.keys() and args_dict["seed"] is not None:
+        save_dir = os.path.join(save_dir, "seed_{}".format(args_dict["seed"]))
+
 
     args_dict['save_dir'] = save_dir
 

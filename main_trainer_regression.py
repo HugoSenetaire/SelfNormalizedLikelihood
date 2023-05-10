@@ -77,6 +77,8 @@ if __name__ == '__main__' :
     else :
         name = name + "_" + args_dict['ebm_name']
         save_dir = os.path.join(save_dir,args_dict['ebm_name'])
+    if "seed" in args_dict.keys() and args_dict["seed"] is not None:
+            save_dir = os.path.join(save_dir, "seed_{}".format(args_dict["seed"]))
 
     args_dict['save_dir'] = save_dir
 
