@@ -8,7 +8,9 @@ from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussia
 from .ProposalForRegression.MDNProposal import MDNProposalRegression
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
 from .ProposalForDistributionEstimation.categorical import Categorical
+from .ProposalForDistributionEstimation.gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal
 
+import copy
 
 dic_proposals = {
     "standard_gaussian": StandardGaussian,
@@ -17,12 +19,30 @@ dic_proposals = {
     "poisson": Poisson,
     "uniform_categorical": Categorical,
     'kernel_density_adaptive': KernelDensityAdaptive,
+    'gaussian_mixture_adaptive': GaussianMixtureAdaptiveProposal,
 }
 
 
 
 def get_proposal(args_dict, input_size, dataset):
+
     proposal = dic_proposals[args_dict["proposal_name"]]
+    if 'adaptive' in args_dict['proposal_name'] :
+        assert 'default_proposal_name' in args_dict.keys(), 'You need to specify a default proposal for the adaptive proposal'
+        assert not args_dict['train_proposal'], 'You cannot train the proposal if it is adaptive'
+        
+        if 'proposal_params' not in args_dict.keys():
+            args_dict['proposal_params'] = {}
+        aux_args_dict = copy.deepcopy(args_dict)
+        if 'default_proposal_params' not in args_dict.keys():
+            aux_args_dict['proposal_params'] = {}
+        else :
+            aux_args_dict['proposal_params'] = args_dict['default_proposal_params']
+        
+        aux_args_dict['proposal_name'] = args_dict['default_proposal_name']
+        default_proposal = get_proposal(aux_args_dict, input_size, dataset,)
+        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = dataset, **args_dict["proposal_params"])
+
     if "proposal_params" in args_dict:
         return proposal(input_size, dataset, **args_dict["proposal_params"])
     else:

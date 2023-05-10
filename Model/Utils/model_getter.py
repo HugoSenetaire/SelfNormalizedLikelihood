@@ -20,14 +20,14 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     energy = energy.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
 
-    data = torch.cat([dataset[i][0] for i in range(len(dataset))])
+    data = torch.cat([dataset[i][0] for i in range(len(dataset))]).reshape(-1,*dataset[0][0].shape).flatten(1).to(device)
     dist = Normal(data.mean(0), data.std(0))
     ranges= tqdm.tqdm(range(10000))
     for k in ranges:
-        x = dist.sample((1000,))
-        target_energy = -dist.log_prob(x).sum(dim=1)
+        x = dist.sample((1000,)).to(device)
+        target_energy = -dist.log_prob(x).reshape(1000,-1).sum(dim=1).to(device)
         # target_energy =  0.5 * (x**2).flatten(1).sum(dim=1)
-        current_energy = energy(x).flatten()
+        current_energy = energy(x).reshape(1000,).to(device)
         loss = ((current_energy - target_energy)**2).mean()
         optimizer.zero_grad()
         loss.backward()
@@ -36,11 +36,12 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
         # time.sleep(1)
     x = dist.sample((10000,))
     log_prob = dist.log_prob(x).sum(dim=1)
-    
     norm = (-energy(x).flatten()-log_prob).exp().mean()
     print("=====================================")
     print(f'Norm of the energy : {norm}')
     print("=====================================")
+    energy = energy.to(torch.device('cpu'))
+
     return energy
 
 

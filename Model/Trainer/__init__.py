@@ -1,8 +1,11 @@
-from .DistributionEstimation.trainer_self_normalized import LitSelfNormalized
+from .DistributionEstimation import SelfNormalizedTrainer, NCETrainer, ProposalTrainer
 from .Regression import RegressionTrainerSelfNormalized, ProposalRegressionTrainer, RegressionTrainerNCE
 
 dic_trainer = {
-    'self_normalized': LitSelfNormalized
+    'self_normalized': SelfNormalizedTrainer,
+    'just_proposal' : ProposalTrainer,
+    'nce' : NCETrainer,
+    
 }
 
 dic_trainer_regression = {

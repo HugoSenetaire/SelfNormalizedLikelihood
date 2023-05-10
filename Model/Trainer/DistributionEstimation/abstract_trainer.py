@@ -9,7 +9,14 @@ import yaml
 from ...Sampler import get_sampler
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
-from ...Utils.proposal_loss import kl_loss, log_prob_kl_loss, log_prob_loss
+from ...Utils.proposal_loss import log_prob_kl_loss, kl_loss, log_prob_loss
+from ...Sampler import get_sampler
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+import yaml
+import itertools
+
 
 
 class AbstractDistributionEstimation(pl.LightningModule):
@@ -26,11 +33,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.args_dict = args_dict
         print("args_dict", args_dict)
         self.hparams.update(args_dict)
-        self.last_save = -float("inf")  # To save the energy contour plot
-        self.last_save_sample = -float("inf")  # To save the samples
-        self.sampler = get_sampler(
-            args_dict,
-        )
+        self.last_save = -float('inf') # To save the energy contour plot 
+        self.last_save_sample = 0 # To save the samples
+        self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
 
@@ -232,25 +237,17 @@ class AbstractDistributionEstimation(pl.LightningModule):
             )
 
     def configure_optimizers(self):
-        params_ebm = [
-            child.parameters()
-            for name, child in self.ebm.named_children()
-            if name != "proposal"
-        ]
-        params_proposal = (
-            [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
-        )
+        params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        params_ebm.append(self.ebm.parameters())
+        params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
+        proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
 
-        ebm_opt = get_optimizer(args_dict=self.args_dict, list_params_gen=params_ebm)
-        proposal_opt = get_optimizer(
-            args_dict=self.args_dict, list_params_gen=params_proposal
-        )
-
-        ebm_sch = get_scheduler(args_dict=self.args_dict, optim=ebm_opt)
-        proposal_sch = get_scheduler(args_dict=self.args_dict, optim=proposal_opt)
-        if ebm_sch is not None and proposal_sch is not None:
-            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]
-        elif ebm_sch is not None:
+        ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
+        proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
+        if ebm_sch is not None and proposal_sch is not None :
+            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]      
+        elif ebm_sch is not None :
             return [ebm_opt, proposal_opt], ebm_sch
         elif proposal_sch is not None:
             return [ebm_opt, proposal_opt], proposal_sch

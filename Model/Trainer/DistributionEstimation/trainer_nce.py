@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import yaml
 from .abstract_trainer import AbstractDistributionEstimation
 
-class LitSelfNormalized(AbstractDistributionEstimation):
+class NCETrainer(AbstractDistributionEstimation):
     """
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
@@ -21,11 +21,12 @@ class LitSelfNormalized(AbstractDistributionEstimation):
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers()
-        if hasattr(self.ebm.proposal, 'set_x'):
-            self.ebm.proposal.set_x(None)
+
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
             self.ebm.switch_mode()
         x = batch['data']
+        if hasattr(self.ebm.proposal, 'set_x'):
+            self.ebm.proposal.set_x(x)
 
         energy_data, dic_output = self.ebm.calculate_energy(x,)
         energy_data = energy_data.reshape(x.shape[0],)

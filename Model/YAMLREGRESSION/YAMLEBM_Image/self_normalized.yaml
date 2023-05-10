@@ -4,5 +4,5 @@ save_energy_every : 10
 samples_every: 10
 batch_size : 32
 explicit_bias_name : '2_layer_fc'
-num_sample_proposal : 1024
+num_sample_proposal : 64
 train_proposal : False

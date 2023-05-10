@@ -1,7 +1,16 @@
 import torch
 import torch.distributions as distributions
+import itertools
 import torch.nn as nn
 
+
+class BiasExplicit(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+    
+    def forward(self, x):
+        return x + self.explicit_bias
 
 class ImportanceWeightedEBM(nn.Module):
     def __init__(
@@ -23,19 +32,13 @@ class ImportanceWeightedEBM(nn.Module):
         self.bias_explicit = bias_explicit
 
         if bias_explicit:
-            self.explicit_bias = torch.nn.parameter.Parameter(
-                torch.zeros(1), requires_grad=True
-            )
-            log_z_estimate, dic = self.estimate_log_z(
-                torch.zeros(
-                    1,
-                    dtype=torch.float32,
-                ),
-                nb_sample=self.nb_sample_bias_explicit,
-            )
-            self.explicit_bias.data = log_z_estimate
-        else:
-            self.explicit_bias = None
+            # self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+            self.explicit_bias_module = BiasExplicit() 
+            self.explicit_bias = self.explicit_bias_module.explicit_bias
+            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
+            self.explicit_bias_module.explicit_bias.data = log_z_estimate
+        else :
+            self.explicit_bias_module = None
 
     def sample(self, nb_sample=1):
         """
@@ -71,14 +74,17 @@ class ImportanceWeightedEBM(nn.Module):
         else:
             base_dist_log_prob = torch.zeros_like(out_energy)
 
+        if self.explicit_bias_module is not None :
+            out_energy = self.explicit_bias_module(out_energy)
+            dic_output.update({"log_bias_explicit" : self.explicit_bias_module.explicit_bias})
+
+
         current_energy = out_energy - base_dist_log_prob
         dic_output["energy"] = current_energy
 
-        if self.explicit_bias is not None:
-            dic_output.update({"log_bias_explicit": self.explicit_bias})
-            return current_energy + self.explicit_bias, dic_output
-        else:
-            return current_energy, dic_output
+        return current_energy, dic_output
+
+
 
     def switch_mode(
         self,
@@ -97,37 +103,18 @@ class ImportanceWeightedEBM(nn.Module):
         dic_output = {}
         samples = self.sample(nb_sample).to(x.device, x.dtype)
 
-        energy_samples = (
-            self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-        )
-        if self.bias_explicit:
-            energy_samples = energy_samples + self.explicit_bias
-        dic_output["f_theta_samples"] = energy_samples
-
-        if self.base_dist is not None:
-            base_dist_log_prob = (
-                self.base_dist.log_prob(samples)
-                .view(samples.size(0), -1)
-                .sum(1)
-                .unsqueeze(1)
-            )
-            if self.base_dist != self.proposal:
-                base_dist_log_prob = (
-                    self.base_dist.log_prob(samples)
-                    .view(samples.size(0), -1)
-                    .sum(1)
-                    .unsqueeze(1)
-                )
-                samples_log_prob = (
-                    self.proposal.log_prob(samples)
-                    .reshape(samples.shape[0], -1)
-                    .sum(1)
-                    .unsqueeze(1)
-                )
-                aux_prob = base_dist_log_prob - samples_log_prob
-                log_z_estimate = torch.logsumexp(
-                    -energy_samples + aux_prob, dim=0
-                ) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
+        energy_samples = self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
+        if self.bias_explicit :
+            energy_samples = self.explicit_bias_module(energy_samples)
+        dic_output['f_theta_samples'] = energy_samples
+        
+        if self.base_dist is not None :
+            base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
+            if self.base_dist != self.proposal :
+                base_dist_log_prob = self.base_dist.log_prob(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
+                samples_log_prob = self.proposal.log_prob(samples).reshape(samples.shape[0], -1).sum(1).unsqueeze(1)
+                aux_prob = base_dist_log_prob - samples_log_prob 
+                log_z_estimate = torch.logsumexp(-energy_samples + aux_prob,dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
                 z_estimate = log_z_estimate.exp()
                 dic_output.update(
                     {

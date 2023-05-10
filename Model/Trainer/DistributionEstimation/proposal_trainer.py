@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import yaml
 from .abstract_trainer import AbstractDistributionEstimation
 
-class LitSelfNormalized(AbstractDistributionEstimation):
+class ProposalTrainer(AbstractDistributionEstimation):
     """
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.

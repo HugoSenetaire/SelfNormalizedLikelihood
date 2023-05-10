@@ -140,19 +140,20 @@ if __name__ == "__main__":
         checkpoints.append(ema_callback)
 
     # Train :
-    trainer = pl.Trainer(
-        accelerator=accelerator,
-        # logger=logger,
-        default_root_dir=save_dir,
-        callbacks=checkpoints,
-        # devices = len(devices),
-        strategy=strategy,
-        precision=16,
-        max_steps=args_dict["max_steps"],
-        resume_from_checkpoint=ckpt_path,
-    )
-
-    if not args_dict["just_test"]:
+    if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
+        max_steps = args_dict["max_epoch"] * len(train_loader)
+        args_dict["max_steps"] = max_steps
+    trainer = pl.Trainer(accelerator=accelerator,
+                        # logger=logger,
+                        default_root_dir=save_dir,
+                        callbacks=checkpoints,
+                        # devices = len(devices),
+                        strategy = strategy,
+                        precision=16,
+                        max_steps = args_dict['max_steps'],
+                        resume_from_checkpoint = ckpt_path)
+    
+    if not args_dict['just_test']:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
@@ -162,23 +163,12 @@ if __name__ == "__main__":
 
     if np.prod(complete_dataset.get_dim_input()) == 2:
         samples = algo.samples_mcmc()[0].flatten(1)
-        plot_energy_2d(
-            algo=algo,
-            save_dir=save_dir,
-            samples=[algo.example, algo.example_proposal, samples],
-            samples_title=[
-                "Samples from dataset",
-                "Samples from proposal",
-                "Samples HMC",
-            ],
-        )
-    else:
-        images = algo.samples_mcmc()
-        plot_images(
-            images,
-            save_dir,
-            algo=None,
-            transform_back=complete_dataset.transform_back,
-            name="samples_best",
-            step="",
-        )
+        plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
+    else :
+        images = algo.samples_mcmc()[0]
+        plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
+   
+
+
+
+        

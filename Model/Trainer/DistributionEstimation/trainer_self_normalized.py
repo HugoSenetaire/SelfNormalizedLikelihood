@@ -11,8 +11,7 @@ from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from .abstract_trainer import AbstractDistributionEstimation
 
-
-class LitSelfNormalized(AbstractDistributionEstimation):
+class SelfNormalizedTrainer(AbstractDistributionEstimation):
     """
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
@@ -45,9 +44,9 @@ class LitSelfNormalized(AbstractDistributionEstimation):
             and self.global_step == self.args_dict["switch_mode"]
         ):
             self.ebm.switch_mode()
-        x = batch["data"]
-        if hasattr(self.ebm.proposal, "set_x"):
-            self.ebm.proposal.set_x(None)
+        x = batch['data']
+        if hasattr(self.ebm.proposal, 'set_x'):
+            self.ebm.proposal.set_x(x)
         energy_samples, dic_output = self.ebm.calculate_energy(x)
 
         estimate_log_z, dic = self.ebm.estimate_log_z(x, self.ebm.nb_sample)
@@ -84,7 +83,6 @@ class LitSelfNormalized(AbstractDistributionEstimation):
                 (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
             )
             proposal_opt.step()
-
         # Update the parameters of the ebm
         ebm_opt.step()
         dic_output.update(dic)

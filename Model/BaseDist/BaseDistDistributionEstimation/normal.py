@@ -14,7 +14,7 @@ class Normal(nn.Module):
         self.input_size = input_size
         
         index = np.random.choice(len(dataset), 1000)
-        data = torch.cat([dataset[i][0] for i in index])
+        data = torch.cat([dataset[i][0] for i in index]).reshape(-1, *input_size)
         self.mode_cov = mode_cov
 
         if mode_cov == 'diag':
@@ -39,6 +39,7 @@ class Normal(nn.Module):
         return samples
     
     def log_prob(self, x):
+        x = x.reshape(x.shape[0],*self.input_size)
         distribution = distributions.Normal(self.mu, self.logstd.exp())
         if self.mode_cov == 'diag':
             log_p = distribution.log_prob(x).flatten(1).sum(1)
