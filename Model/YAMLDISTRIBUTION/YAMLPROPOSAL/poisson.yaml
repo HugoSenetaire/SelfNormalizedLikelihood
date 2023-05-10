@@ -1,3 +1,4 @@
 proposal_name: 'poisson'
+train_proposal: false
 proposal_params:
   lambda_: 10.

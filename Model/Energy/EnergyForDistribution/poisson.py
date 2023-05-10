@@ -24,7 +24,7 @@ class EnergyPoissonDistribution(nn.Module):
 
     Attributes:
         lambda_: nn.Parameter that represents the real valued parameter of the poisson distribution.
-        It is initialized with a random value sampled from N(0,1).
+        It is initialized with a random value sampled from U(0,1) if not specified.
 
     Raises:
         AssertionError: if the input_size is not a tuple of size 1.
@@ -37,14 +37,16 @@ class EnergyPoissonDistribution(nn.Module):
         lambda_: float,
         learn_lambda: bool = False,
     ) -> None:
-        super().__init__()
-        assert len(input_size) == 1
-        lambda_ = torch.Tensor([lambda_])
+        super(EnergyPoissonDistribution, self).__init__()
+        assert prod(input_size) == 1
+        if lambda_ is None:
+            lambda_ = torch.rand(1) + 1e-3
+        lambda_ = torch.Tensor(lambda_)
         self.lambda_ = nn.parameter.Parameter(lambda_, requires_grad=learn_lambda)
 
     def forward(
-        self, x: Float[torch.Tensor, "batch_size 1 1"]
-    ) -> Float[torch.Tensor, "batch_size 1"]:
+        self, x: Float[torch.Tensor, "batch_size 1"]
+    ) -> Float[torch.Tensor, "batch_size"]:
         """Compute the energy of the poisson distribution
 
         Args:
@@ -53,5 +55,6 @@ class EnergyPoissonDistribution(nn.Module):
         Returns:
             Float[torch.Tensor, "batch_size 1"], E(x), the energy of the poisson distribution
         """
-        x = x.flatten(1)
+        # print(f"self.lambda_: {self.lambda_}")
+        # print(f"x: {x.shape}")
         return torch.lgamma(x + 1) - x * torch.log(self.lambda_)

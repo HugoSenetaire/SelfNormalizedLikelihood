@@ -35,7 +35,8 @@ class EnergyCategoricalDistrib(nn.Module):
         theta: List[float] = None,
         learn_theta: bool = False,
     ) -> None:
-        super().__init__()
+        super(EnergyCategoricalDistrib, self).__init__()
+        print(f"input_size: {input_size}")
         if theta is None:
             theta = [1 / prod(input_size)] * prod(input_size)
         assert prod(input_size) == len(theta), "input_size and theta do not match"
@@ -43,15 +44,14 @@ class EnergyCategoricalDistrib(nn.Module):
         self.theta = nn.parameter.Parameter(theta_, requires_grad=learn_theta)
 
     def forward(
-        self, x: Float[torch.Tensor, "batch_size *dim"]
+        self, x: Float[torch.Tensor, "batch_size num_categories"]
     ) -> Float[torch.Tensor, "batch_size"]:
         """Compute the energy of the categorical distribution.
 
         Args:
-            x: Float[torch.Tensor, "batch_size *dim"], the input of the energy. This is a batch of vectors of size dim.
+            x: Float[torch.Tensor, "batch_size num_categories"], the input of the energy. This is a batch of vectors of size dim.
 
         Returns:
             Float[torch.Tensor, "batch_size"], E(x), the energy of the categorical distribution.
         """
-        x = x.flatten(1)
         return x @ self.theta

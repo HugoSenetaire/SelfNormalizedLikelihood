@@ -40,7 +40,7 @@ class EnergyRBM(nn.Module):
         input_size: Tuple[int],
         hidden_dim: int,
     ) -> None:
-        super().__init__()
+        super(EnergyRBM, self).__init__()
         assert len(input_size) == 1
         self.W = nn.parameter.Parameter(
             torch.randn(hidden_dim, prod(input_size)) * torch.sqrt(0.05)
