@@ -25,7 +25,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         nb_sample_train_estimate=1024,
         **kwargs,
     ):
-        print("SelfNormalize HELLOOKEKEKEKKEKEKKE")
         super().__init__(
             ebm=ebm,
             args_dict=args_dict,
@@ -35,7 +34,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         )
 
     def training_step(self, batch, batch_idx):
-        print("SHOW ME THIS PRINT PLEASE")
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers()
 
@@ -60,7 +58,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         loss_total = loss_energy + loss_estimate_z
         self.log("train_loss", loss_total)
 
-        # Backward ebm
+        # Backward ebmxx
         ebm_opt.zero_grad()
         proposal_opt.zero_grad()
         self.manual_backward(
