@@ -2,6 +2,16 @@
 import torch.nn as nn
 import torch
 import torch.distributions as distributions
+import itertools
+
+
+class BiasExplicit(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+    
+    def forward(self, x):
+        return x + self.explicit_bias
 
 class ImportanceWeightedEBM(nn.Module):
     def __init__(self, energy, proposal, num_sample_proposal, base_dist = None,  bias_explicit = False, nb_sample_bias_explicit = 1024, **kwargs):
@@ -14,11 +24,13 @@ class ImportanceWeightedEBM(nn.Module):
         self.bias_explicit = bias_explicit
         
         if bias_explicit:
-            self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+            # self.explicit_bias = torch.nn.parameter.Parameter(torch.zeros(1),requires_grad=True)
+            self.explicit_bias_module = BiasExplicit() 
+            self.explicit_bias = self.explicit_bias_module.explicit_bias
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
-            self.explicit_bias.data = log_z_estimate
+            self.explicit_bias_module.explicit_bias.data = log_z_estimate
         else :
-            self.explicit_bias = None
+            self.explicit_bias_module = None
 
         
 
@@ -49,16 +61,17 @@ class ImportanceWeightedEBM(nn.Module):
         else :
             base_dist_log_prob = torch.zeros_like(out_energy)
 
-        
+        if self.explicit_bias_module is not None :
+            out_energy = self.explicit_bias_module(out_energy)
+            dic_output.update({"log_bias_explicit" : self.explicit_bias_module.explicit_bias})
+
+
         current_energy = out_energy - base_dist_log_prob
         dic_output['energy'] = current_energy
 
-        if self.explicit_bias is not None :
-            dic_output.update({"log_bias_explicit" : self.explicit_bias})
-            return current_energy + self.explicit_bias, dic_output
-        else:
-            return current_energy, dic_output
-        
+        return current_energy, dic_output
+
+
 
     def switch_mode(self, ):
         '''
@@ -80,7 +93,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         energy_samples = self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         if self.bias_explicit :
-            energy_samples = energy_samples + self.explicit_bias
+            energy_samples = self.explicit_bias_module(energy_samples)
         dic_output['f_theta_samples'] = energy_samples
         
         if self.base_dist is not None :
