@@ -74,8 +74,10 @@ def get_feature_extractor(
     if 'feature_extractor_params' not in args_dict.keys():
         args_dict['feature_extractor_params'] = {}
     feature_extractor = feature_extractor(input_dim=input_size_x, **args_dict['feature_extractor_params'])
-    for param in feature_extractor.parameters():
-        param.requires_grad = False
+    print(args_dict['train_feature_extractor'])
+    if args_dict['train_feature_extractor'] == False :
+        for param in feature_extractor.parameters():
+            param.requires_grad = False
     return feature_extractor
 
 from .ExplicitBiasForRegression import Layer1FC, Layer2FC, Layer3FC
