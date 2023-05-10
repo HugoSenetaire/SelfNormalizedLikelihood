@@ -8,6 +8,8 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import yaml
+import itertools
+
 
 
 class AbstractDistributionEstimation(pl.LightningModule):
@@ -17,7 +19,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.args_dict = args_dict
         self.hparams.update(args_dict)
         self.last_save = -float('inf') # To save the energy contour plot 
-        self.last_save_sample = -float('inf') # To save the samples
+        self.last_save_sample = 0 # To save the samples
         self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
@@ -158,8 +160,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
         
     def configure_optimizers(self):
         params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        params_ebm.append(self.ebm.parameters())
         params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
-        
         ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
         proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
 

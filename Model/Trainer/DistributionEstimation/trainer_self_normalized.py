@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import yaml
 from .abstract_trainer import AbstractDistributionEstimation
 
-class LitSelfNormalized(AbstractDistributionEstimation):
+class SelfNormalizedTrainer(AbstractDistributionEstimation):
     """
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
@@ -55,7 +55,6 @@ class LitSelfNormalized(AbstractDistributionEstimation):
             proposal_loss = self.proposal_loss(log_prob_proposal, estimate_log_z,)
             self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))
             proposal_opt.step()
-
         # Update the parameters of the ebm
         ebm_opt.step()
         dic_output.update(dic)
