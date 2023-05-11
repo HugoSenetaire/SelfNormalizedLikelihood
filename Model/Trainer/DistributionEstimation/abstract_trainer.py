@@ -1,3 +1,4 @@
+import itertools
 import os
 
 import matplotlib.pyplot as plt
@@ -5,18 +6,14 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import yaml
+from torch.distributions import categorical
+
+from Dataset.MissingDataDataset.DiscreteDataset import dic_discrete_dataset
 
 from ...Sampler import get_sampler
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
-from ...Utils.plot_utils import plot_energy_2d, plot_images
-from ...Utils.proposal_loss import log_prob_kl_loss, kl_loss, log_prob_loss
-from ...Sampler import get_sampler
-import numpy as np
-import os
-import matplotlib.pyplot as plt
-import yaml
-import itertools
-
+from ...Utils.plot_utils import plot_energy_2d, plot_images, print_discrete_params
+from ...Utils.proposal_loss import kl_loss, log_prob_kl_loss, log_prob_loss
 
 
 class AbstractDistributionEstimation(pl.LightningModule):
@@ -33,9 +30,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.args_dict = args_dict
         print("args_dict", args_dict)
         self.hparams.update(args_dict)
-        self.last_save = -float('inf') # To save the energy contour plot 
-        self.last_save_sample = 0 # To save the samples
-        self.sampler = get_sampler(args_dict,)
+        self.last_save = -float("inf")  # To save the energy contour plot
+        self.last_save_sample = 0  # To save the samples
+        self.sampler = get_sampler(
+            args_dict,
+        )
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
 
@@ -237,17 +236,25 @@ class AbstractDistributionEstimation(pl.LightningModule):
             )
 
     def configure_optimizers(self):
-        params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        params_ebm = [
+            child.parameters()
+            for name, child in self.ebm.named_children()
+            if name != "proposal"
+        ]
         params_ebm.append(self.ebm.parameters())
-        params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
-        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
-        proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
+        params_proposal = (
+            [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+        )
+        ebm_opt = get_optimizer(args_dict=self.args_dict, list_params_gen=params_ebm)
+        proposal_opt = get_optimizer(
+            args_dict=self.args_dict, list_params_gen=params_proposal
+        )
 
-        ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
-        proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
-        if ebm_sch is not None and proposal_sch is not None :
-            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]      
-        elif ebm_sch is not None :
+        ebm_sch = get_scheduler(args_dict=self.args_dict, optim=ebm_opt)
+        proposal_sch = get_scheduler(args_dict=self.args_dict, optim=proposal_opt)
+        if ebm_sch is not None and proposal_sch is not None:
+            return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]
+        elif ebm_sch is not None:
             return [ebm_opt, proposal_opt], ebm_sch
         elif proposal_sch is not None:
             return [ebm_opt, proposal_opt], proposal_sch
@@ -354,30 +361,40 @@ class AbstractDistributionEstimation(pl.LightningModule):
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            samples, init_samples = self.samples_mcmc(num_samples=num_samples)
 
-            if np.prod(self.args_dict["input_size"]) == 2:
-                samples = samples.flatten(1)
-                plot_energy_2d(
-                    self,
-                    save_dir=save_dir,
-                    samples=[samples],
-                    samples_title=["HMC samples"],
-                    name="samples",
-                    step=self.global_step,
-                )
-            # elif len(self.args_dict["input_size"]) == 2 and self.args_dict["input_size"][0]==1:
-            #     plot_energy_1d()
-            elif len(self.args_dict["input_size"]) == 3:
-                plot_images(
-                    algo=self,
-                    save_dir=save_dir,
-                    images=samples,
-                    name="samples",
-                    step=self.global_step,
-                    init_samples=init_samples,
-                    transform_back=self.transform_back,
-                )
+            if self.args_dict["dataset_name"] in dic_discrete_dataset.keys():
+                print_discrete_params(self)
             else:
-                raise NotImplementedError
-            self.last_save_sample = self.global_step
+                samples, init_samples = self.samples_mcmc(num_samples=num_samples)
+                self._sample_categorical(
+                    num_samples=num_samples,
+                    save_dir=save_dir,
+                    name="samples",
+                    step=self.global_step,
+                )
+
+                if np.prod(self.args_dict["input_size"]) == 2:
+                    samples = samples.flatten(1)
+                    plot_energy_2d(
+                        self,
+                        save_dir=save_dir,
+                        samples=[samples],
+                        samples_title=["HMC samples"],
+                        name="samples",
+                        step=self.global_step,
+                    )
+                # elif len(self.args_dict["input_size"]) == 2 and self.args_dict["input_size"][0]==1:
+                #     plot_energy_1d()
+                elif len(self.args_dict["input_size"]) == 3:
+                    plot_images(
+                        algo=self,
+                        save_dir=save_dir,
+                        images=samples,
+                        name="samples",
+                        step=self.global_step,
+                        init_samples=init_samples,
+                        transform_back=self.transform_back,
+                    )
+                else:
+                    raise NotImplementedError
+                self.last_save_sample = self.global_step

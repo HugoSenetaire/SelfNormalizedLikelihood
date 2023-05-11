@@ -3,9 +3,17 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torchvision
 
-# def plot_energy_1d(algo, save_dir, samples = [], samples_title = [], step, energy_type=True):
+
+def print_discrete_params(algo):
+    if algo.args_dict["dataset_name"] == "poisson":
+        print(f"self.ebm.energy.theta {algo.ebm.energy.lambda_}")
+    elif algo.args_dict["dataset_name"] == "categorical":
+        print(f"self.ebm.energy.theta {F.softmax(algo.ebm.energy.theta)}")
+    else:
+        raise NotImplementedError
 
 
 def plot_energy_2d(
