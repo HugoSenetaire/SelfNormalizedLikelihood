@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from jaxtyping import Float
 
 
-class EnergyIsing(nn.Module):
+class ErdosRenyiEnergyIsing(nn.Module):
     """Implement the energy of an Ising model. C.f. Oops I took a gradient from Grathwohl et al.
 
     According to table 1 of the paper the energy is defined as:
@@ -25,7 +25,8 @@ class EnergyIsing(nn.Module):
 
     Attributes:
         W: nn.Linear (input_size, hidden_dim), the parameters of the energy.
-            W is initialized with a Bernoulli distribution with p=0.5.
+            W is initialized as the adjacency matrix of an Erdos-Renyi graph with probability p=4/prod(input_size).
+            So each node has an average degree of 4.
         b: torch.Tensor of size (hidden_dim), the parameters of the energy.
             b is initialized as a tensor of ones.
 
@@ -38,12 +39,21 @@ class EnergyIsing(nn.Module):
         learn_b: bool = True,
     ) -> None:
         super().__init__()
-        self.W = nn.parameter.Parameter(
-            torch.ones(prod(input_size), prod(input_size)) * 0.5, requires_grad=learn_W
-        )
-        self.b = nn.parameter.Parameter(
-            torch.ones(prod(input_size)), requires_grad=learn_b
-        )
+        N = prod(input_size)
+        assert N > 4, "input_size is too small"
+        p = 1 / (N - 1)
+        G = torch.rand(N, N) < p
+        G = torch.triu(G, diagonal=1)
+        G = (G + G.T) * 1.0
+
+        weights = torch.randn_like(G) * (
+            (1.0 / (N * p)) ** 0.5
+        )  # From Oops I took a gradient
+        weights = weights * (1 - torch.tril(torch.ones_like(weights)))
+        weights = weights + weights.t()
+
+        self.W = nn.parameter.Parameter(G * weights, requires_grad=learn_W)
+        self.b = nn.parameter.Parameter(torch.ones(N), requires_grad=learn_b)
 
     def forward(
         self, x: Float[torch.Tensor, "batch_size *dim"]
