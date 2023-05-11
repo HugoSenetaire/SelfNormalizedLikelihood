@@ -1,10 +1,13 @@
 from math import prod
 from typing import Tuple
 
+import igraph as ig
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from jaxtyping import Float
+from torch.distributions import bernoulli
 
 
 class ErdosRenyiEnergyIsing(nn.Module):
@@ -35,37 +38,43 @@ class ErdosRenyiEnergyIsing(nn.Module):
     def __init__(
         self,
         input_size: Tuple[int],
-        learn_W: bool = True,
-        learn_b: bool = True,
+        n_node: int,
+        average_degree: int = 4,
+        init_bias: float = 0.0,
+        learn_G: bool = False,
+        learn_bias: bool = False,
     ) -> None:
-        super().__init__()
-        N = prod(input_size)
-        assert N > 4, "input_size is too small"
-        p = 1 / (N - 1)
-        G = torch.rand(N, N) < p
-        G = torch.triu(G, diagonal=1)
-        G = (G + G.T) * 1.0
-
-        weights = torch.randn_like(G) * (
-            (1.0 / (N * p)) ** 0.5
-        )  # From Oops I took a gradient
+        super(ErdosRenyiEnergyIsing, self).__init__()
+        # Code from Oops I took a gradient
+        g = ig.Graph.Erdos_Renyi(n_node, float(average_degree) / float(n_node))
+        A = np.asarray(g.get_adjacency().data)  # g.get_sparse_adjacency()
+        A = torch.tensor(A).float()
+        weights = torch.randn_like(A) * ((1.0 / avg_degree) ** 0.5)
         weights = weights * (1 - torch.tril(torch.ones_like(weights)))
         weights = weights + weights.t()
 
-        self.W = nn.parameter.Parameter(G * weights, requires_grad=learn_W)
-        self.b = nn.parameter.Parameter(torch.ones(N), requires_grad=learn_b)
+        self.G = nn.Parameter(A * weights, requires_grad=learn_G)
+        self.bias = nn.Parameter(
+            torch.ones((n_node,)).float() * init_bias, requires_grad=learn_bias
+        )
+        self.data_dim = n_node
 
     def forward(
-        self, x: Float[torch.Tensor, "batch_size *dim"]
+        self, x: Float[torch.Tensor, "batch_size nb_point_in_graph"]
     ) -> Float[torch.Tensor, "batch_size"]:
         """Compute the energy of the Ising model.
 
         Args:
-            x: Float[torch.Tensor, "batch_size *dim"], batch input of the energy.
+            x: Float[torch.Tensor, "batch_size nb_point_in_graph"], batch input of the energy.
+            x is a vector of zeros and ones.
 
         Returns:
             Float[torch.Tensor, "batch_size"], E(x), the energy of the Ising model.
         """
-        x = x.flatten(1)
-        Wx = torch.matmul(x, self.W.T)
-        return -torch.sum(x * Wx, dim=1) - x @ self.b
+        # code from Oops I took a gradient
+
+        x = 2 * x - 1  # convert 0/1 to -1/1
+        xg = x @ self.G
+        xgx = (xg * x).sum(-1)
+        b = (self.bias[None, :] * x).sum(-1)
+        return -xgx - b
