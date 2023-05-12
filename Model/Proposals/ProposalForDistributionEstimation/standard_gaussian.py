@@ -9,8 +9,11 @@ class StandardGaussian(nn.Module):
         self.input_size = input_size
         print("Init Standard Gaussian...")
         
-        index = np.random.choice(len(dataset), 100)
-        data = torch.cat([dataset[i][0] for i in index])
+        index = np.random.choice(len(dataset), 10000)
+        try :
+            data = torch.cat([dataset[i][0] for i in index]).reshape(-1, *self.input_size)
+        except TypeError :
+            data = torch.cat([dataset[i][0][0] for i in index]).reshape(-1, *self.input_size)
         if mean == 'dataset' :
             self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=False)
         else :

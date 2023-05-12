@@ -277,7 +277,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         total_loss_self_norm = mean_energy + log_z_estimate.exp()
         self.log(name + "loss_self_norm", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate.exp() + 1
-        self.log(name + "likelihood_unormalized", total_likelihood)
+        self.log(name + "likelihood_normalized", total_likelihood)
 
         if self.ebm.type_z == "exp":
             self.log(name + "loss", total_loss_self_norm)
@@ -285,7 +285,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         total_loss_self_norm = mean_energy + log_z_estimate
         self.log(name + "loss_log", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate
-        self.log(name + "likelihood_logd", total_likelihood)
+        self.log(name + "likelihood_log", total_likelihood)
 
         if self.ebm.type_z == "log":
             self.log(name + "loss", total_loss_self_norm)

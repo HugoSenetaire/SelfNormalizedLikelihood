@@ -17,7 +17,7 @@ class UniformRegression(nn.Module):
                 for i in range(len(current_dataset)):
                     self.min_data = torch.min(self.min_data, current_dataset[i][1])
 
-            self.min_data = torch.tensor(self.min_data -3, dtype=torch.float32)
+            self.min_data = torch.tensor(self.min_data, dtype=torch.float32)
         else :
             self.min_data = torch.tensor(min_data, dtype=torch.float32)
         if max_data == 'dataset' :
@@ -25,7 +25,7 @@ class UniformRegression(nn.Module):
             for current_dataset in dataset :
                 for i in range(len(current_dataset)):
                     self.max_data = torch.max(self.max_data, current_dataset[i][1])
-            self.max_data= torch.tensor(self.max_data +3, dtype=torch.float32)
+            self.max_data= torch.tensor(self.max_data, dtype=torch.float32)
         else :
             self.max_data = torch.tensor(max_data, dtype=torch.float32)
 

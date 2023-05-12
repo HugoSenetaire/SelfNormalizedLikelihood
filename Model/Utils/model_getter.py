@@ -147,7 +147,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
             param.requires_grad = False
     print("Get base_dist... end")
 
-    if base_dist is None and ('ebm_pretraining' in args_dict.keys() or args_dict['ebm_pretraining'] is None):
+    if base_dist is None and ('ebm_pretraining' not in args_dict.keys() or args_dict['ebm_pretraining'] is None):
         print("Careful, no base_dist given, the energy might not be well initialized")
 
     if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
@@ -188,7 +188,7 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         print("Get proposal")
-        proposal = get_proposal_regression(args_dict=args_dict, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
+        proposal = get_proposal_regression(args_dict=args_dict, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = [complete_dataset.dataset_train, complete_dataset.dataset_val, complete_dataset.dataset_test],)
         print("Get proposal... end")
     else:
         raise ValueError("No proposal given")
