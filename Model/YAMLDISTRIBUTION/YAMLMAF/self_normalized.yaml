@@ -5,4 +5,4 @@ samples_every: 100000000
 batch_size : 512
 nb_sample_bias_explicit : 1024
 bias_explicit : True
-num_sample_proposal : 512
+num_sample_proposal : 1024
