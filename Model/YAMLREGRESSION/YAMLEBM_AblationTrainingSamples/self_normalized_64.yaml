@@ -1,7 +1,7 @@
 ebm_name : 'self_normalized'
 max_epoch : 75
-save_energy_every : 10
-samples_every: 50000
+save_energy_every : 5000
+samples_every: 10
 batch_size : 32
 explicit_bias_name : '2_layer_fc'
 num_sample_proposal : 64

@@ -1,7 +1,7 @@
 ebm_name : 'eubo'
 max_epoch : 75
-save_energy_every : 10
-samples_every: 10
+save_energy_every : 5000
+samples_every: 100000
 batch_size : 32
 num_sample_proposal : 64
 train_proposal : True
