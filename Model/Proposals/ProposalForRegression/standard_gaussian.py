@@ -10,7 +10,11 @@ class StandardGaussianRegression(nn.Module):
         self.input_size_y = np.prod(input_size_y)
         print("Init Standard Gaussian...")
         index = np.random.choice(len(dataset), 100)
-        data = torch.cat([dataset[i][1].reshape(1, self.input_size_y) for i in index])
+        if isinstance(dataset, list):
+            current_dataset = dataset[0]
+        else :
+            current_dataset = dataset
+        data = torch.cat([current_dataset[i][1].reshape(1, self.input_size_y) for i in index])
         if mean == 'dataset' :
             self.mean = nn.parameter.Parameter(data.mean(0),)
         else :

@@ -31,6 +31,9 @@ class EnergyNetworkRegression_Large(nn.Module):
         assert x_feature.shape[1] == self.input_dim_x
         try :
             assert y.shape[1] == self.input_dim_y
+        except AssertionError:
+            y = y.unsqueeze(1)
+            assert y.shape[1] == self.input_dim_y
         except IndexError:
             y = y.unsqueeze(1)
             assert y.shape[1] == self.input_dim_y

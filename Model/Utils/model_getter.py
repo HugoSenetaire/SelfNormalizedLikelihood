@@ -59,7 +59,7 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
         feature_extractor = feature_extractor.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
     
-    data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
+    data_y = torch.cat([dataset[i][1].unsqueeze(0) for i in range(len(dataset))]).to(device, dtype)
     dist_y = Normal(data_y.mean(0), data_y.std(0))
     epochs = 20
     batch_size = args_dict['batch_size']
@@ -132,7 +132,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         print("Get proposal")
-        proposal = get_proposal(args_dict=args_dict, input_size=input_size, dataset = complete_dataset.dataset_train,)
+        proposal = get_proposal(args_dict=args_dict, input_size=input_size, dataset = [complete_dataset.dataset_train, complete_dataset.dataset_val, complete_dataset.dataset_test],)
         print("Get proposal... end")
     else:
         raise ValueError("No proposal given")

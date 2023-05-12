@@ -5,8 +5,9 @@ def get_sampler(args_dict):
         args_dict["sampler_params"] = {}
 
     if "sampler_name" not in args_dict.keys():
-        args_dict["sampler_name"] = "nuts"
-        print("No sampler specified, using NUTS by default")
+        # args_dict["sampler_name"] = "nuts"
+        print("No sampler specified, using ")
+        return None
 
     
     if args_dict["sampler_name"] == "nuts":
