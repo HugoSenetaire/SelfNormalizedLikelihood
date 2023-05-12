@@ -30,7 +30,8 @@ def get_proposal(args_dict, input_size, dataset):
     if 'adaptive' in args_dict['proposal_name'] :
         assert 'default_proposal_name' in args_dict.keys(), 'You need to specify a default proposal for the adaptive proposal'
         assert not args_dict['train_proposal'], 'You cannot train the proposal if it is adaptive'
-        
+        if isinstance(dataset, list):
+            current_dataset = dataset[0]
         if 'proposal_params' not in args_dict.keys():
             args_dict['proposal_params'] = {}
         aux_args_dict = copy.deepcopy(args_dict)
@@ -40,11 +41,11 @@ def get_proposal(args_dict, input_size, dataset):
             aux_args_dict['proposal_params'] = args_dict['default_proposal_params']
         
         aux_args_dict['proposal_name'] = args_dict['default_proposal_name']
-        default_proposal = get_proposal(aux_args_dict, input_size, dataset,)
-        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = dataset, **args_dict["proposal_params"])
+        default_proposal = get_proposal(aux_args_dict, input_size, current_dataset,)
+        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = current_dataset, **args_dict["proposal_params"])
 
     if "proposal_params" in args_dict:
-        return proposal(input_size, dataset, **args_dict["proposal_params"])
+        return proposal(input_size, current_dataset, **args_dict["proposal_params"])
     else:
         return proposal(input_size, dataset)
 
