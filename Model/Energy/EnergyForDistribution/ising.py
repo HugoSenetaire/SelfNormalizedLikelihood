@@ -49,7 +49,7 @@ class ErdosRenyiEnergyIsing(nn.Module):
         g = ig.Graph.Erdos_Renyi(n_node, float(average_degree) / float(n_node))
         A = np.asarray(g.get_adjacency().data)  # g.get_sparse_adjacency()
         A = torch.tensor(A).float()
-        weights = torch.randn_like(A) * ((1.0 / avg_degree) ** 0.5)
+        weights = torch.randn_like(A) * ((1.0 / average_degree) ** 0.5)
         weights = weights * (1 - torch.tril(torch.ones_like(weights)))
         weights = weights + weights.t()
 

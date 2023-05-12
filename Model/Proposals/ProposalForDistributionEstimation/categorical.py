@@ -28,7 +28,7 @@ class Categorical(nn.Module):
 
         return samples_one_hot
 
-    def log_prob(self, x: Float[torch.Tensor, "batch_size"]):
+    def log_prob(self, x: Float[torch.Tensor, "batch_size 1"]):
         return (
             categorical.Categorical(self.logit_parameters).log_prob(x).flatten(1).sum(1)
         )

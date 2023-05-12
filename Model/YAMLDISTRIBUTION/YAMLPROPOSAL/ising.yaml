@@ -1,0 +1,3 @@
+proposal_name: "ising"
+proposal_params:
+  p: 0.9

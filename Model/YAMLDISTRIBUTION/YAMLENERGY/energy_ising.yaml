@@ -1,4 +1,7 @@
 energy_name: 'ising'
-energy_param:
-  learn_W: true
-  learn_b: true
+energy_params:
+  n_node: 100
+  average_degree: 4
+  init_bias: 0.
+  learn_G: true
+  learn_bias: true
