@@ -67,12 +67,13 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.train_proposal = self.args_dict["train_proposal"]
         self.train_base_dist = self.args_dict["train_base_dist"]
 
-        if not self.train_base_dist:
-            for param in self.ebm.base_dist.parameters():
-                param.requires_grad = False
-        else:
-            for param in self.ebm.base_dist.parameters():
-                param.requires_grad = True
+        if self.ebm.base_dist is not None :
+            if not self.train_base_dist:
+                for param in self.ebm.base_dist.parameters():
+                    param.requires_grad = False
+            else:
+                for param in self.ebm.base_dist.parameters():
+                    param.requires_grad = True
 
 
         if not self.train_proposal:
@@ -85,7 +86,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if self.ebm.base_dist == self.ebm.proposal:
             # Overwrite before if base dist == proposal and one of them is trained
             if self.train_proposal or self.train_base_dist :
-                for param in self.ebm.base_dist.parameters():
+                for param in self.ebm.proposal.parameters():
                     param.requires_grad = True
 
     def training_step(self, batch, batch_idx):
@@ -283,33 +284,34 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
     def base_dist_visualization(self):
         """Visualize the base dist"""
-        energy_function = lambda x: -self.ebm.base_dist.log_prob(x)
-        if self.input_type == "2d":
-            self.resample_proposal()
-            save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            plot_energy_2d(
-                self,
-                energy_function=energy_function,
-                save_dir=save_dir,
-                samples=[self.example, self.example_base_dist, self.example_proposal],
-                samples_title=["Samples from dataset", "Samples from base_dist", "Samples from proposal"],
-                name="base_dist",
-                step=self.global_step,
-            )
-        elif self.input_type == "image":
-            self.resample_base_dist()
-            save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            plot_images(
-                self.example_base_dist,
-                save_dir=save_dir,
-                name="base_dist_samples",
-                transform_back=self.transform_back,
-                step=self.global_step,
-            )
+        if self.ebm.base_dist is not None :
+            energy_function = lambda x: -self.ebm.base_dist.log_prob(x)
+            if self.input_type == "2d":
+                self.resample_proposal()
+                save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                plot_energy_2d(
+                    self,
+                    energy_function=energy_function,
+                    save_dir=save_dir,
+                    samples=[self.example, self.example_base_dist, self.example_proposal],
+                    samples_title=["Samples from dataset", "Samples from base_dist", "Samples from proposal"],
+                    name="base_dist",
+                    step=self.global_step,
+                )
+            elif self.input_type == "image":
+                self.resample_base_dist()
+                save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                plot_images(
+                    self.example_base_dist,
+                    save_dir=save_dir,
+                    name="base_dist_samples",
+                    transform_back=self.transform_back,
+                    step=self.global_step,
+                )
 
 
     def configure_optimizers(self):
