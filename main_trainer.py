@@ -146,6 +146,10 @@ if __name__ == "__main__":
     if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
         max_steps = args_dict["max_epoch"] * len(train_loader)
         args_dict["max_steps"] = max_steps
+    if 'val_check_interval' in args_dict.keys():
+        val_check_interval = args_dict['val_check_interval']
+    else :
+        val_check_interval = None
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
                         default_root_dir=save_dir,
@@ -154,7 +158,10 @@ if __name__ == "__main__":
                         strategy = strategy,
                         precision=16,
                         max_steps = args_dict['max_steps'],
-                        resume_from_checkpoint = ckpt_path)
+                        resume_from_checkpoint = ckpt_path,
+                        val_check_interval = val_check_interval,
+                        )
+    
     
     if not args_dict['just_test']:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
