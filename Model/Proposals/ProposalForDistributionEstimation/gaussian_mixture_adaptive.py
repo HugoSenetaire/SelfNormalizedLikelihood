@@ -20,7 +20,7 @@ class GaussianMixtureAdaptiveProposal(nn.Module):
         index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
         data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), *input_size)
         data += torch.randn_like(data) * 1e-2
-        self.std = nn.Parameter(data.std(0), requires_grad=False)
+        self.std = nn.Parameter(data.std(0).reshape(input_size), requires_grad=False)
         self.x = None
         
     def set_x(self, x):
@@ -42,10 +42,10 @@ class GaussianMixtureAdaptiveProposal(nn.Module):
                 index_sample = np.random.choice(len(self.x), nb_sample, replace=True)
             else :
                 index_sample = np.random.choice(len(self.x), nb_sample, replace=False)
-            x_repeat = self.x[index_sample].clone().detach().reshape(nb_sample, *self.x.shape[1:])
-            samples = torch.randn_like(x_repeat) * self.std.unsqueeze(0) + x_repeat
-            index = np.random.choice(len(samples), nb_sample)
-            return samples[index].detach()
+            x_repeat = self.x[index_sample].clone().detach().reshape(nb_sample, *self.input_size)
+            samples = torch.randn_like(x_repeat) * self.std.unsqueeze(0).expand(x_repeat.shape) + x_repeat
+            # index = np.random.choice(len(samples), nb_sample)
+            return samples.detach()
     
     def log_prob(self, samples):
         if self.x is None or not self.training:

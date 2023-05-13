@@ -48,11 +48,11 @@ class NoiseGradationAdaptiveProposal(nn.Module):
             else :
                 index_samples = np.random.choice(len(self.x), nb_sample, replace=False)
 
-            x_repeat = self.x[index_samples].clone().detach().reshape(nb_sample, *self.x.shape[1:])
+            x_repeat = self.x[index_samples].clone().detach().reshape(nb_sample, *self.input_size)
          
             samples = torch.randn_like(x_repeat) * self.std[index_std].reshape(x_repeat.shape) + x_repeat
-            index = np.random.choice(len(samples), nb_sample)
-            return samples[index].detach()
+            # index = np.random.choice(len(samples), nb_sample)
+            return samples
     
     def log_prob(self, samples):
         if self.x is None or not self.training:
