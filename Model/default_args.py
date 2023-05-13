@@ -21,6 +21,7 @@ def default_args_ebm(parser = None):
 
     parser.add_argument('--train_proposal', action='store_true', help='Train the proposal')
     parser.add_argument('--train_feature_extractor', action='store_true', help='Train the feature extractor')
+    parser.add_argument('--train_base_dist', type=bool, default=True, help='Train the base distribution')
     parser.add_argument('--proposal_loss_name', type = str, default = 'log_prob', choices=['log_prob', 'kl', 'log_prob_kl'],
                         help='Loss used to train the proposal, \
                             log prob simply consider maximizing the likelihood of the proposal with the data \

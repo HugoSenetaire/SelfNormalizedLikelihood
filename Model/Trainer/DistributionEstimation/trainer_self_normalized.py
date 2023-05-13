@@ -79,7 +79,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             )
             self.manual_backward(
                 (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
-            )
+            )         
             proposal_opt.step()
         # Update the parameters of the ebm
         ebm_opt.step()

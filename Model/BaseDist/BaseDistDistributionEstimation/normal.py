@@ -12,6 +12,8 @@ class Normal(nn.Module):
         super().__init__()
         # assert False
         self.input_size = input_size
+        if isinstance(dataset, list):
+            dataset = dataset[0]
         
         index = np.random.choice(len(dataset), 1000)
         data = torch.cat([dataset[i][0] for i in index]).reshape(-1, *input_size)

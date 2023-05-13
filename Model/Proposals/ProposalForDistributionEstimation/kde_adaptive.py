@@ -10,6 +10,8 @@ class KernelDensityAdaptive(nn.Module):
     def __init__(self, input_size, dataset, kernel='gaussian', bandwith = 'scott', nb_center=1000, **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
+        if isinstance(dataset, list):
+            dataset = dataset[0]
         
         index = np.random.choice(len(dataset), min(nb_center,len(dataset)))
         data = torch.cat([dataset[i][0] for i in index]).flatten(1).numpy()

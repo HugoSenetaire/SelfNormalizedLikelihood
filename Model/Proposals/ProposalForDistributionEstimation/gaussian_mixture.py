@@ -7,7 +7,7 @@ from ..gmm_torch.gmm import GaussianMixture
 
 
 class GaussianMixtureProposal(nn.Module):
-    def __init__(self, input_size, dataset, covariance_type="diag", eps=1.e-6, n_components = 10, nb_sample_for_estimate = 10000, init_params="kmeans", delta = 1e-3, n_iter = 100, warm_start = False, **kwargs) -> None:
+    def __init__(self, input_size, dataset, covariance_type="diag", eps=1.e-6, n_components = 10, nb_sample_for_estimate = 10000, init_params="kmeans", delta = 1e-3, n_iter = 100, warm_start = False, fit = True, **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         self.n_components = n_components
@@ -16,12 +16,18 @@ class GaussianMixtureProposal(nn.Module):
         self.warm_start = warm_start
 
         n_features = np.prod(input_size)
-        index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
-        data = torch.cat([dataset[i][0] for i in index]).flatten(1)
+        if isinstance(dataset, list) or isinstance(dataset, tuple):
+            current_dataset= dataset[0]
+        index = np.random.choice(len(current_dataset), min(nb_sample_for_estimate,len(current_dataset)))
+        # if isinstance(dataset[index[0]][0], tuple) or isinstance(dataset[index[0]][0], list):
+            # data = torch.cat([dataset[i][0][0] for i in index]).flatten(1)
+
+        data = torch.cat([current_dataset[i][0] for i in index]).reshape(len(index), -1)
         data += torch.randn_like(data) * 1e-2
         
         self.gmm = GaussianMixture(n_features=n_features, n_components=n_components, covariance_type=covariance_type, eps=eps, init_params=init_params)
-        self.gmm.fit(data, delta=self.delta, n_iter=self.n_iter, warm_start=self.warm_start)
+        if fit :
+            self.gmm.fit(data, delta=self.delta, n_iter=self.n_iter, warm_start=self.warm_start)
         
     def sample(self, nb_sample = 1):
         samples,y = self.gmm.sample(nb_sample)

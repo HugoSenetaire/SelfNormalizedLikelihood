@@ -9,7 +9,7 @@ from .ProposalForRegression.MDNProposal import MDNProposalRegression
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
 from .ProposalForDistributionEstimation.categorical import Categorical
 from .ProposalForDistributionEstimation.gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal
-
+from .ProposalForDistributionEstimation.noise_gradation_adaptive import NoiseGradationAdaptiveProposal
 import copy
 
 dic_proposals = {
@@ -20,18 +20,22 @@ dic_proposals = {
     "uniform_categorical": Categorical,
     'kernel_density_adaptive': KernelDensityAdaptive,
     'gaussian_mixture_adaptive': GaussianMixtureAdaptiveProposal,
+    'noise_gradation_adaptive' : NoiseGradationAdaptiveProposal,
 }
 
 
 
 def get_proposal(args_dict, input_size, dataset):
 
+    if isinstance(dataset, list):
+        current_dataset = dataset[0]
+    else :
+        current_dataset = dataset
     proposal = dic_proposals[args_dict["proposal_name"]]
     if 'adaptive' in args_dict['proposal_name'] :
         assert 'default_proposal_name' in args_dict.keys(), 'You need to specify a default proposal for the adaptive proposal'
         assert not args_dict['train_proposal'], 'You cannot train the proposal if it is adaptive'
-        if isinstance(dataset, list):
-            current_dataset = dataset[0]
+        
         if 'proposal_params' not in args_dict.keys():
             args_dict['proposal_params'] = {}
         aux_args_dict = copy.deepcopy(args_dict)
