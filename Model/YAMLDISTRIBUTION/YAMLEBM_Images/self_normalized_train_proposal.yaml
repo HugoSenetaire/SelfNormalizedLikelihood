@@ -1,0 +1,7 @@
+ebm_name : 'self_normalized'
+max_steps : 10000
+save_energy_every : 100
+samples_every: 100
+batch_size : 256
+nb_sample_bias_explicit : 1024
+bias_explicit : True
