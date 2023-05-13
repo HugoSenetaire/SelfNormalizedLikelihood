@@ -1,6 +1,7 @@
 
 
 from .BaseDistDistributionEstimation.normal import Normal
+from .BaseDistDistributionEstimation.gaussian_mixture import GaussianMixtureProposal
 from .BaseDistRegression.normal_regression import NormalRegression
 from .BaseDistRegression.uniform_regression import UniformRegression
 def get_base_dist(args_dict, proposal, input_size, dataset):
@@ -10,6 +11,8 @@ def get_base_dist(args_dict, proposal, input_size, dataset):
 
         if args_dict['base_dist_name'] == 'Normal':
             base_dist = Normal(input_size= input_size, dataset=dataset, **args_dict['base_dist_parameters'])
+        elif args_dict['base_dist_name'] == 'gaussian_mixture':
+            base_dist = GaussianMixtureProposal(input_size= input_size, dataset=dataset, **args_dict['base_dist_parameters'])
         elif args_dict['base_dist_name'] == 'proposal':
             base_dist = proposal
         else:

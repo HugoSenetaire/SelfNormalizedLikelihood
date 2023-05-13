@@ -163,13 +163,13 @@ if __name__ == "__main__":
         )
 
     trainer.test(algo, dataloaders=test_loader)
-
-    if np.prod(complete_dataset.get_dim_input()) == 2:
-        samples = algo.samples_mcmc()[0].flatten(1)
-        plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
-    else :
-        images = algo.samples_mcmc()[0]
-        plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
+    if algo.sampler is not None :
+        if np.prod(complete_dataset.get_dim_input()) == 2:
+            samples = algo.samples_mcmc()[0].flatten(1)
+            plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
+        else :
+            images = algo.samples_mcmc()[0]
+            plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
    
 
 

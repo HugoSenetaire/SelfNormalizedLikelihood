@@ -142,7 +142,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     base_dist = get_base_dist(args_dict = args_dict, proposal=proposal, input_size=input_size, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
-        assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
+        # assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
         for param in proposal.parameters():
             param.requires_grad = False
     print("Get base_dist... end")
@@ -203,6 +203,9 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
     base_dist = get_base_dist_regression(args_dict = args_dict, proposal=proposal, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
+    else :
+        for param in base_dist.parameters():
+            param.requires_grad = True
     print("Get base_dist... end")
     if args_dict['base_dist_name'] == 'proposal':
         assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
