@@ -9,3 +9,4 @@ bias_explicit : True
 num_sample_proposal : 1024
 train_proposal : True
 proposal_loss_name : 'log_prob'
+val_check_interval : 100

@@ -1,8 +1,7 @@
 ebm_name : 'self_normalized'
-max_epoch : 100
+max_epoch : 25
 save_energy_every : 9
 samples_every: 100
-val_check_interval : 100
 batch_size : 512
 nb_sample_bias_explicit : 1024
 bias_explicit : True
