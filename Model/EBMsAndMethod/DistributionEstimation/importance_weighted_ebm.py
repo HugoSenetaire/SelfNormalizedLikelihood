@@ -102,7 +102,6 @@ class ImportanceWeightedEBM(nn.Module):
     def estimate_log_z(self, x, nb_sample=1000):
         dic_output = {}
         samples = self.sample(nb_sample).to(x.device, x.dtype)
-
         energy_samples = self.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         if self.bias_explicit :
             energy_samples = self.explicit_bias_module(energy_samples)

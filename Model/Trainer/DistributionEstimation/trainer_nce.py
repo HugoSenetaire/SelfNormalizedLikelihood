@@ -20,7 +20,7 @@ class NCETrainer(AbstractDistributionEstimation):
 
     def training_step(self, batch, batch_idx):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers()
+        ebm_opt, proposal_opt = self.optimizers_perso()
 
         if self.args_dict["switch_mode"] is not None and self.global_step == self.args_dict["switch_mode"]:
             self.ebm.switch_mode()
@@ -44,13 +44,12 @@ class NCETrainer(AbstractDistributionEstimation):
 
         # Backward ebm
         ebm_opt.zero_grad()
-        proposal_opt.zero_grad()
         self.manual_backward(loss_total, retain_graph=True, )
 
 
         # Update the parameters of the proposal
-        proposal_opt.zero_grad()
         if self.train_proposal :
+            proposal_opt.zero_grad()
             self.log('proposal_log_likelihood', log_prob_proposal_data.mean())
             proposal_loss = self.proposal_loss(log_prob_proposal_data, estimate_log_z,)
             self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))

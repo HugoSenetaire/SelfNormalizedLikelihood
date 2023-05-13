@@ -20,7 +20,7 @@ class ProposalTrainer(AbstractDistributionEstimation):
 
     def training_step(self, batch, batch_idx):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers()
+        ebm_opt, proposal_opt = self.optimizers_perso()
         x = batch['data']
         log_prob_proposal_data = self.ebm.proposal.log_prob(x,)
         self.log('train_proposal_log_likelihood', log_prob_proposal_data.mean())

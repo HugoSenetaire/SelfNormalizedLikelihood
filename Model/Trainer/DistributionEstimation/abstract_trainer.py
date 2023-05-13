@@ -59,6 +59,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
             raise ValueError("Proposal loss name not recognized")
 
         self.initialize_examples(complete_dataset=complete_dataset)
+        self.resample_base_dist()
+        self.resample_proposal()
         self.proposal_visualization()
         self.base_dist_visualization()
         self.automatic_optimization = False
@@ -336,6 +338,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         opt_list = [ebm_opt]
         if proposal_opt is not None :
             opt_list.append(proposal_opt)
+        # opt_list.append(proposal_opt)
 
         if ebm_sch is not None and proposal_sch is not None :
             return opt_list, [ebm_sch, proposal_sch]      
@@ -345,6 +348,15 @@ class AbstractDistributionEstimation(pl.LightningModule):
             return opt_list, proposal_sch
         else:
             return opt_list
+        
+    def optimizers_perso(self):
+        liste_opt = super().optimizers()
+        try :
+            ebm_opt, proposal_opt = liste_opt
+            return liste_opt
+        except :
+            return liste_opt, None
+        
 
     def update_dic_logger(self, outputs, name="val_"):
         list_keys = list(outputs[0].keys())
