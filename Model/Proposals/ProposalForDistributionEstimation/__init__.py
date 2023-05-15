@@ -4,3 +4,5 @@ from .gaussian_mixture import GaussianMixtureProposal
 from .gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal
 from .noise_gradation_adaptive import NoiseGradationAdaptiveProposal
 from .student import StudentProposal
+from .ising_proposal import IsingProposal
+from .ising_proposal_adaptive import IsingProposalAdaptive

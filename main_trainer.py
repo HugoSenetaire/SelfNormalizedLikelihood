@@ -165,6 +165,7 @@ if __name__ == "__main__":
     
     
     if not args_dict['just_test']:
+        trainer.validate(algo, dataloaders=val_loader)
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]

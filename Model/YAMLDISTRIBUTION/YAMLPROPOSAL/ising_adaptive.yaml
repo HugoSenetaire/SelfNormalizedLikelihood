@@ -1,0 +1,4 @@
+proposal_name: "ising_adaptive"
+default_proposal_name : "ising"
+proposal_params:
+  p: 0.5

@@ -100,4 +100,5 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             with torch.no_grad():
                 log_rmse = (self.J - self.ebm.energy.J).pow(2).mean().sqrt().log()
                 self.log_rmse.append((log_rmse.item(), self.global_step))
+                self.log("log_rmse_train", log_rmse)
         return loss_total

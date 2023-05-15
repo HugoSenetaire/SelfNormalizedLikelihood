@@ -124,6 +124,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             with torch.no_grad():
                 log_rmse_val = (self.J - self.ebm.energy.J).pow(2).mean().sqrt().log()
                 self.log_rmse_val.append((log_rmse_val.item(), self.global_step))
+                self.log("log_rmse_val", log_rmse_val)
         self.update_dic_logger(outputs, name="val_")
         self.proposal_visualization()
         self.base_dist_visualization()

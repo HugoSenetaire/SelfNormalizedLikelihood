@@ -6,6 +6,6 @@ samples_every: 2
 batch_size : 64
 nb_sample_bias_explicit : 1024
 bias_explicit : True
-num_sample_proposal : 512
-num_sample_proposal_val : 512
-decay_ema: 0.99
+num_sample_proposal : 1024
+num_sample_proposal_val : 2048
+decay_ema: 0.9
