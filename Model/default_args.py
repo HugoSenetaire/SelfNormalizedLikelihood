@@ -17,7 +17,7 @@ def default_args_ebm(parser = None):
     parser.add_argument('--proposal_name', type=str, default='standard_gaussian', help='Name of the proposal', choices = dic_proposals.keys())
     parser.add_argument('--num_sample_proposal', type=float, default=512, help='Standard deviation of the proposal')
     parser.add_argument('--num_sample_proposal_val', type=float, default=1024, help='Standard deviation of the proposal')
-    parser.add_argument('--num_sample_proposal_test', type=float, default= 16384, help='Standard deviation of the proposal')
+    parser.add_argument('--num_sample_proposal_test', type=float, default= 20000, help='Standard deviation of the proposal')
 
     parser.add_argument('--train_proposal', action='store_true', help='Train the proposal')
     parser.add_argument('--train_feature_extractor', action='store_true', help='Train the feature extractor')

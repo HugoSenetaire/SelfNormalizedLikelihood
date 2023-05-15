@@ -38,6 +38,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
+        self.num_samples_val = args_dict["num_sample_proposal_val"]
 
         if np.prod(self.args_dict["input_size"]) == 2:
             self.input_type = "2d"
@@ -375,10 +376,17 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 ).mean()
         # dic_output = {name+key+"_mean": torch.cat([outputs[k][key] for k in range(len(outputs))]).mean() for key in list_keys}
         mean_energy = dic_output[name + "energy_mean"]
-        log_z_estimate, dic = self.ebm.estimate_log_z(
-            x=torch.zeros((1,), dtype=torch.float32, device=self.device),
-            nb_sample=self.args_dict["num_sample_proposal_test"],
-        )
+        if name == "val_":
+            log_z_estimate, dic = self.ebm.estimate_log_z(
+                x=torch.zeros((1,), dtype=torch.float32, device=self.device),
+                nb_sample=self.args_dict["num_sample_proposal_val"],
+            )
+        else :
+            log_z_estimate, dic = self.ebm.estimate_log_z(
+                x=torch.zeros((1,), dtype=torch.float32, device=self.device),
+                nb_sample=self.args_dict["num_sample_proposal_test"],
+            )
+
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})
         total_loss_self_norm = mean_energy + log_z_estimate.exp()
