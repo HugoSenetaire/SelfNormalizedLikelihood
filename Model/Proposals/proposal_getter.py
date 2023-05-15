@@ -12,6 +12,10 @@ from .ProposalForDistributionEstimation.poisson import Poisson
 from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussian
 from .ProposalForRegression.MDNProposal import MDNProposalRegression
 from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
+from .ProposalForDistributionEstimation.categorical import Categorical
+from .ProposalForDistributionEstimation.noise_gradation_adaptive import NoiseGradationAdaptiveProposal
+from .ProposalForDistributionEstimation.student import StudentProposal
+import copy
 
 dic_proposals = {
     "standard_gaussian": StandardGaussian,
@@ -19,13 +23,20 @@ dic_proposals = {
     "gaussian_mixture": GaussianMixtureProposal,
     "poisson": Poisson,
     "uniform_categorical": Categorical,
-    "kernel_density_adaptive": KernelDensityAdaptive,
     "gaussian_mixture_adaptive": GaussianMixtureAdaptiveProposal,
     "ising": IsingProposal,
+    'kernel_density_adaptive': KernelDensityAdaptive,
+    'noise_gradation_adaptive' : NoiseGradationAdaptiveProposal,
+    'student' : StudentProposal,
 }
 
 
 def get_proposal(args_dict, input_size, dataset):
+
+    if isinstance(dataset, list):
+        current_dataset = dataset[0]
+    else :
+        current_dataset = dataset
     proposal = dic_proposals[args_dict["proposal_name"]]
     if "adaptive" in args_dict["proposal_name"]:
         assert (
@@ -38,26 +49,17 @@ def get_proposal(args_dict, input_size, dataset):
         if "proposal_params" not in args_dict.keys():
             args_dict["proposal_params"] = {}
         aux_args_dict = copy.deepcopy(args_dict)
-        if "default_proposal_params" not in args_dict.keys():
-            aux_args_dict["proposal_params"] = {}
-        else:
-            aux_args_dict["proposal_params"] = args_dict["default_proposal_params"]
-
-        aux_args_dict["proposal_name"] = args_dict["default_proposal_name"]
-        default_proposal = get_proposal(
-            aux_args_dict,
-            input_size,
-            dataset,
-        )
-        return proposal(
-            default_proposal=default_proposal,
-            input_size=input_size,
-            dataset=dataset,
-            **args_dict["proposal_params"]
-        )
+        if 'default_proposal_params' not in args_dict.keys():
+            aux_args_dict['proposal_params'] = {}
+        else :
+            aux_args_dict['proposal_params'] = args_dict['default_proposal_params']
+        
+        aux_args_dict['proposal_name'] = args_dict['default_proposal_name']
+        default_proposal = get_proposal(aux_args_dict, input_size, current_dataset,)
+        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = current_dataset, **args_dict["proposal_params"])
 
     if "proposal_params" in args_dict:
-        return proposal(input_size, dataset, **args_dict["proposal_params"])
+        return proposal(input_size, current_dataset, **args_dict["proposal_params"])
     else:
         return proposal(input_size, dataset)
 

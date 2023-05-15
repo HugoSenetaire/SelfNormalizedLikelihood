@@ -59,7 +59,7 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
         feature_extractor = feature_extractor.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
     
-    data_y = torch.cat([dataset[i][1] for i in range(len(dataset))])
+    data_y = torch.cat([dataset[i][1].unsqueeze(0) for i in range(len(dataset))]).to(device, dtype)
     dist_y = Normal(data_y.mean(0), data_y.std(0))
     epochs = 20
     batch_size = args_dict['batch_size']
@@ -86,7 +86,37 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
         feature_extractor = feature_extractor.to(torch.device('cpu'))
     return energy
 
-def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
+
+
+def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
+    dtype = torch.float32
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else :
+        device = torch.device('cpu')
+
+    proposal = proposal.to(device)
+
+    for param in proposal.parameters():
+        param.requires_grad = True
+    optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-3)
+    print("Init proposal to data")
+    for epoch in range(100):
+        tqdm_range = tqdm.tqdm(dataloader)
+        for batch in tqdm_range:
+            x = batch['data']
+            x = x.to(device, dtype)
+            log_prob = proposal.log_prob(x,).reshape(-1)
+            loss = (-log_prob).mean()
+            tqdm_range.set_description(f'Loss : {loss.item()}')
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+    proposal = proposal.to(torch.device('cpu'))
+    print("Init proposal to data... end")
+    return proposal
+
+def init_proposal_to_data_regression(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
     dtype = torch.float32
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -120,7 +150,7 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
     print("Init proposal to data... end")
     return proposal
 
-def get_model(args_dict, complete_dataset, complete_masked_dataset):
+def get_model(args_dict, complete_dataset, complete_masked_dataset, loader_train):
     input_size = complete_dataset.get_dim_input()
 
     # Get energy function :
@@ -132,7 +162,7 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         print("Get proposal")
-        proposal = get_proposal(args_dict=args_dict, input_size=input_size, dataset = complete_dataset.dataset_train,)
+        proposal = get_proposal(args_dict=args_dict, input_size=input_size, dataset = [complete_dataset.dataset_train, complete_dataset.dataset_val, complete_dataset.dataset_test],)
         print("Get proposal... end")
     else:
         raise ValueError("No proposal given")
@@ -142,18 +172,23 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
     base_dist = get_base_dist(args_dict = args_dict, proposal=proposal, input_size=input_size, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
-        assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
+        # assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"
         for param in proposal.parameters():
             param.requires_grad = False
     print("Get base_dist... end")
 
-    if base_dist is None and ('ebm_pretraining' in args_dict.keys() or args_dict['ebm_pretraining'] is None):
+    if base_dist is None and ('ebm_pretraining' not in args_dict.keys() or args_dict['ebm_pretraining'] is None):
         print("Careful, no base_dist given, the energy might not be well initialized")
 
     if 'ebm_pretraining' in args_dict.keys() and args_dict['ebm_pretraining'] == 'standard_gaussian':
         print("Init energy to standard gaussian")
         energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
         print("Init energy to standard gaussian... end")
+
+    if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
+        print("Init proposal")
+        proposal = init_proposal_to_data(proposal = proposal, input_size = input_size, dataloader = loader_train, args_dict = args_dict)
+        print("Init proposal... end")
 
     # Get EBM :
     print("Get EBM")
@@ -188,21 +223,24 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
     # Get proposal :
     if args_dict['proposal_name'] is not None:
         print("Get proposal")
-        proposal = get_proposal_regression(args_dict=args_dict, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
+        proposal = get_proposal_regression(args_dict=args_dict, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = [complete_dataset.dataset_train, complete_dataset.dataset_val, complete_dataset.dataset_test],)
         print("Get proposal... end")
     else:
         raise ValueError("No proposal given")
     
     if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
-        print("Init proposal to standard gaussian")
-        proposal = init_proposal_to_data(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, args_dict = args_dict)
-        print("Init proposal to standard gaussian... end")
+        print("Init proposal")
+        proposal = init_proposal_to_data_regression(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, args_dict = args_dict)
+        print("Init proposal... end")
     
     # Get base_dist :
     print("Get base_dist")
     base_dist = get_base_dist_regression(args_dict = args_dict, proposal=proposal, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
+    else :
+        for param in base_dist.parameters():
+            param.requires_grad = True
     print("Get base_dist... end")
     if args_dict['base_dist_name'] == 'proposal':
         assert args_dict['train_proposal'] == False, "If training the proposal, the base_dist should not be the proposal"

@@ -1,0 +1,8 @@
+ebm_name : 'eubo'
+max_epoch : 75
+save_energy_every : 5000
+samples_every: 10
+batch_size : 32
+num_sample_proposal : 1
+train_proposal : False
+explicit_bias_name : 'none'

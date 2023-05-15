@@ -82,13 +82,16 @@ if __name__ == "__main__":
         name = name + "_" + args_dict["ebm_name"]
         save_dir = os.path.join(save_dir, args_dict["ebm_name"])
 
+    if "seed" in args_dict.keys() and args_dict["seed"] is not None:
+        save_dir = os.path.join(save_dir, "seed_{}".format(args_dict["seed"]))
+
     args_dict["save_dir"] = save_dir
 
     # Get EBM :
     if args_dict["just_test"]:
         args_dict["ebm_pretraining"] = False
         args_dict["proposal_pretraining"] = False
-    ebm = get_model(args_dict, complete_dataset, complete_masked_dataset)
+    ebm = get_model(args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader)
 
     # Get Trainer :
     algo = dic_trainer[args_dict["trainer_name"]](
@@ -141,8 +144,13 @@ if __name__ == "__main__":
 
     # Train :
     if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
-        max_steps = args_dict["max_epoch"] * len(train_loader)
+        max_steps = args_dict["max_epoch"] * (len(train_loader)+len(val_loader))
         args_dict["max_steps"] = max_steps
+
+    if 'val_check_interval' in args_dict.keys():
+        val_check_interval = args_dict['val_check_interval']
+    else :
+        val_check_interval = None
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
                         default_root_dir=save_dir,
@@ -151,7 +159,10 @@ if __name__ == "__main__":
                         strategy = strategy,
                         precision=16,
                         max_steps = args_dict['max_steps'],
-                        resume_from_checkpoint = ckpt_path)
+                        resume_from_checkpoint = ckpt_path,
+                        val_check_interval = val_check_interval,
+                        )
+    
     
     if not args_dict['just_test']:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
@@ -160,13 +171,13 @@ if __name__ == "__main__":
         )
 
     trainer.test(algo, dataloaders=test_loader)
-
-    if np.prod(complete_dataset.get_dim_input()) == 2:
-        samples = algo.samples_mcmc()[0].flatten(1)
-        plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
-    else :
-        images = algo.samples_mcmc()[0]
-        plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
+    if algo.sampler is not None :
+        if np.prod(complete_dataset.get_dim_input()) == 2:
+            samples = algo.samples_mcmc()[0].flatten(1)
+            plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
+        else :
+            images = algo.samples_mcmc()[0]
+            plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
    
 
 

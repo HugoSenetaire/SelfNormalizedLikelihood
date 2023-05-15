@@ -1,0 +1,8 @@
+ebm_name : 'self_normalized'
+trainer_name : 'just_proposal'
+max_epoch : 75
+save_energy_every : 5000
+samples_every: 10
+batch_size : 32
+num_sample_proposal : 64
+explicit_bias_name : None

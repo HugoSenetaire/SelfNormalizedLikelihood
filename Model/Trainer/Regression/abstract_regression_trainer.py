@@ -60,7 +60,7 @@ class AbstractRegression(pl.LightningModule):
         else :
             raise ValueError('Proposal loss name not recognized')
 
-
+        self.test_name = None
         self.automatic_optimization = False
 
 
@@ -217,11 +217,17 @@ class AbstractRegression(pl.LightningModule):
        
     def test_step(self, batch, batch_idx):
         self.num_samples_val = self.args_dict['num_sample_proposal_test']
-        return self.validation_step(batch, batch_idx, name = 'test')
+        if self.test_name is None :
+            return self.validation_step(batch, batch_idx, name = 'test') # Regular testing
+        else :
+            return self.validation_step(batch, batch_idx, name = self.test_name) # Testing with a specific name for specific proposal evaluation
         
         
     def test_epoch_end(self, outputs):
-       self.update_dic_logger(outputs, name = 'test_')
+        if self.test_name is None :
+            self.update_dic_logger(outputs, name = 'test_') # Regular testing
+        else :
+            self.update_dic_logger(outputs, name = self.test_name+'_') # Testing with a specific name for specific proposal evaluation
         
     
     def plot_energy(self, ):

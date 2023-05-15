@@ -1,7 +1,7 @@
 ebm_name : 'self_normalized'
 trainer_name : 'nce'
 max_epoch : 75
-save_energy_every : 10
+save_energy_every : 5000
 samples_every: 10
 batch_size : 32
 explicit_bias_name : 'none'

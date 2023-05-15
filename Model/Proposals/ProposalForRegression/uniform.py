@@ -8,21 +8,24 @@ class UniformRegression(nn.Module):
         super().__init__()
         self.input_size_x = np.prod(input_size_x)
         self.input_size_y = np.prod(input_size_y)
-        print("Init Standard Gaussian...")
-
+        print("Init UNIFORM...")
+        if not isinstance(dataset, list):
+            dataset = [dataset]
         if min_data == 'dataset' :
-            self.min_data = float('inf') 
-            for i in range(len(dataset)):
-                self.min_data = min(self.min_data, dataset[i][1])
+            self.min_data = dataset[0][0][1]
+            for current_dataset in dataset :
+                for i in range(len(current_dataset)):
+                    self.min_data = torch.min(self.min_data, current_dataset[i][1])
 
-            self.min_data = torch.tensor(self.min_data -1, dtype=torch.float32)
+            self.min_data = torch.tensor(self.min_data, dtype=torch.float32)
         else :
             self.min_data = torch.tensor(min_data, dtype=torch.float32)
         if max_data == 'dataset' :
-            self.max_data = float('-inf') 
-            for i in range(len(dataset)):
-                self.max_data = max(self.max_data, dataset[i][1])
-            self.max_data= torch.tensor(self.max_data +1, dtype=torch.float32)
+            self.max_data = dataset[0][0][1]
+            for current_dataset in dataset :
+                for i in range(len(current_dataset)):
+                    self.max_data = torch.max(self.max_data, current_dataset[i][1])
+            self.max_data= torch.tensor(self.max_data, dtype=torch.float32)
         else :
             self.max_data = torch.tensor(max_data, dtype=torch.float32)
 
@@ -43,5 +46,7 @@ class UniformRegression(nn.Module):
     def log_prob(self, x_feature, y):
         assert x_feature.shape[0] == y.shape[0]
         batch_size = x_feature.shape[0]
-        return self.distribution.log_prob(y).reshape(batch_size, self.input_size_y).sum(1)
+        y_clamp = y.clamp(self.min_data, self.max_data)
+        log_prob = self.distribution.log_prob(y_clamp).reshape(batch_size, self.input_size_y).sum(1)
+        return log_prob
     

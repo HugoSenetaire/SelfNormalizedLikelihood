@@ -1,3 +1,3 @@
 energy_name : 'conv'
-energy_param :
+energy_params :
   last_layer_bias : False

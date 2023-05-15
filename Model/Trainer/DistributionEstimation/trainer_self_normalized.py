@@ -42,7 +42,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
     def training_step(self, batch, batch_idx):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers()
+        ebm_opt, proposal_opt = self.optimizers_perso()
 
         if (
             self.args_dict["switch_mode"] is not None
@@ -67,15 +67,14 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
         # Backward ebmxx
         ebm_opt.zero_grad()
-        proposal_opt.zero_grad()
         self.manual_backward(
             loss_total,
             retain_graph=True,
         )
 
         # Update the parameters of the proposal
-        proposal_opt.zero_grad()
         if self.train_proposal:
+            proposal_opt.zero_grad()
             log_prob_proposal = self.ebm.proposal.log_prob(
                 x,
             )
@@ -86,7 +85,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             )
             self.manual_backward(
                 (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
-            )
+            )         
             proposal_opt.step()
         # Update the parameters of the ebm
         ebm_opt.step()

@@ -1,0 +1,9 @@
+ebm_name : 'self_normalized'
+trainer_name : 'nce'
+max_epoch : 75
+save_energy_every : 9
+samples_every: 500
+batch_size : 512
+nb_sample_bias_explicit : 1024
+bias_explicit : True
+num_sample_proposal : 512

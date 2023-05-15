@@ -2,5 +2,5 @@ sampler_name : 'nuts'
 sampler_params :
   num_samples : 8
   warmup_steps : 200
-  num_chains : 10
+  num_chains : 8
   thinning : 10
