@@ -144,8 +144,9 @@ if __name__ == "__main__":
 
     # Train :
     if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
-        max_steps = args_dict["max_epoch"] * len(train_loader)
+        max_steps = args_dict["max_epoch"] * (len(train_loader)+len(val_loader))
         args_dict["max_steps"] = max_steps
+
     if 'val_check_interval' in args_dict.keys():
         val_check_interval = args_dict['val_check_interval']
     else :
