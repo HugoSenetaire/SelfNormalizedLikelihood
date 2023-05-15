@@ -1,5 +1,5 @@
 python main_trainer.py \
---yamldataset Dataset/MissingDataDataset/YAMLExamples/power_maf.yaml \
+--yamldataset Dataset/MissingDataDataset/YAMLExamples/hepmass_maf.yaml \
 --yamlebm Model/YAMLDISTRIBUTION/YAMLBASEDIST/normal_diag.yaml \
 Model/YAMLDISTRIBUTION/YAMLMAF/self_normalized_train_proposal.yaml \
 Model/YAMLDISTRIBUTION/YAMLPROPOSAL/standard_gaussian.yaml \

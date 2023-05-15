@@ -1,4 +1,5 @@
 ebm_name : 'self_normalized'
+trainer_name : 'nce'
 max_epoch : 75
 save_energy_every : 9
 samples_every: 500
