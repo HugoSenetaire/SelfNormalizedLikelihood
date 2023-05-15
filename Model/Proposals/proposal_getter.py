@@ -10,6 +10,7 @@ from .ProposalForRegression.standard_gaussian import StandardGaussianRegression
 from .ProposalForDistributionEstimation.categorical import Categorical
 from .ProposalForDistributionEstimation.gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal
 from .ProposalForDistributionEstimation.noise_gradation_adaptive import NoiseGradationAdaptiveProposal
+from .ProposalForDistributionEstimation.student import StudentProposal
 import copy
 
 dic_proposals = {
@@ -21,6 +22,7 @@ dic_proposals = {
     'kernel_density_adaptive': KernelDensityAdaptive,
     'gaussian_mixture_adaptive': GaussianMixtureAdaptiveProposal,
     'noise_gradation_adaptive' : NoiseGradationAdaptiveProposal,
+    'student' : StudentProposal,
 }
 
 
