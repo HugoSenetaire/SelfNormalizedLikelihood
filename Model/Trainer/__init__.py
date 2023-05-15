@@ -6,7 +6,7 @@ dic_trainer = {
     'just_proposal' : ProposalTrainer,
     'nce' : NCETrainer,
     'score_matching' : ScoreMatchingTrainer,
-    'denoisingscore_matching' : DenoisingScoreMatchingTrainer,
+    'denoising_score_matching' : DenoisingScoreMatchingTrainer,
     
 }
 
