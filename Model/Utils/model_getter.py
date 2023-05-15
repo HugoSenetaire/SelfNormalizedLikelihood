@@ -86,7 +86,37 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
         feature_extractor = feature_extractor.to(torch.device('cpu'))
     return energy
 
-def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
+
+
+def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
+    dtype = torch.float32
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else :
+        device = torch.device('cpu')
+
+    proposal = proposal.to(device)
+
+    for param in proposal.parameters():
+        param.requires_grad = True
+    optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-3)
+    print("Init proposal to data")
+    for epoch in range(100):
+        tqdm_range = tqdm.tqdm(dataloader)
+        for batch in tqdm_range:
+            x = batch['data']
+            x = x.to(device, dtype)
+            log_prob = proposal.log_prob(x,).reshape(-1)
+            loss = (-log_prob).mean()
+            tqdm_range.set_description(f'Loss : {loss.item()}')
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+    proposal = proposal.to(torch.device('cpu'))
+    print("Init proposal to data... end")
+    return proposal
+
+def init_proposal_to_data_regression(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
     dtype = torch.float32
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -120,7 +150,7 @@ def init_proposal_to_data(feature_extractor, proposal, input_size_x, input_size_
     print("Init proposal to data... end")
     return proposal
 
-def get_model(args_dict, complete_dataset, complete_masked_dataset):
+def get_model(args_dict, complete_dataset, complete_masked_dataset, loader_train):
     input_size = complete_dataset.get_dim_input()
 
     # Get energy function :
@@ -154,6 +184,11 @@ def get_model(args_dict, complete_dataset, complete_masked_dataset):
         print("Init energy to standard gaussian")
         energy = init_energy_to_gaussian(energy, input_size, complete_dataset.dataset_train, args_dict)
         print("Init energy to standard gaussian... end")
+
+    if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
+        print("Init proposal")
+        proposal = init_proposal_to_data(proposal = proposal, input_size = input_size, dataloader = loader_train, args_dict = args_dict)
+        print("Init proposal... end")
 
     # Get EBM :
     print("Get EBM")
@@ -194,9 +229,9 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
         raise ValueError("No proposal given")
     
     if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
-        print("Init proposal to standard gaussian")
-        proposal = init_proposal_to_data(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, args_dict = args_dict)
-        print("Init proposal to standard gaussian... end")
+        print("Init proposal")
+        proposal = init_proposal_to_data_regression(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, args_dict = args_dict)
+        print("Init proposal... end")
     
     # Get base_dist :
     print("Get base_dist")

@@ -91,7 +91,7 @@ if __name__ == "__main__":
     if args_dict["just_test"]:
         args_dict["ebm_pretraining"] = False
         args_dict["proposal_pretraining"] = False
-    ebm = get_model(args_dict, complete_dataset, complete_masked_dataset)
+    ebm = get_model(args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader)
 
     # Get Trainer :
     algo = dic_trainer[args_dict["trainer_name"]](
