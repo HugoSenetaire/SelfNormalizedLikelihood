@@ -28,6 +28,8 @@ class GaussianMixtureProposal(nn.Module):
         data += torch.randn_like(data) * 1e-2
         
         self.gmm = GaussianMixture(n_features=n_features, n_components=n_components, covariance_type=covariance_type, eps=eps, init_params=init_params)
+        for param in self.gmm.parameters():
+            param.requires_grad = True
         self.gmm.fit(data, delta=self.delta, n_iter=self.n_iter, warm_start=self.warm_start)
         
     def sample(self, nb_sample = 1):

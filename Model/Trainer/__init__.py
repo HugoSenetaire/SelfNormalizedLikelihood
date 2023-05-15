@@ -1,4 +1,4 @@
-from .DistributionEstimation import SelfNormalizedTrainer, NCETrainer, ProposalTrainer, ScoreMatchingTrainer
+from .DistributionEstimation import SelfNormalizedTrainer, NCETrainer, ProposalTrainer, ScoreMatchingTrainer, DenoisingScoreMatchingTrainer
 from .Regression import RegressionTrainerSelfNormalized, ProposalRegressionTrainer, RegressionTrainerNCE
 
 dic_trainer = {
@@ -6,6 +6,7 @@ dic_trainer = {
     'just_proposal' : ProposalTrainer,
     'nce' : NCETrainer,
     'score_matching' : ScoreMatchingTrainer,
+    'denoisingscore_matching' : DenoisingScoreMatchingTrainer,
     
 }
 
