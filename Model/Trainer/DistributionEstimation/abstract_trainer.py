@@ -96,9 +96,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x = batch["data"]
         energy_samples, dic_output = self.ebm.calculate_energy(x)
+
         return dic_output
 
     def validation_epoch_end(self, outputs):
+        if self.args_dict["dataset_name"] == "ising":
+            with torch.no_grad():
+                log_rmse_val = (self.J - self.ebm.energy.J).pow(2).mean().sqrt().log()
+                self.log_rmse_val.append((log_rmse_val.item(), self.global_step))
         self.update_dic_logger(outputs, name="val_")
         self.proposal_visualization()
         self.plot_energy()
@@ -363,7 +368,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 os.makedirs(save_dir)
 
             if self.args_dict["dataset_name"] in dic_discrete_dataset.keys():
-                print_discrete_params(self)
+                print_discrete_params(self, save_dir=save_dir, step=self.global_step)
             else:
                 samples, init_samples = self.samples_mcmc(num_samples=num_samples)
                 self._sample_categorical(

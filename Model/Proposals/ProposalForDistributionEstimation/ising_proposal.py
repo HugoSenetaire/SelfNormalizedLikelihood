@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from jaxtyping import Float
+from torch.nn.parameter import Parameter
 
 
 class IsingProposal(nn.Module):
@@ -12,18 +13,19 @@ class IsingProposal(nn.Module):
         p: float, probability of not flipping the spin
     """
 
-    def __init__(self, dataset, p: float = 0.9):
+    def __init__(self, input_size, dataset, p: float = 0.9):
         super(IsingProposal, self).__init__()
-        self.dateset = dataset
+        self.dataset = dataset
         self.p = p
+        self.dummy_param = Parameter(torch.Tensor([0.0]), requires_grad=False)
 
     def sample(self, nb_sample: int = 1) -> Float[torch.Tensor, "nb_sample nb_nodes"]:
-        if nb_sample < len(self.dateset):
-            index = np.random.choice(len(self.dateset), nb_sample)
+        if nb_sample < len(self.dataset):
+            index = np.random.choice(len(self.dataset), nb_sample)
         else:
-            index = np.random.choice(len(self.dateset), nb_sample, replace=True)
+            index = np.random.choice(len(self.dataset), nb_sample, replace=True)
 
-        center = torch.cat([self.dateset[i][0] for i in index])
+        center = torch.stack([self.dataset[i][0] for i in index])
         bernoulli_keep = torch.distributions.Bernoulli(
             torch.full_like(center, self.p)
         ).sample()
@@ -34,7 +36,7 @@ class IsingProposal(nn.Module):
     def log_prob(
         self, x: Float[torch.Tensor, "batch_size nb_nodes"]
     ) -> Float[torch.Tensor, "batch_size"]:
-        data = torch.cat(
+        data = torch.stack(
             [self.dataset[i][0] for i in range(len(self.dataset))]
         ).unsqueeze(
             1
@@ -48,6 +50,6 @@ class IsingProposal(nn.Module):
             .sum(-1)
         )  # len(dataset), batch_size
         log_prob = log_prob.logsumexp(0) - torch.log(
-            torch.tensor(len(self.dateset))
+            torch.tensor(len(self.dataset))
         )  # batch_size
         return log_prob

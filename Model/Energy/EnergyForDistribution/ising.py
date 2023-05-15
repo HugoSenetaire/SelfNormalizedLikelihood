@@ -46,9 +46,10 @@ class ErdosRenyiEnergyIsing(nn.Module):
     ) -> None:
         super(ErdosRenyiEnergyIsing, self).__init__()
         # Code from Oops I took a gradient
-        g = ig.Graph.Erdos_Renyi(n_node, float(average_degree) / float(n_node))
-        A = np.asarray(g.get_adjacency().data)  # g.get_sparse_adjacency()
-        A = torch.tensor(A).float()
+        # g = ig.Graph.Erdos_Renyi(n_node, float(average_degree) / float(n_node))
+        # A = np.asarray(g.get_adjacency().data)  # g.get_sparse_adjacency()
+        # A = torch.tensor(A).float()
+        A = torch.randn((n_node, n_node)) * 0.01
         weights = torch.randn_like(A) * ((1.0 / average_degree) ** 0.5)
         weights = weights * (1 - torch.tril(torch.ones_like(weights)))
         weights = weights + weights.t()
@@ -58,6 +59,10 @@ class ErdosRenyiEnergyIsing(nn.Module):
             torch.ones((n_node,)).float() * init_bias, requires_grad=learn_bias
         )
         self.data_dim = n_node
+
+    @property
+    def J(self):
+        return self.G
 
     def forward(
         self, x: Float[torch.Tensor, "batch_size nb_point_in_graph"]
@@ -74,7 +79,7 @@ class ErdosRenyiEnergyIsing(nn.Module):
         # code from Oops I took a gradient
 
         x = 2 * x - 1  # convert 0/1 to -1/1
-        xg = x @ self.G
+        xg = x @ self.J
         xgx = (xg * x).sum(-1)
         b = (self.bias[None, :] * x).sum(-1)
         return -xgx - b

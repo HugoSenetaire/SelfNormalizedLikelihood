@@ -7,13 +7,39 @@ import torch.nn.functional as F
 import torchvision
 
 
-def print_discrete_params(algo):
+def print_discrete_params(algo, save_dir, step=""):
     if algo.args_dict["dataset_name"] == "poisson":
         print(f"self.ebm.energy.theta {algo.ebm.energy.lambda_}")
     elif algo.args_dict["dataset_name"] == "categorical":
         print(f"self.ebm.energy.theta {F.softmax(algo.ebm.energy.theta)}")
+    elif algo.args_dict["dataset_name"] == "ising":
+        plot_log_rmse(algo, save_dir, name="log_rmse", step=step)
     else:
         raise NotImplementedError
+
+
+def plot_log_rmse(algo, save_dir, name="log_rmse", step=""):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    fig, ax = plt.subplots()
+    ax.plot([k[1] for k in algo.log_rmse], [k[0] for k in algo.log_rmse], "o-")
+    ax.set(xlabel="iteration", ylabel="log_rmse")
+    plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+    print(f"Saved at {os.path.join(save_dir, '{}_{}.png'.format(name, step))}")
+
+    if algo.args_dict["decay_ema"] is not None:
+        fig, ax = plt.subplots()
+        ax.plot(
+            [k[1] for k in algo.log_rmse_val], [k[0] for k in algo.log_rmse_val], "o-"
+        )
+        ax.set(xlabel="iteration", ylabel="log_rmse_val")
+        plt.savefig(
+            os.path.join(save_dir, "{}_val_{}.png".format(name, step)),
+        )
+        print(
+            f"Saved at {os.path.join(save_dir, '{}_val_{}.png'.format(name, step))}",
+        )
 
 
 def plot_energy_2d(
