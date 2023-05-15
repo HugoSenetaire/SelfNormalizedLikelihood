@@ -121,6 +121,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         self.update_dic_logger(outputs, name="val_")
         self.proposal_visualization()
+        self.base_dist_visualization()
         self.plot_energy()
         self.plot_samples()
 
@@ -134,23 +135,23 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if self.ebm.base_dist is not None :
             if self.input_type == "2d":
                 self.example_base_dist = self.ebm.base_dist.sample(1000).flatten(1)
-                self.min_x, self.max_x = min(
-                    torch.min(
-                        self.example_base_dist[:, 0],
-                    ),
-                    self.min_x,
-                ), max(torch.max(self.example_base_dist[:, 0]), self.max_x)
-                self.min_y, self.max_y = min(
-                    torch.min(
-                        self.example_base_dist[:, 1],
-                    ),
-                    self.min_y,
-                ), max(torch.max(self.example_base_dist[:, 1]), self.max_y)
+                # self.min_x, self.max_x = min(
+                #     torch.min(
+                #         self.example_base_dist[:, 0],
+                #     ),
+                #     self.min_x,
+                # ), max(torch.max(self.example_base_dist[:, 0]), self.max_x)
+                # self.min_y, self.max_y = min(
+                #     torch.min(
+                #         self.example_base_dist[:, 1],
+                #     ),
+                #     self.min_y,
+                # ), max(torch.max(self.example_base_dist[:, 1]), self.max_y)
             elif self.input_type == "1d":
                 self.example_base_dist = self.ebm.base_dist.sample(1000)
-                self.min_x, self.max_x = min(
-                    torch.min(self.example_base_dist), self.min_x
-                ), max(torch.max(self.example_base_dist), self.max_x)
+                # self.min_x, self.max_x = min(
+                    # torch.min(self.example_base_dist), self.min_x
+                # ), max(torch.max(self.example_base_dist), self.max_x)
             elif self.input_type == "image":
                 self.example_base_dist = self.ebm.base_dist.sample(64)
         else:
@@ -163,23 +164,23 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if self.ebm.proposal is not None:
             if self.input_type == "2d":
                 self.example_proposal = self.ebm.proposal.sample(1000).flatten(1)
-                self.min_x, self.max_x = min(
-                    torch.min(
-                        self.example_proposal[:, 0],
-                    ),
-                    self.min_x,
-                ), max(torch.max(self.example_proposal[:, 0]), self.max_x)
-                self.min_y, self.max_y = min(
-                    torch.min(
-                        self.example_proposal[:, 1],
-                    ),
-                    self.min_y,
-                ), max(torch.max(self.example_proposal[:, 1]), self.max_y)
+                # self.min_x, self.max_x = min(
+                    # torch.min(
+                        # self.example_proposal[:, 0],
+                    # ),
+                    # self.min_x,
+                # ), max(torch.max(self.example_proposal[:, 0]), self.max_x)
+                # self.min_y, self.max_y = min(
+                    # torch.min(
+                        # self.example_proposal[:, 1],
+                    # ),
+                    # self.min_y,
+                # ), max(torch.max(self.example_proposal[:, 1]), self.max_y)
             elif self.input_type == "1d":
                 self.example_proposal = self.ebm.proposal.sample(1000)
-                self.min_x, self.max_x = min(
-                    torch.min(self.example_proposal), self.min_x
-                ), max(torch.max(self.example_proposal), self.max_x)
+                # self.min_x, self.max_x = min(
+                    # torch.min(self.example_proposal), self.min_x
+                # ), max(torch.max(self.example_proposal), self.max_x)
             elif self.input_type == "image":
                 self.example_proposal = self.ebm.proposal.sample(64)
         else:

@@ -28,23 +28,23 @@ def plot_energy_2d(
         energy_function = lambda x: algo.ebm.calculate_energy(x)[0]
     nx = 1000
     ny = 1000
-    min_x, max_x = algo.min_x, algo.max_x
-    min_y, max_y = algo.min_y, algo.max_y
+    min_x, max_x = algo.min_x-1, algo.max_x+1
+    min_y, max_y = algo.min_y-1, algo.max_y+1
 
-    for s, title in zip(samples, samples_title):
-        if s is not None :
-            min_x, max_x = min(
-                torch.min(
-                    s[:, 0],
-                ),
-                min_x,
-            ), max(torch.max(s[:, 0]), max_x)
-            min_y, max_y = min(
-                torch.min(
-                    s[:, 1],
-                ),
-                min_y,
-            ), max(torch.max(s[:, 1]), max_y)
+    # for s, title in zip(samples, samples_title):
+    #     if s is not None :
+    #         min_x, max_x = min(
+    #             torch.min(
+    #                 s[:, 0],
+    #             ),
+    #             min_x,
+    #         ), max(torch.max(s[:, 0]), max_x)
+    #         min_y, max_y = min(
+    #             torch.min(
+    #                 s[:, 1],
+    #             ),
+    #             min_y,
+    #         ), max(torch.max(s[:, 1]), max_y)
 
     x = np.linspace(min_x, max_x, nx)
     y = np.linspace(min_y, max_y, ny)
@@ -67,6 +67,8 @@ def plot_energy_2d(
             axs[i + 1].contourf(x, y, z, 100)
             axs[i + 1].scatter(s[:, 0], s[:, 1], c="r", alpha=0.1)
             axs[i + 1].set_title(s_title)
+            axs[i+1].set_ylim(min_y,max_y)
+            axs[i+1].set_xlim(min_x, max_x)
     fig.colorbar(axs[0].contourf(x, y, z, 100), cax=axs[-1])
     plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try:
