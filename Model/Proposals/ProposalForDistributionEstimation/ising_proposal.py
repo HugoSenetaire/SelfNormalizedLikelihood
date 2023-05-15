@@ -27,11 +27,11 @@ class IsingProposal(nn.Module):
             self.len_centers = len(centers)
         else :
             self.len_centers = len_dataset
-            if np.prod(shape)*len(dataset)<1e5:
+            # if np.prod(shape)*len(dataset)<1e5:
                 # Checking the full size of storing everything :
-                self.centers = torch.stack([self.dataset[i][0] for i in range(len(self.dataset))])
-            else :
-                self.centers = None
+                # self.centers = torch.stack([self.dataset[i][0] for i in range(len(self.dataset))])
+            # else :
+            self.centers = None
 
     def get_centers(self, index):
         # Might be worth it time wise to store the samples in memory rather than recalculating them everytime
@@ -41,24 +41,25 @@ class IsingProposal(nn.Module):
             return torch.stack([self.dataset[i][0] for i in index])
 
     def sample(self, nb_sample: int = 1) -> Float[torch.Tensor, "nb_sample nb_nodes"]:
-        if nb_sample < self.len_centers:
-            index = np.random.choice(self.len_centers, nb_sample)
-        else:
-            index = np.random.choice(self.len_centers, nb_sample, replace=True)
+        with torch.no_grad(): # Lower memory size
+            if nb_sample < self.len_centers:
+                index = np.random.choice(self.len_centers, nb_sample)
+            else:
+                index = np.random.choice(self.len_centers, nb_sample, replace=True)
 
-        center = self.get_centers(index)
-        bernoulli_keep = torch.distributions.Bernoulli(
-            torch.full_like(center, self.p)
-        ).sample()
+            center = self.get_centers(index).to(self.dummy_param.device)
+            bernoulli_keep = torch.distributions.Bernoulli(
+                torch.full_like(center, self.p)
+            ).sample()
 
-        samples = center * bernoulli_keep + (1 - center) * (1 - bernoulli_keep)
+            samples = center * bernoulli_keep + (1 - center) * (1 - bernoulli_keep)
         return samples.detach()
 
     def log_prob(
         self, x: Float[torch.Tensor, "batch_size nb_nodes"]
     ) -> Float[torch.Tensor, "batch_size"]:
 
-        data = self.get_centers(range(self.len_centers)).unsqueeze(1)
+        data = self.get_centers(range(self.len_centers)).unsqueeze(1).to(x.device)
         x_expanded = x.unsqueeze(0)  # 1, batch_size, nb_nodes
 
         dependency = (data - x_expanded).abs()  # len(dataset), batch_size, nb_nodes

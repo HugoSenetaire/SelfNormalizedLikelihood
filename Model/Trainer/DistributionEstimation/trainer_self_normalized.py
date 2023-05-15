@@ -35,7 +35,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         )
 
         if args_dict["dataset_name"] == "ising":
-            self.J = complete_dataset.J
+            self.J = complete_dataset.J.to(self.device)
             self.log_rmse = []
             if args_dict["decay_ema"] is not None:
                 self.log_rmse_val = []
@@ -98,7 +98,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
         if self.args_dict["dataset_name"] == "ising":
             with torch.no_grad():
-                log_rmse = (self.J - self.ebm.energy.J).pow(2).mean().sqrt().log()
-                self.log_rmse.append((log_rmse.item(), self.global_step))
+                log_rmse = (self.J.to(self.device, self.dtype) - self.ebm.energy.J).pow(2).mean().sqrt().log()
+                self.log_rmse.append((log_rmse.detach().item(), self.global_step))
                 self.log("log_rmse_train", log_rmse)
         return loss_total
