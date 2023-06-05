@@ -31,20 +31,12 @@ def plot_energy_2d(
     min_x, max_x = algo.min_x-1, algo.max_x+1
     min_y, max_y = algo.min_y-1, algo.max_y+1
 
-    # for s, title in zip(samples, samples_title):
-    #     if s is not None :
-    #         min_x, max_x = min(
-    #             torch.min(
-    #                 s[:, 0],
-    #             ),
-    #             min_x,
-    #         ), max(torch.max(s[:, 0]), max_x)
-    #         min_y, max_y = min(
-    #             torch.min(
-    #                 s[:, 1],
-    #             ),
-    #             min_y,
-    #         ), max(torch.max(s[:, 1]), max_y)
+    min_x = -3
+    max_x = 3
+    min_y = -3
+    max_y = 3
+
+
 
     x = np.linspace(min_x, max_x, nx)
     y = np.linspace(min_y, max_y, ny)
@@ -62,15 +54,21 @@ def plot_energy_2d(
 
     axs[0].contourf(x, y, z, 100)
     axs[0].set_title("Energy")
+    #Turn off axis
+    axs[0].axis('off')
+
     for i, (s, s_title) in enumerate(zip(samples, samples_title)):
+        current_s = s[:1000]
         if s is not None :
             axs[i + 1].contourf(x, y, z, 100)
-            axs[i + 1].scatter(s[:, 0], s[:, 1], c="r", alpha=0.1)
+            axs[i + 1].scatter(current_s[:, 0], current_s[:, 1], c="r", alpha=0.1)
             axs[i + 1].set_title(s_title)
             axs[i+1].set_ylim(min_y,max_y)
             axs[i+1].set_xlim(min_x, max_x)
+            axs[i+1].axis('off')
     fig.colorbar(axs[0].contourf(x, y, z, 100), cax=axs[-1])
     plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+    plt.savefig(os.path.join(save_dir, "{}_{}.pdf".format(name, step)))
     try:
         algo.logger.log_image(
             key="{}.png".format(

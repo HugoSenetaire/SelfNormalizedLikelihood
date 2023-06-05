@@ -12,9 +12,6 @@ class GaussianMixtureAdaptiveProposal(nn.Module):
         super().__init__()
         self.input_size = input_size
         self.default_proposal = default_proposal
-        if isinstance(dataset, list):
-            dataset = dataset[0]
-
 
         n_features = np.prod(input_size)
         index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
@@ -31,20 +28,13 @@ class GaussianMixtureAdaptiveProposal(nn.Module):
             samples = self.default_proposal.sample(nb_sample)
             return samples
         else :
-            # print(self.x)
             batch_size = self.x.shape[0]
-            # if nb_sample > len(self.x) :
-                # repeat = int(np.ceil(nb_sample / len(self.x)))
-                # x_repeat = self.x.clone().detach().flatten(1).unsqueeze(1).expand(self.x.shape[0],repeat,-1).reshape(self.x.shape[0]*repeat,*self.x.shape[1:])
-            # else :
-                # x_repeat = self.x.clone().detach().reshape(batch_size, *self.x.shape[1:])
             if nb_sample > len(self.x) :
                 index_sample = np.random.choice(len(self.x), nb_sample, replace=True)
             else :
                 index_sample = np.random.choice(len(self.x), nb_sample, replace=False)
             x_repeat = self.x[index_sample].clone().detach().reshape(nb_sample, *self.input_size)
             samples = torch.randn_like(x_repeat) * self.std.unsqueeze(0).expand(x_repeat.shape) + x_repeat
-            # index = np.random.choice(len(samples), nb_sample)
             return samples.detach()
     
     def log_prob(self, samples):

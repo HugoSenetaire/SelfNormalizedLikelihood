@@ -1,7 +1,7 @@
 import torch 
 import dadaptation
 import itertools
-def get_optimizer(args_dict, list_params_gen):
+def get_optimizer(args_dict, list_parameters_gen):
     """
         Get optimizer from PyTorch. This function reads a dictionary of parameters
         and returns the asked optimizer with the right parameters. If no parameters
@@ -10,11 +10,11 @@ def get_optimizer(args_dict, list_params_gen):
         Args:
             args: A dictionary containing optimizer parameters.
 
-            list_params_gen: a ;ost of parameters generator
+            list_parameters_gen: a list of parameters generator
     """
     # Get the optimizer creation function from torch.optim
     if "OPTIMIZER" not in args_dict:
-        optim_function = getattr(torch.optim, "Adam")(itertools.chain(*list_params_gen), lr=1e-4)
+        optim_function = getattr(torch.optim, "Adam")(itertools.chain(*list_parameters_gen), lr=1e-4)
     else :
         try : 
             optim_name = args_dict['OPTIMIZER']['NAME']
@@ -24,18 +24,18 @@ def get_optimizer(args_dict, list_params_gen):
         if optim_name in torch.optim.__dict__.keys():
             optim_function = getattr(torch.optim, optim_name)
             if "PARAMS" not in args_dict["OPTIMIZER"]:
-                optim_function = optim_function(itertools.chain(*list_params_gen), lr=1e-4)
+                optim_function = optim_function(itertools.chain(*list_parameters_gen), lr=1e-4)
             else :
-                optim_function = optim_function(itertools.chain(*list_params_gen), **args_dict['OPTIMIZER']['PARAMS'])
+                optim_function = optim_function(itertools.chain(*list_parameters_gen), **args_dict['OPTIMIZER']['PARAMS'])
             
         elif optim_name in dadaptation.__dict__.keys():
             optim_function = getattr(dadaptation, optim_name)
             if "PARAMS" not in args_dict["OPTIMIZER"]:
-                optim_function = optim_function(itertools.chain(*list_params_gen), lr=1)
+                optim_function = optim_function(itertools.chain(*list_parameters_gen), lr=1)
             else :
                 if args_dict['OPTIMIZER']['PARAMS']['lr']!= 1 :
                     print("Defazio recommends to use a learning rate 1, currently {}".format(args_dict['OPTIMIZER']['PARAMS']['lr']) )
-                optim_function = optim_function(itertools.chain(*list_params_gen), **args_dict['OPTIMIZER']['PARAMS'])
+                optim_function = optim_function(itertools.chain(*list_parameters_gen), **args_dict['OPTIMIZER']['PARAMS'])
         else :
             raise ValueError("Optimizer name not valid")
         

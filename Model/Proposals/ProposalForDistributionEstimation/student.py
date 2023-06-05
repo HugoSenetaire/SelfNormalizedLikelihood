@@ -10,29 +10,21 @@ class StudentProposal(nn.Module):
         print("Init Standard Gaussian...")
 
         # try :
-        if isinstance(dataset,list):
-            current_dataset = dataset[0]
-        else :
-            current_dataset = dataset
-        index = np.random.choice(len(current_dataset), 10000)
-        
-        data = torch.cat([current_dataset.__getitem__(i)[0] for i in index]).reshape(-1, *self.input_size)
 
+        index = np.random.choice(len(dataset), min(10000, len(dataset)))
+        data = torch.cat([dataset.__getitem__(i)[0] for i in index]).reshape(-1, *self.input_size)
         self.mean = nn.parameter.Parameter(data.reshape(-1, *self.input_size).mean(0), requires_grad=True)
         self.log_std = nn.parameter.Parameter(data.reshape(-1, *self.input_size).std(0).log(), requires_grad=True)
         self.log_df = nn.parameter.Parameter(torch.zeros_like(self.mean.data), requires_grad=True)
 
-        
         print("Init Standard Gaussian... end")
 
     def sample(self, nb_sample = 1):
         self.distribution = dist.StudentT(self.log_df.exp(), self.mean, self.log_std.exp())
-
         samples = self.distribution.sample((nb_sample,)).reshape(nb_sample, *self.input_size).detach()
         return samples
     
     def log_prob(self, x):
         self.distribution = dist.StudentT(self.log_df.exp(), self.mean, self.log_std.exp())
-
         return self.distribution.log_prob(x.reshape(-1,*self.input_size)).flatten(1).sum(1)
     

@@ -1,4 +1,4 @@
 energy_name : 'fc'
-energy_params :
+energy_parameters :
   dims : [300, 200, 100, 100, 50]
   last_layer_bias : False

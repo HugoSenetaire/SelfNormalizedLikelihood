@@ -154,7 +154,7 @@ if __name__ == '__main__' :
 
 
     args_dict_uniform = {'proposal_name' : 'uniform',
-                    'proposal_params' : {'min_data' : min_y, 'max_data' : max_y},
+                    'proposal_parameters' : {'min_data' : min_y, 'max_data' : max_y},
                     }
     
     current_uniform = get_proposal_regression(args_dict_uniform, input_size_x, input_size_y, complete_dataset.dataset_train)

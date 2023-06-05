@@ -1,4 +1,3 @@
-ebm_name : 'elbo'
 max_steps : 1001
 save_energy_every : 100
 samples_every: 500

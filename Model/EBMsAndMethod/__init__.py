@@ -1,12 +1,3 @@
-from .DistributionEstimation import SelfNormalized, ELBO
-from .Regression import SelfNormalizedRegression, EUBORegression
+from .DistributionEstimation import ImportanceWeightedEBM
+from .Regression import EBMRegression
 
-dic_ebm = {
-    'self_normalized': SelfNormalized,
-    'elbo' : ELBO
-}
-
-dic_ebm_regression = {
-    'self_normalized': SelfNormalizedRegression,
-    'eubo' : EUBORegression,
-}

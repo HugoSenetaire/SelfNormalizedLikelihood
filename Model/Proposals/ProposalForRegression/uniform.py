@@ -9,8 +9,7 @@ class UniformRegression(nn.Module):
         self.input_size_x = np.prod(input_size_x)
         self.input_size_y = np.prod(input_size_y)
         print("Init UNIFORM...")
-        if not isinstance(dataset, list):
-            dataset = [dataset]
+
         if min_data == 'dataset' :
             self.min_data = dataset[0][0][1]
             for current_dataset in dataset :

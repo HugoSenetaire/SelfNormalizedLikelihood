@@ -20,6 +20,40 @@ import itertools
 
 
 class AbstractDistributionEstimation(pl.LightningModule):
+    '''
+    Abstract Trainer for EBM for distribution estimation.
+    This makes sure that we compare all the different training loss in the same way.
+    To provide a new loss, one needs to inherit this class and define the training_step function.
+
+    Attributes:
+    ----------
+        ebm (EBM): The energy based model to train
+        args_dict (dict): The dictionary of arguments
+        complete_dataset (Dataset): One of the dataset to sample from for visualization
+        sampler (Sampler): The sampler to use for the visualization of the samples
+        transform_back (function): The function to use to transform the samples back to the original space
+                                    (for example, if the image is normalized, we need to unnormalize it)
+        nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant in training
+        num_samples_val (int): Number of samples used to estimate the normalization constant in validation
+        input_type (str): The type of input (1d, 2d, image, other)
+        proposal_loss_name (str): The name of the loss used to train the proposal
+        proposal_loss (function): The function used to train the proposal (Note that this function must be defined in the class)
+        last_save (int): The last time the energy contour plot was saved
+
+    Methods:
+    -------
+        training_step: The training step to be defined in inherited classes
+        post_train_step_handler: Function called at the end of a train_step
+        validation_step: The validation step
+        validation_epoch_end: The validation epoch end
+        test_step: The test step
+        test_epoch_end: The test epoch end
+        resample_base_dist: Resample the base distribution directly
+        resample_proposal: Resample the proposal distribution directly
+        proposal_visualization: Visualize the proposal distribution (if it exists)
+        base_dist_visualization: Visualize the base distribution (if it exists)
+
+    '''
     def __init__(
         self,
         ebm,
@@ -28,11 +62,24 @@ class AbstractDistributionEstimation(pl.LightningModule):
         nb_sample_train_estimate=1024,
         **kwargs,
     ):
+        '''
+        Create a trainer using the EBM and the arguments dictionary. 
+        Verify the type of dataset used.
+        Samples the base distribution and the proposal distribution for visualization.
+        Populate some samples from dataset to save.
+
+        Parameters:
+        ----------
+            ebm (EBM): The energy based model to train
+            args_dict (dict): The dictionary of arguments
+            complete_dataset (Dataset): One of the dataset to sample from for visualization
+            nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant in training
+        '''
         super().__init__()
         self.ebm = ebm
         self.args_dict = args_dict
         print("args_dict", args_dict)
-        self.hparams.update(args_dict)
+        self.hparameters.update(args_dict)
         self.last_save = -float('inf') # To save the energy contour plot 
         self.last_save_sample = 0 # To save the samples
         self.sampler = get_sampler(args_dict,)
@@ -91,68 +138,81 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     param.requires_grad = True
 
     def training_step(self, batch, batch_idx):
+        '''
+        The training step to be defined in inherited classes.
+        '''
         raise NotImplementedError
 
     def post_train_step_handler(self, x, dic_output):
-        """
-        Function called at the end of a train_step
-        """
+        '''
+        Function called at the end of a train_step. 
+        If the proposal is adapative, i.e. depending on the batch, make sure the batch is deleted.
+        Create a new estimate of the log likelihood using a fixed number of samples 
+        (useful when evaluating multiple samples number)
+        Log the different training outputs of the EBM coming from the dictionary, dic_output.
+
+        Parameters:
+        ----------
+            x (torch.Tensor): 
+            dic_output (dict): The dictionary of outputs from the EBM
+        '''
         # Just in case it's an adaptive proposal that requires x
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(None)
 
         # Add some estimates of the log likelihood with a fixed number of samples
-        if (
-            self.nb_sample_train_estimate is not None
-            and self.nb_sample_train_estimate > 0
-        ):
-            estimate_log_z, _ = self.ebm.estimate_log_z(
-                x, nb_sample=self.nb_sample_train_estimate
-            )
-            log_likelihood_fix_z = -dic_output["energy"].mean() - estimate_log_z + 1
-            self.log("train_log_likelihood_fix_z", log_likelihood_fix_z)
+        if (self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0):
+            estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate)
+            SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
+            log_likelihood = -dic_output["energy"].mean() - estimate_log_z
+            dic_output[f"SNL_{self.nb_sample_train_estimate}"] = SNL_fix_z
+            dic_output[f"log_likelihood_{self.nb_sample_train_estimate}"] = log_likelihood
+        
         for key in dic_output:
             self.log(f"train_{key}_mean", dic_output[key].mean().item())
 
     def validation_step(self, batch, batch_idx):
+        '''
+        Validation step, just returns the logs from calculating the energy of the EBM.
+        '''
         x = batch["data"]
-        energy_samples, dic_output = self.ebm.calculate_energy(x)
+        energy_batch, dic_output = self.ebm.calculate_energy(x)
         return dic_output
 
+
+    def test_step(self, batch, batch_idx):
+        '''
+        The test step is the same as the validation step.
+        '''
+        return self.validation_step(batch, batch_idx)
+
     def validation_epoch_end(self, outputs):
+        '''
+        Gather the energy from the batches in the validation step. 
+        Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
+        Visualize proposal, base_dist, energy and samples if number of step is sufficient.
+        '''
         self.update_dic_logger(outputs, name="val_")
         self.proposal_visualization()
         self.base_dist_visualization()
         self.plot_energy()
         self.plot_samples()
 
-    def test_step(self, batch, batch_idx):
-        return self.validation_step(batch, batch_idx)
 
     def test_epoch_end(self, outputs):
+        '''
+        Gather the energy from the batches in the test step.
+        Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
+        '''
         self.update_dic_logger(outputs, name="test_")
 
     def resample_base_dist(self,):
+        '''Base dist might be trained and need to be resampled during training'''
         if self.ebm.base_dist is not None :
             if self.input_type == "2d":
                 self.example_base_dist = self.ebm.base_dist.sample(1000).flatten(1)
-                # self.min_x, self.max_x = min(
-                #     torch.min(
-                #         self.example_base_dist[:, 0],
-                #     ),
-                #     self.min_x,
-                # ), max(torch.max(self.example_base_dist[:, 0]), self.max_x)
-                # self.min_y, self.max_y = min(
-                #     torch.min(
-                #         self.example_base_dist[:, 1],
-                #     ),
-                #     self.min_y,
-                # ), max(torch.max(self.example_base_dist[:, 1]), self.max_y)
             elif self.input_type == "1d":
                 self.example_base_dist = self.ebm.base_dist.sample(1000)
-                # self.min_x, self.max_x = min(
-                    # torch.min(self.example_base_dist), self.min_x
-                # ), max(torch.max(self.example_base_dist), self.max_x)
             elif self.input_type == "image":
                 self.example_base_dist = self.ebm.base_dist.sample(64)
         else:
@@ -161,101 +221,50 @@ class AbstractDistributionEstimation(pl.LightningModule):
     def resample_proposal(
         self,
     ):
-        """Proposal might be changing and need to be resampled during training"""
+        '''Proposal might be changing and need to be resampled during training'''
         if self.ebm.proposal is not None:
             if self.input_type == "2d":
                 self.example_proposal = self.ebm.proposal.sample(1000).flatten(1)
-                # self.min_x, self.max_x = min(
-                    # torch.min(
-                        # self.example_proposal[:, 0],
-                    # ),
-                    # self.min_x,
-                # ), max(torch.max(self.example_proposal[:, 0]), self.max_x)
-                # self.min_y, self.max_y = min(
-                    # torch.min(
-                        # self.example_proposal[:, 1],
-                    # ),
-                    # self.min_y,
-                # ), max(torch.max(self.example_proposal[:, 1]), self.max_y)
             elif self.input_type == "1d":
                 self.example_proposal = self.ebm.proposal.sample(1000)
-                # self.min_x, self.max_x = min(
-                    # torch.min(self.example_proposal), self.min_x
-                # ), max(torch.max(self.example_proposal), self.max_x)
             elif self.input_type == "image":
                 self.example_proposal = self.ebm.proposal.sample(64)
         else:
             self.example_proposal = None
 
     def initialize_examples(self, complete_dataset):
-        """
+        '''
         Initialize the examples used for the visualization of the energy function.
         Making sure we have appropriate range for visualization and evaluation.
-        """
+        '''
         self.min_x, self.max_x, self.min_y, self.max_y = -3, 3, -3, 3
         if complete_dataset is not None:
             if self.input_type == "2d":
-                indexes_to_print = np.random.choice(
-                    len(complete_dataset.dataset_train), 10000
-                )
-                self.example = torch.cat(
-                    [
-                        complete_dataset.dataset_train.__getitem__(i)[0].reshape(1, -1)
-                        for i in indexes_to_print
-                    ],
-                    dim=0,
-                )
-                self.min_x, self.max_x = min(
-                    torch.min(
-                        self.example[:, 0],
-                    ),
-                    -3,
-                ), max(torch.max(self.example[:, 0]), 3)
-                self.min_y, self.max_y = min(
-                    torch.min(
-                        self.example[:, 1],
-                    ),
-                    -3,
-                ), max(torch.max(self.example[:, 1]), 3)
+                indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), 10000)
+                self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0].reshape(1, -1) for i in indexes_to_print],dim=0,)
+                self.min_x, self.max_x = min(torch.min(self.example[:, 0],),-3,), max(torch.max(self.example[:, 0]), 3)
+                self.min_y, self.max_y = min(torch.min(self.example[:, 1],), -3,), max(torch.max(self.example[:, 1]), 3)
 
             elif self.input_type == "1d":
-                indexes_to_print = np.random.choice(
-                    len(complete_dataset.dataset_train), 10000
-                )
-                self.example = torch.cat(
-                    [
-                        complete_dataset.dataset_train.__getitem__(i)[0].unsqueeze(0)
-                        for i in indexes_to_print
-                    ],
-                    dim=0,
-                )
-                self.min_x, self.max_x = min(
-                    torch.min(
-                        self.example[:, 0],
-                    ),
-                    -3,
-                ), max(torch.max(self.example[:, 0]), 3)
+                indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), 10000)
+                self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0].unsqueeze(0) for i in indexes_to_print], dim=0,)
+                self.min_x, self.max_x = min(torch.min(self.example[:, 0],),-3,), max(torch.max(self.example[:, 0]), 3)
 
             elif self.input_type == "image":
                 if complete_dataset is not None:
-                    self.example = torch.cat(
-                        [
-                            complete_dataset.dataset_train.__getitem__(i)[0]
-                            for i in range(64)
-                        ],
-                        dim=0,
-                    )
-                    plot_images(
-                        self.example,
-                        save_dir=self.args_dict["save_dir"],
-                        name="example",
-                        transform_back=self.transform_back,
-                    )
+                    self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0]for i in range(64)],dim=0,)
+                    plot_images(self.example,
+                                save_dir=self.args_dict["save_dir"],
+                                name="example",
+                                transform_back=self.transform_back,
+                                )
         else:
             self.example = None
 
     def proposal_visualization(self):
-        """Visualize the proposal"""
+        ''' Visualize the proposal distribution and associated density.
+            Depending on the input type, the visualization is different.
+        '''
         energy_function = lambda x: -self.ebm.proposal.log_prob(x)
         if self.input_type == "2d":
             self.resample_proposal()
@@ -270,7 +279,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 samples_title=["Samples from dataset", "Samples from proposal"],
                 name="proposal",
                 step=self.global_step,
-            )
+                )
         elif self.input_type == "image":
             self.resample_proposal()
             save_dir = os.path.join(self.args_dict["save_dir"], "proposal")
@@ -282,10 +291,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 name="proposal_samples",
                 transform_back=self.transform_back,
                 step=self.global_step,
-            )
+                )
 
     def base_dist_visualization(self):
-        """Visualize the base dist"""
+        ''' Visualize the base distribution and associated density.
+            Depending on the input type, the visualization is different.'''
         if self.ebm.base_dist is not None :
             energy_function = lambda x: -self.ebm.base_dist.log_prob(x)
             if self.input_type == "2d":
@@ -317,33 +327,40 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
 
     def configure_optimizers(self):
+        '''
+        Configure the optimizers for the EBM, base distribution and proposal.
+        If the base distribution is equal to the proposal and the proposal is trained, the parameters ebm does not include the base distribution parameters.
+        If the base distribution is equal to the proposal and the base distribution is trained, the proposal parameters are not given.
+        It's not possible to train both 
+
+        Returns:
+        -------
+            opt_list (list): The list of optimizers
+            sch_list (list): The list of schedulers
+        '''
         if self.args_dict['train_proposal'] and self.ebm.proposal == self.ebm.base_dist :
             # In case the base dist is equal to the proposal, I can't train both of them with the same loss 
-            # If I want to train the proposal it takes priority
-            params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal' and name != 'base_dist']
+            # If I want to train the proposal it takes priority over the base distribution
+            parameters_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal' and name != 'base_dist']
             print("Proposal takes priority here")
         else :
-            params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
-        # params_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
+            parameters_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        # parameters_ebm.append(self.ebm.parameters())
+        ebm_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_ebm)
         ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
 
 
         if not self.args_dict['train_proposal'] and self.ebm.proposal == self.ebm.base_dist :
-            # In case the base dist is equal to the proposal, I can't train both of them with the same loss 
-            # If I want to train the proposal it takes priority
             proposal_opt = None
             proposal_sch = None
         else :
-            params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
-            proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
+            parameters_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+            proposal_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_proposal)
             proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
 
         opt_list = [ebm_opt]
         if proposal_opt is not None :
             opt_list.append(proposal_opt)
-        # opt_list.append(proposal_opt)
-
         if ebm_sch is not None and proposal_sch is not None :
             return opt_list, [ebm_sch, proposal_sch]      
         elif ebm_sch is not None :
@@ -354,6 +371,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
             return opt_list
         
     def optimizers_perso(self):
+        '''
+        I don't remember why I needed that. #TODO : CHECK WHY I WROTE THIS.
+        '''
         liste_opt = super().optimizers()
         try :
             ebm_opt, proposal_opt = liste_opt
@@ -363,29 +383,27 @@ class AbstractDistributionEstimation(pl.LightningModule):
         
 
     def update_dic_logger(self, outputs, name="val_"):
+        '''
+        Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
+        Log the different training outputs of the EBM 
+
+        Parameters:
+        ----------
+            outputs (dict): The dictionary of saved logs obtained while calculating energy.
+            name (str): The name of the outputs (val_ or test_)
+        '''
         list_keys = list(outputs[0].keys())
         dic_output = {}
         for key in list_keys:
             try:
-                dic_output[name + key + "_mean"] = torch.cat(
-                    [outputs[k][key] for k in range(len(outputs))]
-                ).mean()
+                dic_output[name + key + "_mean"] = torch.cat([outputs[k][key] for k in range(len(outputs))]).mean()
             except RuntimeError:
-                dic_output[name + key + "_mean"] = torch.cat(
-                    [outputs[k][key].unsqueeze(0) for k in range(len(outputs))]
-                ).mean()
-        # dic_output = {name+key+"_mean": torch.cat([outputs[k][key] for k in range(len(outputs))]).mean() for key in list_keys}
+                dic_output[name + key + "_mean"] = torch.cat([outputs[k][key].unsqueeze(0) for k in range(len(outputs))]).mean()
         mean_energy = dic_output[name + "energy_mean"]
         if name == "val_":
-            log_z_estimate, dic = self.ebm.estimate_log_z(
-                x=torch.zeros((1,), dtype=torch.float32, device=self.device),
-                nb_sample=self.args_dict["num_sample_proposal_val"],
-            )
+            log_z_estimate, dic = self.ebm.estimate_log_z(x=torch.zeros((1,), dtype=torch.float32, device=self.device), nb_sample=self.args_dict["num_sample_proposal_val"],)
         else :
-            log_z_estimate, dic = self.ebm.estimate_log_z(
-                x=torch.zeros((1,), dtype=torch.float32, device=self.device),
-                nb_sample=self.args_dict["num_sample_proposal_test"],
-            )
+            log_z_estimate, dic = self.ebm.estimate_log_z(x=torch.zeros((1,), dtype=torch.float32, device=self.device), nb_sample=self.args_dict["num_sample_proposal_test"],)
 
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})
@@ -411,9 +429,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
     def plot_energy(
         self,
     ):
-        """
+        '''
         If possible show the current energy function and the samples from the proposal and dataset
-        """
+        '''
         if np.prod(self.args_dict["input_size"]) == 2:
             if self.global_step - self.last_save > self.args_dict["save_energy_every"]:
                 save_dir = self.args_dict["save_dir"]
@@ -426,19 +444,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     samples=[self.example, self.example_proposal],
                     samples_title=["Samples from dataset", "Samples from proposal"],
                     name="contour",
-                    step=self.global_step,
-                )
-                ebm_function_list = [
-                    lambda x,: self.ebm.calculate_energy(
-                        x,
-                    )[
-                        1
-                    ]["f_theta"],
-                ]
-                ebm_function_name = [
-                    "f_theta",
-                ]
-
+                    step=self.global_step,)
+                
+                # Add auxiliary contour plots, might be useful if we use a base distribution.
+                ebm_function_list = [lambda x,: self.ebm.calculate_energy(x,)[1]["f_theta"],]
+                ebm_function_name = ["f_theta",]
                 for ebm_function, ebm_name in zip(ebm_function_list, ebm_function_name):
                     plot_energy_2d(
                         self,
@@ -454,6 +464,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 self.last_save = self.global_step
 
     def samples_mcmc(self, num_samples=None):
+        '''
+        Sample from the EBM distribution using an MCMC sampler.
+        '''
         if self.sampler is not None :
             samples, x_init = self.sampler.sample(
                 self.ebm, self.ebm.proposal, num_samples=num_samples
@@ -463,12 +476,12 @@ class AbstractDistributionEstimation(pl.LightningModule):
         return samples, x_init
 
     def plot_samples(self, num_samples=None):
-        """
-        Plot the samples from the EBM distribution using the sampler
-        """
+        '''
+        Plot the samples from the EBM distribution using an MCMC sampler.
+        '''
         if self.sampler is None :
             return False
-        torch.set_grad_enabled(True)
+        torch.set_grad_enabled(True) # Required for MCMC sampling
 
         if self.global_step - self.last_save_sample > self.args_dict["samples_every"]:
             save_dir = self.args_dict["save_dir"]
@@ -487,8 +500,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     name="samples",
                     step=self.global_step,
                 )
-            # elif len(self.args_dict["input_size"]) == 2 and self.args_dict["input_size"][0]==1:
-            #     plot_energy_1d()
             elif self.input_type == 'image':
                 plot_images(
                     algo=self,

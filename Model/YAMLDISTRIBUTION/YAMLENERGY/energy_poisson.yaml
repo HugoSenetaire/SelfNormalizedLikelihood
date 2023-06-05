@@ -1,4 +1,4 @@
 energy_name: 'poisson'
-energy_params:
+energy_parameters:
   lambda_: null
   learn_lambda: true

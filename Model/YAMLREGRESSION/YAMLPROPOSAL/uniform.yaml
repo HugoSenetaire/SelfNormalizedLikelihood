@@ -1,4 +1,4 @@
 proposal_name : 'uniform'
-proposal_params :
+proposal_parameters :
   min : 'dataset'
   max : 'dataset'

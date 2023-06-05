@@ -28,13 +28,8 @@ class ProposalTrainer(AbstractDistributionEstimation):
         self.manual_backward((loss_proposal), inputs= list(self.ebm.proposal.parameters()))
         self.log('train_loss', loss_proposal)
         proposal_opt.step()
-        
         # Update the parameters of the ebm
         ebm_opt.step()
-
-        # Just in case it's an adaptive proposal that requires x
-        if hasattr(self.ebm.proposal, 'set_x'):
-            self.ebm.proposal.set_x(None)
 
         return loss_proposal.mean()
     

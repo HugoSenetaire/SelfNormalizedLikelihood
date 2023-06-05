@@ -1,1 +1,1 @@
-from .proposal_getter import dic_proposals, get_proposal, get_proposal_regression, dic_proposals_regression
+from .proposal_getter import dic_proposals, get_proposal, get_proposal_regression, get_base_dist, get_base_dist_regression, dic_proposals_regression

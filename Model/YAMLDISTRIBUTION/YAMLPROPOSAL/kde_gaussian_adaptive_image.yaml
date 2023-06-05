@@ -1,5 +1,5 @@
 proposal_name : 'kernel_density_adaptive'
-proposal_params: 
+proposal_parameters: 
   kernel : 'gaussian'
   bandwidth : 'scott'
   

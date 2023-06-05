@@ -1,2 +1,1 @@
-from .elbo import ELBO
-from .self_normalized import SelfNormalized
+from .importance_weighted_ebm import ImportanceWeightedEBM

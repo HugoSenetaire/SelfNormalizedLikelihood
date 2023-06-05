@@ -174,11 +174,11 @@ class AbstractRegression(pl.LightningModule):
                                                 )
         
     def configure_optimizers(self):
-        params_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
-        params_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
+        parameters_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
+        parameters_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
         
-        ebm_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_ebm)
-        proposal_opt = get_optimizer( args_dict = self.args_dict, list_params_gen = params_proposal)
+        ebm_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_ebm)
+        proposal_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_proposal)
 
         ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
         proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)

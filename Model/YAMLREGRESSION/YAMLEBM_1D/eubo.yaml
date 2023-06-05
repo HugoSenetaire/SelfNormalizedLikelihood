@@ -1,5 +1,4 @@
-ebm_name : 'eubo'
-max_steps : 2000
+ebm_name : 'eubo'max_steps : 2000
 max_epoch : 25
 save_energy_every : 10
 samples_every: 10

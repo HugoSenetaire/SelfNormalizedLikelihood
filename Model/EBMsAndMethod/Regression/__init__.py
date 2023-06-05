@@ -1,2 +1,1 @@
-from .eubo import EUBORegression
-from .self_normalized import SelfNormalizedRegression
+from .global_ebm import EBMRegression

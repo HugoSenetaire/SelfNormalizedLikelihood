@@ -1,4 +1,4 @@
-ebm_name : 'self_normalized'
+
 max_epoch : 20
 save_energy_every : 1000
 samples_every: 1000

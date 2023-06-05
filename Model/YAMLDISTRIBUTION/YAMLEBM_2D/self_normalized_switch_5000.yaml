@@ -1,4 +1,3 @@
-ebm_name : 'self_normalized'
 max_steps : 2001
 switch_mode_index : 5000
 save_energy_every : 500

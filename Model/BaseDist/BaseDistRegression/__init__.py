@@ -1,2 +1,0 @@
-from .normal_regression import NormalRegression
-from .uniform_regression import UniformRegression

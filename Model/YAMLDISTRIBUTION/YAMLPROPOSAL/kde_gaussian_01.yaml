@@ -1,5 +1,5 @@
 proposal_name : 'kernel_density'
-proposal_params: 
+proposal_parameters: 
   kernel : 'gaussian'
   bandwidth : 0.1
   

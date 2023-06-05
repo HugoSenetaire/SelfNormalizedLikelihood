@@ -1,5 +1,5 @@
 sampler_name : 'nuts'
-sampler_params :
+sampler_parameters :
   num_samples : 100
   warmup_steps : 100
   num_chains : 10

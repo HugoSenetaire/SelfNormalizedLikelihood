@@ -49,7 +49,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
         estimate_log_z, dic = self.ebm.estimate_log_z(x, self.ebm.nb_sample)
         estimate_log_z = estimate_log_z.mean()
-        loss_estimate_z = estimate_log_z.exp()
+        loss_estimate_z = estimate_log_z
 
         loss_energy = energy_samples.mean()
         loss_total = loss_energy + loss_estimate_z

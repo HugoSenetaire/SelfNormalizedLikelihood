@@ -12,18 +12,13 @@ class NoiseGradationAdaptiveProposal(nn.Module):
         super().__init__()
         self.input_size = input_size
         self.default_proposal = default_proposal
-        if isinstance(dataset, list):
-            dataset = dataset[0]
 
         n_features = np.prod(input_size)
         index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
         data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), -1)
         data += torch.randn_like(data) * 1e-2
-        # self.std = nn.Parameter(data.std(0), requires_grad=False)
-        # self.std = nn.Parameter(torch.ones_like(self.std), requires_grad=False)
         self.ranges_std = [0.1, 1,]
         self.nb_gradation = len(self.ranges_std)
-        # print(self.ranges_std)
         
         std_aux = []
         current_std = data.std(0)

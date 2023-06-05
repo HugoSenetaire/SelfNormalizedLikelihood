@@ -1,4 +1,4 @@
 energy_name: 'categorical'
-energy_params:
+energy_parameters:
   theta: null
   learn_theta: true

@@ -40,8 +40,6 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
 
         loss = loss1 + loss2
 
-        if not self.training:
-            loss = loss.detach()
 
         return loss, dic
 
@@ -64,7 +62,6 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
         ebm_opt.zero_grad()
         self.manual_backward(loss_total.mean(), retain_graph=False, )
         ebm_opt.step()
-
         ebm_opt.zero_grad()
 
         estimate_log_z, dic = self.ebm.estimate_log_z(x, self.ebm.nb_sample)

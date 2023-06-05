@@ -10,7 +10,7 @@ Model/YAMLDISTRIBUTION/YAMLENERGY/energy_fc_nobias_deep.yaml \
 Model/YAMLDISTRIBUTION/YAMLOPTIMIZATION/adam1e-3.yaml
 
 
-python main_trainer.py -seed 0 \
+python main_trainer.py --seed 0 \
 --yamldataset Dataset/MissingDataDataset/YAMLExamples/four_circles.yaml \
 --yamlebm Model/YAMLDISTRIBUTION/YAMLBASEDIST/none.yaml \
 Model/YAMLDISTRIBUTION/YAMLEBM_2D/self_normalized.yaml \
@@ -29,7 +29,7 @@ Model/YAMLDISTRIBUTION/YAMLENERGY/energy_fc_nobias_deep.yaml \
 Model/YAMLDISTRIBUTION/YAMLOPTIMIZATION/adam1e-3.yaml
 
 
-python main_trainer.py -seed 1 \
+python main_trainer.py --seed 1 \
 --yamldataset Dataset/MissingDataDataset/YAMLExamples/four_circles.yaml \
 --yamlebm Model/YAMLDISTRIBUTION/YAMLBASEDIST/none.yaml \
 Model/YAMLDISTRIBUTION/YAMLEBM_2D/self_normalized.yaml \
@@ -47,7 +47,7 @@ Model/YAMLDISTRIBUTION/YAMLENERGY/energy_fc_nobias_deep.yaml \
 Model/YAMLDISTRIBUTION/YAMLOPTIMIZATION/adam1e-3.yaml
 
 
-python main_trainer.py -seed 2 \
+python main_trainer.py --seed 2 \
 --yamldataset Dataset/MissingDataDataset/YAMLExamples/four_circles.yaml \
 --yamlebm Model/YAMLDISTRIBUTION/YAMLBASEDIST/none.yaml \
 Model/YAMLDISTRIBUTION/YAMLEBM_2D/self_normalized.yaml \
@@ -65,7 +65,7 @@ Model/YAMLDISTRIBUTION/YAMLENERGY/energy_fc_nobias_deep.yaml \
 Model/YAMLDISTRIBUTION/YAMLOPTIMIZATION/adam1e-3.yaml
 
 
-python main_trainer.py -seed 3 \
+python main_trainer.py --seed 3 \
 --yamldataset Dataset/MissingDataDataset/YAMLExamples/four_circles.yaml \
 --yamlebm Model/YAMLDISTRIBUTION/YAMLBASEDIST/none.yaml \
 Model/YAMLDISTRIBUTION/YAMLEBM_2D/self_normalized.yaml \

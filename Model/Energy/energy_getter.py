@@ -32,10 +32,10 @@ def get_energy(input_size, args_dict):
         raise ValueError("Energy name not valid")
 
     energy = dic_energy[args_dict["energy_name"]]
-    if "energy_params" not in args_dict:
+    if "energy_parameters" not in args_dict:
         energy = energy(input_size=input_size)
     else:
-        energy = energy(input_size=input_size, **args_dict["energy_params"])
+        energy = energy(input_size=input_size, **args_dict["energy_parameters"])
     return energy
 
 
@@ -46,10 +46,10 @@ def get_energy_regression(input_size_x, input_size_y, args_dict):
         raise ValueError("Energy name not valid")
 
     energy = dic_energy_regression[args_dict["energy_name"]]
-    if "energy_params" not in args_dict:
-        args_dict["energy_params"] = {}
+    if "energy_parameters" not in args_dict:
+        args_dict["energy_parameters"] = {}
     energy = energy(
-        input_dim_x=input_size_x, input_dim_y=input_size_y, **args_dict["energy_params"]
+        input_dim_x=input_size_x, input_dim_y=input_size_y, **args_dict["energy_parameters"]
     )
 
     return energy
@@ -71,9 +71,9 @@ def get_feature_extractor(
         raise ValueError("Feature extractor name not valid")
     
     feature_extractor = dic_feature_extractor[args_dict['feature_extractor_name']]
-    if 'feature_extractor_params' not in args_dict.keys():
-        args_dict['feature_extractor_params'] = {}
-    feature_extractor = feature_extractor(input_dim=input_size_x, **args_dict['feature_extractor_params'])
+    if 'feature_extractor_parameters' not in args_dict.keys():
+        args_dict['feature_extractor_parameters'] = {}
+    feature_extractor = feature_extractor(input_dim=input_size_x, **args_dict['feature_extractor_parameters'])
     print(args_dict['train_feature_extractor'])
     if args_dict['train_feature_extractor'] == False :
         for param in feature_extractor.parameters():
@@ -98,8 +98,8 @@ def get_explicit_bias_regression(args_dict,
     if args_dict['explicit_bias_name'] is None or args_dict['explicit_bias_name'] == 'none' :
             return None
     explicit_bias = dic_explicit_bias_regression[args_dict['explicit_bias_name']]
-    if 'explicit_bias_params' not in args_dict.keys():
-        args_dict['explicit_bias_params'] = {}
+    if 'explicit_bias_parameters' not in args_dict.keys():
+        args_dict['explicit_bias_parameters'] = {}
 
-    explicit_bias = explicit_bias(input_size_x=input_size_x, **args_dict['explicit_bias_params'])
+    explicit_bias = explicit_bias(input_size_x=input_size_x, **args_dict['explicit_bias_parameters'])
     return explicit_bias
