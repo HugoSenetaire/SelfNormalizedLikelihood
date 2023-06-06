@@ -79,7 +79,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.ebm = ebm
         self.args_dict = args_dict
         print("args_dict", args_dict)
-        self.hparameters.update(args_dict)
+        self.hparams.update(args_dict)
         self.last_save = -float('inf') # To save the energy contour plot 
         self.last_save_sample = 0 # To save the samples
         self.sampler = get_sampler(args_dict,)
@@ -412,16 +412,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
         total_likelihood = -mean_energy - log_z_estimate.exp() + 1
         self.log(name + "likelihood_normalized", total_likelihood)
 
-        if self.ebm.type_z == "exp":
-            self.log(name + "loss", total_loss_self_norm)
+        
 
         total_loss_self_norm = mean_energy + log_z_estimate
         self.log(name + "loss_log", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate
         self.log(name + "likelihood_log", total_likelihood)
 
-        if self.ebm.type_z == "log":
-            self.log(name + "loss", total_loss_self_norm)
+        self.log('val_loss', total_loss_self_norm)
 
         for key in dic_output:
             self.log(key, dic_output[key])

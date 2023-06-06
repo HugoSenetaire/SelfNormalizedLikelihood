@@ -29,10 +29,7 @@ class RegressionTrainerSelfNormalized(AbstractRegression):
         estimate_log_z, dic=self.ebm.estimate_log_z(x, self.ebm.nb_sample)
         dic_output.update(dic)
         dic_output.update({'log_prob_proposal_data': log_prob_proposal_data.mean()})
-        estimate_log_z = estimate_log_z.reshape(x.shape[0], 1, -1)
-        if self.ebm.type_z == 'exp':
-            estimate_log_z = estimate_log_z.exp() - 1
-
+        estimate_log_z = estimate_log_z.reshape(x.shape[0], 1, -1).exp()
         loss_total = (energy_data + estimate_log_z).mean()
 
         # Update the parameters

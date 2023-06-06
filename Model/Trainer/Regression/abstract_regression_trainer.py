@@ -91,8 +91,6 @@ class AbstractRegression(pl.LightningModule):
         dic_output['loss_importance'] = (energy_data + estimate_log_z).reshape(x.shape[0])
         dic_output['log_likelihood_importance'] = - dic_output['loss_importance'].reshape(x.shape[0])
         dic_output['log_likelihood_proposal'] = log_prob_proposal_data.reshape(x.shape[0])
-        if self.ebm.type_z == 'exp':
-            estimate_log_z = estimate_log_z.exp() - 1
         loss_total = (energy_data + estimate_log_z).mean()
         self.log(f'{name}_loss', loss_total)
 

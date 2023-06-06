@@ -90,7 +90,7 @@ def get_model_regression(args_dict, complete_dataset, complete_masked_dataset, l
     
     # Get base_dist :
     print("Get base_dist")
-    base_dist = get_proposal(args_dict = args_dict, proposal=proposal, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
+    base_dist = get_base_dist_regression(args_dict = args_dict, proposal=proposal, input_size_x=input_size_x_feature, input_size_y=input_size_y, dataset = complete_dataset.dataset_train,)
     if args_dict['base_dist_name'] == 'proposal':
         assert proposal == base_dist, "Proposal and base_dist should be the same"
     else :

@@ -32,6 +32,10 @@ def get_base_dist(args_dict, proposal, input_size, dataset) :
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
+    if args_dict['base_dist_name'] == 'none' :
+        return None
+    if args_dict['base_dist_name'] == 'proposal' :
+        return proposal
     base_dist = dic_proposals[args_dict["base_dist_name"]]
     if 'adaptive' in args_dict['base_dist_name'] :
         raise ValueError('Adaptive should only be used for proposal')
@@ -78,10 +82,14 @@ dic_proposals_regression = {
 
 
 
-def get_base_dist_regression(args_dict, input_size_x, input_size_y, dataset,):
+def get_base_dist_regression(args_dict, proposal, input_size_x, input_size_y, dataset,):
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
+    if args_dict['base_dist_name'] == 'none' :
+        return None
+    if args_dict['base_dist_name'] == 'proposal' :
+        return proposal
     base_dist = dic_proposals_regression[args_dict["base_dist_name"]]
     if "base_dist_parameters" not in args_dict:
         args_dict['base_dist_parameters'] = {}
