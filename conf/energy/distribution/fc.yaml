@@ -1,0 +1,3 @@
+default:
+  - distribution_fc_name
+energy_name: 'fc'

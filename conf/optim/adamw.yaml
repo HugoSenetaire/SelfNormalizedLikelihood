@@ -1,0 +1,10 @@
+defaults:
+  - adamw_name
+optimizer: "adamw"
+learning_rate: 0.001
+b1: 0.9
+b2: 0.999
+eps: 1.0e-8
+eps_root: 0.0
+mu_dtype: null
+weight_decay: 0.

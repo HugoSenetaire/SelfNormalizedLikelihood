@@ -1,0 +1,11 @@
+defaults:
+  - self_normalized_name
+trainer_name: 'self_normalized'
+batch_size: 128
+max_steps: 3000
+num_workers: 2
+output_folder: './Results'
+load_from_checkpoint: false
+seed: 42
+just_test: false
+decay_ema: null
