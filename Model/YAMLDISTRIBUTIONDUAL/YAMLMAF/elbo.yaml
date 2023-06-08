@@ -1,0 +1,7 @@
+max_steps : 1001
+save_energy_every : 100
+samples_every: 500
+batch_size : 512
+nb_sample_bias_explicit : 1024
+bias_explicit : False
+num_sample_proposal : 512

@@ -1,0 +1,4 @@
+proposal_name: 'poisson'
+train_proposal: false
+proposal_parameters:
+  lambda_: 10.

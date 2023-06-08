@@ -25,7 +25,10 @@ def plot_energy_2d(
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     if energy_function is None:
-        energy_function = lambda x: algo.ebm.calculate_energy(x)[0]
+        if hasattr(algo.ebm, "feature_extractor"):
+            energy_function = lambda x: algo.ebm.calculate_energy(algo.ebm.get_features(x))[0]
+        else :
+            energy_function = lambda x: algo.ebm.calculate_energy(x)[0]
     nx = 1000
     ny = 1000
     min_x, max_x = algo.min_x-1, algo.max_x+1
@@ -50,6 +53,11 @@ def plot_energy_2d(
         z = energy_function(xy).detach().cpu().numpy()
     z = z.reshape(nx, ny)
     assert len(samples_title) == len(samples)
+    for k in range(len(samples)):
+        if samples[k] is None :
+            del samples_title[k]
+
+        
     fig, axs = plt.subplots(1, 2 + len(samples), figsize=(10 + 5 * len(samples), 5))
 
     axs[0].contourf(x, y, z, 100)

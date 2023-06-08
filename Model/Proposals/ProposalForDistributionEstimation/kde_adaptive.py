@@ -7,12 +7,24 @@ from ..gmm_torch import GaussianMixture
 
 
 class KernelDensityAdaptive(nn.Module):
-    def __init__(self, input_size, dataset, kernel='gaussian', bandwith = 'scott', nb_center=1000, **kwargs) -> None:
+    def __init__(self,
+                input_size,
+                dataset,
+                kernel='gaussian',
+                bandwith = 'scott',
+                nb_center=1000,
+                feature_extractor = None,
+                **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         
         index = np.random.choice(len(dataset), min(nb_center,len(dataset)))
-        data = torch.cat([dataset[i][0] for i in index]).flatten(1).numpy()
+        with torch.no_grad():
+            if feature_extractor is None :
+                data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), *input_size)
+            else :
+                data = torch.cat([feature_extractor(dataset[i][0].unsqueeze(0)) for i in index]).reshape(len(index), -1)
+        data = data.flatten(1).numpy()
         self.kd = sklearn.neighbors.KernelDensity(kernel=kernel, bandwidth=bandwith).fit(data)
         self.bandwith = torch.nn.Parameter(torch.tensor(self.kd.bandwidth_,), requires_grad=False)
         self.last_x = None

@@ -10,7 +10,7 @@ from default_args import check_args_for_yaml, default_args_main
 from Model.Trainer import dic_trainer
 from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
-from Model.Utils.model_getter import get_model
+from Model.Utils.model_getter_distribution_estimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
 
 try:
@@ -113,8 +113,8 @@ if __name__ == "__main__":
     else:
         accelerator = None
         devices = None
-
-    # accelerator = 'mps'
+    
+    accelerator = 'cpu'
 
     if args.load_from_checkpoint or args_dict["just_test"]:
         ckpt_dir = os.path.join(save_dir, "val_checkpoint")

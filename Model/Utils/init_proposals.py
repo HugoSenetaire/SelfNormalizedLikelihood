@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 
-def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
+def init_energy_to_gaussian(energy, input_size, dataset, args_dict, feature_extractor = None):
     '''
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
@@ -18,7 +18,11 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     energy = energy.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
 
-    data = torch.cat([dataset[i][0] for i in range(len(dataset))]).reshape(-1,*dataset[0][0].shape).flatten(1).to(device)
+    with torch.no_grad():
+        if feature_extractor is None :
+            data = torch.cat([dataset[i][0] for i in range(len(dataset))]).reshape(-1,*dataset[0][0].shape).flatten(1).to(device)
+        else :
+            data = torch.cat([feature_extractor(dataset[i][0].unsqueeze(0)).flatten(1) for i in range(len(dataset))]).to(device)
     dist = Normal(data.mean(0), data.std(0))
     ranges= tqdm.tqdm(range(10000))
     for k in ranges:
@@ -86,7 +90,7 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
 
 
 
-def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
+def init_proposal_to_data(proposal, input_size, dataloader, args_dict, feature_extractor = None):
     dtype = torch.float32
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -103,6 +107,8 @@ def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
         tqdm_range = tqdm.tqdm(dataloader)
         for batch in tqdm_range:
             x = batch['data']
+            if feature_extractor is not None :
+                x = feature_extractor(x)
             x = x.to(device, dtype)
             log_prob = proposal.log_prob(x,).reshape(-1)
             loss = (-log_prob).mean()

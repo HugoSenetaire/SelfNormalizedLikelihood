@@ -4,7 +4,14 @@ import torch
 import sklearn.neighbors
 
 class KernelDensity():
-    def __init__(self, input_size, dataset, kernel='gaussian', bandwith = 'scott', nb_center=1000, **kwargs) -> None:
+    def __init__(self,
+                input_size,
+                dataset,
+                kernel='gaussian',
+                bandwith = 'scott',
+                nb_center=1000,
+                feature_extractor = None,
+                **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         

@@ -1,4 +1,6 @@
-from .model_getter import get_model
+from .model_getter_distribution_estimation import get_model
+from .model_getter_distribution_estimation_dual import get_model_distribution_estimation_dual
+from .model_getter_regression import get_model_regression
 from .optimizer_getter import get_optimizer
 from .dataloader_getter import get_dataloader
 from .Callbacks import EMACallback

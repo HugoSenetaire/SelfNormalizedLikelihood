@@ -1,0 +1,12 @@
+
+max_epoch : 20
+save_energy_every : 1000
+samples_every: 1000
+val_check_interval : 300
+batch_size : 512
+nb_sample_bias_explicit : 1024
+bias_explicit : True
+num_sample_proposal : 1024
+train_proposal : True
+proposal_loss_name : 'log_prob'
+val_check_interval : 100

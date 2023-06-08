@@ -1,0 +1,5 @@
+energy_name : 'fc'
+energy_parameters :
+  dims : [100,100]
+  last_layer_bias : False
+feature_extractor_name : 'toy'

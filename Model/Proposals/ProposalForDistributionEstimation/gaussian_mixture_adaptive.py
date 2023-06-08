@@ -8,14 +8,26 @@ import numpy as np
 
 
 class GaussianMixtureAdaptiveProposal(nn.Module):
-    def __init__(self, default_proposal, input_size, dataset, covariance_type="diag", std = 'dataset', nb_sample_for_estimate = 10000, **kwargs) -> None:
+    def __init__(self,
+                default_proposal,
+                input_size,
+                dataset,
+                covariance_type="diag",
+                std = 'dataset',
+                nb_sample_for_estimate = 10000,
+                feature_extractor = None,
+                **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         self.default_proposal = default_proposal
 
         n_features = np.prod(input_size)
         index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
-        data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), *input_size)
+        with torch.no_grad():
+            if feature_extractor is None :
+                data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), *input_size)
+            else :
+                data = torch.cat([feature_extractor(dataset[i][0].unsqueeze(0)) for i in index]).reshape(len(index), -1)
         data += torch.randn_like(data) * 1e-2
         self.std = nn.Parameter(data.std(0).reshape(input_size), requires_grad=False)
         self.x = None

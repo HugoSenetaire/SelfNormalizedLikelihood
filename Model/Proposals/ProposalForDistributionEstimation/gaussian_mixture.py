@@ -7,7 +7,20 @@ from ..gmm_torch.gmm import GaussianMixture
 
 
 class GaussianMixtureProposal(nn.Module):
-    def __init__(self, input_size, dataset, covariance_type="diag", eps=1.e-6, n_components = 10, nb_sample_for_estimate = 10000, init_parameters="kmeans", delta = 1e-3, n_iter = 100, warm_start = False, fit = True, **kwargs) -> None:
+    def __init__(self,
+                input_size,
+                dataset,
+                covariance_type="diag",
+                eps=1.e-6,
+                n_components = 10,
+                nb_sample_for_estimate = 10000,
+                init_parameters="kmeans",
+                delta = 1e-3,
+                n_iter = 100,
+                warm_start = False,
+                feature_extractor = None,
+                fit = True,
+                **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         self.n_components = n_components
@@ -18,8 +31,11 @@ class GaussianMixtureProposal(nn.Module):
         n_features = np.prod(input_size)
         
         index = np.random.choice(len(dataset), min(nb_sample_for_estimate,len(dataset)))
-
-        data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), -1)
+        with torch.no_grad():
+            if feature_extractor is None :
+                data = torch.cat([dataset[i][0] for i in index]).reshape(len(index), *input_size)
+            else :
+                data = torch.cat([feature_extractor(dataset[i][0].unsqueeze(0)) for i in index]).reshape(len(index), -1)
         data += torch.randn_like(data) * 1e-2
         
         self.gmm = GaussianMixture(n_features=n_features, n_components=n_components, covariance_type=covariance_type, eps=eps, init_parameters=init_parameters)

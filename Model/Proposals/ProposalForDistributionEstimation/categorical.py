@@ -12,7 +12,11 @@ from torch.utils.data import Dataset
 class Categorical(nn.Module):
     """Module that implements a uniform categorical distribution"""
 
-    def __init__(self, input_size: Tuple[int], dataset: Dataset) -> None:
+    def __init__(self,
+                input_size: Tuple[int],
+                dataset: Dataset,
+                feature_extractor=None,
+            ) -> None:
         super(Categorical, self).__init__()
         self.input_size = input_size
         self.num_categories = dataset.num_categories

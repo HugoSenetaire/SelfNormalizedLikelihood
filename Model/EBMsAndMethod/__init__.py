@@ -1,3 +1,3 @@
 from .DistributionEstimation import ImportanceWeightedEBM
 from .Regression import EBMRegression
-
+from .DistributionEstimationDualProposal import ImportanceWeightedEBMDualProposal

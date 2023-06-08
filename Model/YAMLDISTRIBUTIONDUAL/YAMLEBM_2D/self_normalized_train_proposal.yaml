@@ -1,0 +1,9 @@
+
+max_epoch : 75
+save_energy_every : 9
+batch_size : 512
+nb_sample_bias_explicit : 1024
+bias_explicit : True
+num_sample_proposal : 512
+train_proposal : True
+proposal_loss_name : 'log_prob'

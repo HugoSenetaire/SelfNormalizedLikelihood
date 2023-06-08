@@ -1,6 +1,6 @@
 from default_args import default_args_main, check_args_for_yaml
 from Dataset.MissingDataDataset.prepare_data import get_dataset
-from Model.Utils.model_getter import get_model_regression
+from Model.Utils.model_getter_distribution_estimation import get_model_regression
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.Callbacks import EMA
 from Model.Trainer import dic_trainer_regression

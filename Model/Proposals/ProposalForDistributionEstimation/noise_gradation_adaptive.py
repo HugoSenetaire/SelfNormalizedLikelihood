@@ -8,7 +8,16 @@ import numpy as np
 
 
 class NoiseGradationAdaptiveProposal(nn.Module):
-    def __init__(self, default_proposal, input_size, dataset, nb_gradation = 3, covariance_type="diag", std = 'dataset', nb_sample_for_estimate = 10000, **kwargs) -> None:
+    def __init__(self,
+                default_proposal,
+                input_size,
+                dataset,
+                nb_gradation = 3,
+                covariance_type="diag",
+                std = 'dataset',
+                nb_sample_for_estimate = 10000,
+                feature_extractor = None,
+                **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         self.default_proposal = default_proposal

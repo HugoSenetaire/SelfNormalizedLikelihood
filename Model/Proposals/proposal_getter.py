@@ -47,11 +47,10 @@ def get_base_dist(args_dict, proposal, input_size, dataset) :
 
 
 
-def get_proposal(args_dict, input_size, dataset, ):
+def get_proposal(args_dict, input_size, dataset, feature_extractor = None ):
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
-
 
     proposal = dic_proposals[args_dict["proposal_name"]]
     if 'proposal_parameters' not in args_dict.keys():
@@ -66,9 +65,9 @@ def get_proposal(args_dict, input_size, dataset, ):
             aux_args_dict['proposal_parameters'] = args_dict['default_proposal_parameters']
         aux_args_dict['proposal_name'] = args_dict['default_proposal_name']
         default_proposal = get_proposal(aux_args_dict, input_size, dataset,)
-        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = dataset, **args_dict["proposal_parameters"])
+        return proposal(default_proposal = default_proposal, input_size = input_size, dataset = dataset, feature_extractor = feature_extractor, **args_dict["proposal_parameters"])
 
-    return proposal(input_size, dataset, **args_dict["proposal_parameters"])
+    return proposal(input_size, dataset, feature_extractor=feature_extractor, **args_dict["proposal_parameters"])
 
 
 

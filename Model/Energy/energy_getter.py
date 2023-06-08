@@ -7,7 +7,7 @@ from .EnergyForDistribution import (
     fc_energy,
 )
 from .EnergyForRegression import EnergyNetworkRegression_Large, EnergyNetworkRegression_Toy
-from .FeatureExtractor import Resnet18_FeatureExtractor, ToyFeatureNet
+from .FeatureExtractor import Resnet18_FeatureExtractor, ToyFeatureNet, ConvFeatureExtractorDistributionMnist
 
 import numpy as np
 dic_energy = {
@@ -58,6 +58,8 @@ def get_energy_regression(input_size_x, input_size_y, args_dict):
 dic_feature_extractor = {
     'resnet' : Resnet18_FeatureExtractor,
     'toy' : ToyFeatureNet,
+    'none' : None,
+    'conv_mnist' : ConvFeatureExtractorDistributionMnist,
 }
 
 

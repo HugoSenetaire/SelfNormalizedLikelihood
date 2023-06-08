@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 class StudentProposal(nn.Module):
-    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', **kwargs) -> None:
+    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', feature_extractor = None, **kwargs) -> None:
         super().__init__()
         self.input_size = input_size
         print("Init Standard Gaussian...")
