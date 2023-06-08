@@ -1,6 +1,0 @@
-- energy=conv_distribution
-- optim=adamw
-- base_distribution=proposal
-- dataset=checkerboard
-- proposal=gaussian
-- train=self_normalized_distribution
