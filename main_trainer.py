@@ -1,4 +1,5 @@
 import os
+from dataclasses import asdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,24 +59,14 @@ def main(cfg):
     cfg = helpers._trigger_post_init(cfg)
     logger.info(os.linesep + pformat(cfg))
 
+    pl.seed_everything(cfg.train.seed)
+    np.random.seed(cfg.train.seed)
+    torch.manual_seed(cfg.train.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
-if __name__ == "__main__":
-    hydra_config.main()
-    main()
-    raise ValueError("Stop here")
-    parser = default_args_main()
-    args = parser.parse_args()
-    args_dict = vars(args)
-    check_args_for_yaml(args_dict)
+    args_dict = asdict(cfg.dataset)
 
-    if "seed" in args_dict.keys() and args_dict["seed"] is not None:
-        pl.seed_everything(args_dict["seed"])
-        np.random.seed(args_dict["seed"])
-        torch.manual_seed(args_dict["seed"])
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-    # Get Dataset :
     complete_dataset, complete_masked_dataset = get_dataset(
         args_dict,
     )
@@ -85,17 +76,48 @@ if __name__ == "__main__":
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
 
-    args_dict["input_size"] = complete_dataset.get_dim_input()
+    cfg.dataset.input_size = complete_dataset.get_dim_input()
 
-    if args_dict["yamldataset"] is not None:
-        name = os.path.basename(args_dict["yamldataset"]).split(".yaml")[0]
-        save_dir = os.path.join(
-            args_dict["output_folder"],
-            os.path.basename(args_dict["yamldataset"]).split(".yaml")[0],
-        )
-    else:
-        name = args_dict["dataset_name"]
-        save_dir = os.path.join(args_dict["output_folder"], args_dict["dataset_name"])
+    # name and save_dir will be in cfg
+
+
+if __name__ == "__main__":
+    hydra_config.main()
+    main()
+    raise ValueError("Stop here")
+    # parser = default_args_main()
+    # args = parser.parse_args()
+    # args_dict = vars(args)
+    # check_args_for_yaml(args_dict)
+
+    # if "seed" in args_dict.keys() and args_dict["seed"] is not None:
+    #     pl.seed_everything(args_dict["seed"])
+    #     np.random.seed(args_dict["seed"])
+    #     torch.manual_seed(args_dict["seed"])
+    #     torch.backends.cudnn.deterministic = True
+    #     torch.backends.cudnn.benchmark = False
+
+    # # Get Dataset :
+    # complete_dataset, complete_masked_dataset = get_dataset(
+    #     args_dict,
+    # )
+    # train_loader = get_dataloader(
+    #     complete_masked_dataset.dataset_train, args_dict, shuffle=True
+    # )
+    # val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
+    # test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
+
+    # args_dict["input_size"] = complete_dataset.get_dim_input()
+
+    # if args_dict["yamldataset"] is not None:
+    #     name = os.path.basename(args_dict["yamldataset"]).split(".yaml")[0]
+    #     save_dir = os.path.join(
+    #         args_dict["output_folder"],
+    #         os.path.basename(args_dict["yamldataset"]).split(".yaml")[0],
+    #     )
+    # else:
+    #     name = args_dict["dataset_name"]
+    #     save_dir = os.path.join(args_dict["output_folder"], args_dict["dataset_name"])
 
     if args_dict["yamlebm"] is not None and len(args_dict["yamlebm"]) > 0:
         list_element = args_dict["yamlebm"]

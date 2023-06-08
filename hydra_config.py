@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional, Union
 
 from hydra.core.config_store import ConfigStore
@@ -24,6 +25,11 @@ class BaseDatasetDistributionConfig:
     download: bool = MISSING
     dataset_name: str = MISSING
     missing_mechanism: str = MISSING
+    input_size: Optional[int] = None
+    seed: Optional[int] = None
+    dataloader_name: str = "default"
+    batch_size: Optional[int] = None
+    num_workers: Optional[int] = None
 
 
 @dataclass
@@ -85,6 +91,7 @@ class BaseTrainConfig:
     seed: int = MISSING
     decay_ema: Optional[float] = MISSING
     task_type: str = MISSING
+    save_dir: Optional[Path] = None
 
     def __post_init__(self):
         if self.task_type not in ["regression", "distribution estimation"]:
@@ -101,6 +108,18 @@ class Config:
     optim: BaseOptimConfig = MISSING
     proposal: BaseProposalConfig = MISSING
     train: BaseTrainConfig = MISSING
+
+    def _complete_dataset(self):
+        self.dataset.seed = self.train.seed
+        self.dataset.batch_size = self.train.batch_size
+        self.dataset.num_workers = self.train.num_workers
+
+    def _complete_train(self):
+        self.train.save_dir = Path(self.train.output_folder) / self.dataset.dataset_name
+
+    def __post_init__(self):
+        self._complete_dataset()
+        self._complete_train()
 
 
 def main():
