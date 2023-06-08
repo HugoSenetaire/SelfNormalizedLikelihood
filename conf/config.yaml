@@ -1,0 +1,8 @@
+defaults:
+  - config_name
+  - base_distribution: proposal_name
+  - dataset: checkerboard_name
+  - energy: distribution_conv_name
+  - optim: adamw_name
+  - proposal: gaussian_name
+  - train: self_normalized_name

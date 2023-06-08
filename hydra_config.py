@@ -20,7 +20,7 @@ class BaseBaseDistributionConfig:
 
 
 @dataclass
-class BaseDistributionDatasetConfig:
+class BaseDatasetDistributionConfig:
     download: bool = MISSING
     dataset_name: str = MISSING
     missing_mechanism: str = MISSING
@@ -64,7 +64,7 @@ class BaseProposalConfig:
     num_sample_proposal_test: int = MISSING
     train_proposal: bool = MISSING
     proposal_loss_name: str = MISSING
-    proposal_pretraining: str = MISSING
+    proposal_pretraining: Optional[str] = MISSING
 
     def __post_init__(self):
         if self.proposal_loss_name not in ["log_prob", "kl", "log_prob_kl"]:
@@ -84,17 +84,45 @@ class BaseTrainConfig:
     just_test: bool = MISSING
     seed: int = MISSING
     decay_ema: Optional[float] = MISSING
+    task_type: str = MISSING
+
+    def __post_init__(self):
+        if self.task_type not in ["regression", "distribution estimation"]:
+            raise RuntimeError(
+                f"task_type should be in ['regression', 'distribution estimation'] but got {self.task_type}"
+            )
+
+
+@dataclass
+class Config:
+    base_distribution: BaseBaseDistributionConfig = MISSING
+    dataset: BaseDatasetDistributionConfig = MISSING
+    energy: BaseEnergyDistributionConfig = MISSING
+    optim: BaseOptimConfig = MISSING
+    proposal: BaseProposalConfig = MISSING
+    train: BaseTrainConfig = MISSING
 
 
 def main():
     cs = ConfigStore.instance()
+    cs.store(name="config_name", node=Config)
     cs.store(
         name="proposal_name", group="base_distribution", node=BaseBaseDistributionConfig
     )
     cs.store(
-        name="checkboard_name",
-        group="dataset/distribution",
-        node=BaseDistributionDatasetConfig,
+        name="checkerboard_name",
+        group="dataset",
+        node=BaseDatasetDistributionConfig,
     )
     cs.store(name="adamw_name", group="optim", node=AdamwConfig)
     cs.store(name="gaussian_name", group="proposal", node=BaseProposalConfig)
+    cs.store(
+        name="distribution_conv_name",
+        group="energy",
+        node=BaseEnergyDistributionConfig,
+    )
+    cs.store(name="self_normalized_name", group="train", node=BaseTrainConfig)
+
+
+if __name__ == "__main__":
+    main()

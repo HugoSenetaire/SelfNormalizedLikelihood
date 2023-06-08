@@ -1,0 +1,35 @@
+base_distribution:
+  base_dist_name: proposal
+  train_base_dist: false
+dataset:
+  download: true
+  dataset_name: checkerboard
+  missing_mechanism: none
+energy:
+  energy_name: conv
+optim:
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.0
+  b1: 0.9
+  b2: 0.999
+  eps: 1.0e-08
+proposal:
+  proposal_name: standard_gaussian
+  num_sample_proposal: 512
+  num_sample_proposal_val: 1024
+  num_sample_proposal_test: 20000
+  train_proposal: false
+  proposal_loss_name: kl
+  proposal_pretraining: null
+train:
+  trainer_name: self_normalized
+  max_steps: 3000
+  batch_size: 128
+  num_workers: 2
+  output_folder: ./Results
+  load_from_checkpoint: false
+  just_test: false
+  seed: 42
+  decay_ema: null
+  task_type: distribution estimation

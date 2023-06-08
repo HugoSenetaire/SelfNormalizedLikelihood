@@ -18,6 +18,22 @@ try:
 except:
     from lighting.pytorch.loggers import WandbLogger
 
+import logging
+from pprint import pformat
+
+import hydra
+from omegaconf import OmegaConf
+
+import helpers
+import hydra_config
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
+    datefmt="[%Y-%m-%d %H:%M:%S]",
+)
+logger = logging.getLogger(__name__)
+
 from tensorboardX import SummaryWriter
 
 
@@ -35,7 +51,18 @@ def find_last_version(dir):
     return last_version
 
 
+@hydra.main(version_base=None, config_path="conf", config_name="config")
+def main(cfg):
+    logger.info(OmegaConf.to_yaml(cfg))
+    my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    cfg = helpers._trigger_post_init(cfg)
+    logger.info(os.linesep + pformat(cfg))
+
+
 if __name__ == "__main__":
+    hydra_config.main()
+    main()
+    raise ValueError("Stop here")
     parser = default_args_main()
     args = parser.parse_args()
     args_dict = vars(args)
@@ -91,7 +118,9 @@ if __name__ == "__main__":
     if args_dict["just_test"]:
         args_dict["ebm_pretraining"] = False
         args_dict["proposal_pretraining"] = False
-    ebm = get_model(args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader)
+    ebm = get_model(
+        args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader
+    )
 
     # Get Trainer :
     algo = dic_trainer[args_dict["trainer_name"]](
@@ -144,42 +173,53 @@ if __name__ == "__main__":
 
     # Train :
     if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
-        max_steps = args_dict["max_epoch"] * (len(train_loader)+len(val_loader))
+        max_steps = args_dict["max_epoch"] * (len(train_loader) + len(val_loader))
         args_dict["max_steps"] = max_steps
 
-    if 'val_check_interval' in args_dict.keys():
-        val_check_interval = args_dict['val_check_interval']
-    else :
+    if "val_check_interval" in args_dict.keys():
+        val_check_interval = args_dict["val_check_interval"]
+    else:
         val_check_interval = None
-    trainer = pl.Trainer(accelerator=accelerator,
-                        # logger=logger,
-                        default_root_dir=save_dir,
-                        callbacks=checkpoints,
-                        # devices = len(devices),
-                        strategy = strategy,
-                        precision=16,
-                        max_steps = args_dict['max_steps'],
-                        resume_from_checkpoint = ckpt_path,
-                        val_check_interval = val_check_interval,
-                        )
-    
-    
-    if not args_dict['just_test']:
+    trainer = pl.Trainer(
+        accelerator=accelerator,
+        # logger=logger,
+        default_root_dir=save_dir,
+        callbacks=checkpoints,
+        # devices = len(devices),
+        strategy=strategy,
+        precision=16,
+        max_steps=args_dict["max_steps"],
+        resume_from_checkpoint=ckpt_path,
+        val_check_interval=val_check_interval,
+    )
+
+    if not args_dict["just_test"]:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
         )
 
     trainer.test(algo, dataloaders=test_loader)
-    if algo.sampler is not None :
+    if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
             samples = algo.samples_mcmc()[0].flatten(1)
-            plot_energy_2d(algo = algo, save_dir = save_dir, samples = [algo.example, algo.example_proposal, samples], samples_title= ['Samples from dataset', 'Samples from proposal', 'Samples HMC'],)
-        else :
+            plot_energy_2d(
+                algo=algo,
+                save_dir=save_dir,
+                samples=[algo.example, algo.example_proposal, samples],
+                samples_title=[
+                    "Samples from dataset",
+                    "Samples from proposal",
+                    "Samples HMC",
+                ],
+            )
+        else:
             images = algo.samples_mcmc()[0]
-            plot_images(images, save_dir, algo = None, transform_back=complete_dataset.transform_back, name = 'samples_best', step='', )
-   
-
-
-
-        
+            plot_images(
+                images,
+                save_dir,
+                algo=None,
+                transform_back=complete_dataset.transform_back,
+                name="samples_best",
+                step="",
+            )
