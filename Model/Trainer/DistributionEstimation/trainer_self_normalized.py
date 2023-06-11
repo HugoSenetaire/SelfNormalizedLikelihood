@@ -29,7 +29,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
-            complete_dataset=complete_dataset,
+            complete_data=complete_dataset,
             nb_sample_train_estimate=nb_sample_train_estimate,
             **kwargs,
         )

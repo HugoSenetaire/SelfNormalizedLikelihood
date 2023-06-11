@@ -40,7 +40,7 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
         super().__init__(
             ebm=ebm,
             args_dict=args_dict,
-            complete_dataset=complete_dataset,
+            complete_data=complete_dataset,
             nb_sample_train_estimate=nb_sample_train_estimate,
             **kwargs
         )

@@ -6,3 +6,4 @@ defaults:
   - optim: adamw_name
   - proposal: gaussian_name
   - train: self_normalized_name
+  - sampler: nuts_name

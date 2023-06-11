@@ -30,7 +30,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
     Attributes:
     ----------
         ebm (EBM): The energy based model to train
-        args_dict (dict): The dictionary of arguments
+        cfg (dataclass): The dataclass containing all the arguments
         complete_dataset (Dataset): One of the dataset to sample from for visualization
         sampler (Sampler): The sampler to use for the visualization of the samples
         transform_back (function): The function to use to transform the samples back to the original space
@@ -80,30 +80,28 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         super().__init__()
         self.ebm = ebm
-        logger.info("args_deprecated is deprecated, use cfg instead")
-        raise NotImplementedError
-        self.args_dict = args_dict
-        print("args_dict", args_dict)
-        self.hparams.update(args_dict)
+        self.cfg = cfg
+        # self.hparams.update(args_dict)
+        logger.info(f"You might want to save some hparams here")
         self.last_save = -float("inf")  # To save the energy contour plot
         self.last_save_sample = 0  # To save the samples
         self.sampler = get_sampler(
-            args_dict,
+            cfg,
         )
         self.transform_back = complete_dataset.transform_back
         self.nb_sample_train_estimate = nb_sample_train_estimate
-        self.num_samples_val = args_dict["num_sample_proposal_val"]
+        self.num_samples_val = cfg.proposal.num_sample_proposal_val
 
-        if np.prod(self.args_dict["input_size"]) == 2:
+        if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
-        elif len(self.args_dict["input_size"]) == 1:
+        elif len(cfg.dataset.input_size) == 1:
             self.input_type = "1d"
-        elif len(self.args_dict["input_size"]) == 3:
+        elif len(cfg.dataset.input_size) == 3:
             self.input_type = "image"
         else:
             self.input_type = "other"
 
-        self.proposal_loss_name = args_dict["proposal_loss_name"]
+        self.proposal_loss_name = cfg.proposal.proposal_loss_name
         if self.proposal_loss_name == "log_prob":
             self.proposal_loss = log_prob_loss
         elif self.proposal_loss_name == "kl":
@@ -119,8 +117,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.proposal_visualization()
         self.base_dist_visualization()
         self.automatic_optimization = False
-        self.train_proposal = self.args_dict["train_proposal"]
-        self.train_base_dist = self.args_dict["train_base_dist"]
+        self.train_proposal = cfg.proposal.train_proposal
+        self.train_base_dist = cfg.base_distribution.train_base_dist
 
         if self.ebm.base_dist is not None:
             if not self.train_base_dist:
@@ -305,7 +303,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     )
                     plot_images(
                         self.example,
-                        save_dir=self.args_dict["save_dir"],
+                        save_dir=self.cfg.train.save_dir,
                         name="example",
                         transform_back=self.transform_back,
                     )
@@ -319,7 +317,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         energy_function = lambda x: -self.ebm.proposal.log_prob(x)
         if self.input_type == "2d":
             self.resample_proposal()
-            save_dir = os.path.join(self.args_dict["save_dir"], "proposal")
+            save_dir = os.path.join(self.cfg.train.save_dir, "proposal")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             plot_energy_2d(
@@ -333,7 +331,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             )
         elif self.input_type == "image":
             self.resample_proposal()
-            save_dir = os.path.join(self.args_dict["save_dir"], "proposal")
+            save_dir = os.path.join(self.cfg.train.save_dir, "proposal")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             plot_images(
@@ -351,7 +349,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             energy_function = lambda x: -self.ebm.base_dist.log_prob(x)
             if self.input_type == "2d":
                 self.resample_proposal()
-                save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
+                save_dir = os.path.join(self.cfg.train.save_dir, "base_dist")
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
                 plot_energy_2d(
@@ -373,7 +371,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
             elif self.input_type == "image":
                 self.resample_base_dist()
-                save_dir = os.path.join(self.args_dict["save_dir"], "base_dist")
+                save_dir = os.path.join(self.cfg.train.save_dir, "base_dist")
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
                 plot_images(
@@ -396,7 +394,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             opt_list (list): The list of optimizers
             sch_list (list): The list of schedulers
         """
-        if self.args_dict["train_proposal"] and self.ebm.proposal == self.ebm.base_dist:
+        if self.cfg.proposal.train_proposal and self.ebm.proposal == self.ebm.base_dist:
             # In case the base dist is equal to the proposal, I can't train both of them with the same loss
             # If I want to train the proposal it takes priority over the base distribution
             parameters_ebm = [
@@ -418,7 +416,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         ebm_sch = get_scheduler(args_dict=self.args_dict, optim=ebm_opt)
 
         if (
-            not self.args_dict["train_proposal"]
+            not self.cfg.proposal.train_proposal
             and self.ebm.proposal == self.ebm.base_dist
         ):
             proposal_opt = None
@@ -482,12 +480,12 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if name == "val_":
             log_z_estimate, dic = self.ebm.estimate_log_z(
                 x=torch.zeros((1,), dtype=torch.float32, device=self.device),
-                nb_sample=self.args_dict["num_sample_proposal_val"],
+                nb_sample=self.cfg.proposal.num_sample_proposal_val,
             )
         else:
             log_z_estimate, dic = self.ebm.estimate_log_z(
                 x=torch.zeros((1,), dtype=torch.float32, device=self.device),
-                nb_sample=self.args_dict["num_sample_proposal_test"],
+                nb_sample=self.cfg.proposal.num_sample_proposal_test,
             )
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})
@@ -512,9 +510,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         If possible show the current energy function and the samples from the proposal and dataset
         """
-        if np.prod(self.args_dict["input_size"]) == 2:
-            if self.global_step - self.last_save > self.args_dict["save_energy_every"]:
-                save_dir = self.args_dict["save_dir"]
+        if np.prod(self.cfg.dataset.input_size) == 2:
+            if self.global_step - self.last_save > self.cfg.train.save_energy_every:
+                save_dir = self.cfg.train.save_dir
                 save_dir = os.path.join(save_dir, "contour_energy")
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
@@ -572,14 +570,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
             return False
         torch.set_grad_enabled(True)  # Required for MCMC sampling
 
-        if self.global_step - self.last_save_sample > self.args_dict["samples_every"]:
-            save_dir = self.args_dict["save_dir"]
+        if self.global_step - self.last_save_sample > self.cfg.train.samples_every:
+            save_dir = self.cfg.train.save_dir
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             samples, init_samples = self.samples_mcmc(num_samples=num_samples)
 
-            if np.prod(self.args_dict["input_size"]) == 2:
+            if np.prod(self.cfg.train.input_size) == 2:
                 samples = samples.flatten(1)
                 plot_energy_2d(
                     self,

@@ -81,6 +81,26 @@ class BaseProposalConfig:
 
 
 @dataclass
+class BaseSamplerConfig:
+    sampler_name: str = MISSING
+
+    def __post_init__(self):
+        if self.sampler_name not in ["no_sampler", "nuts"]:
+            raise RuntimeError(
+                f"sampler_name should be in ['nuts'] but got {self.sampler_name}"
+            )
+
+
+@dataclass
+class NutsConfig(BaseSamplerConfig):
+    input_size: Optional[int] = MISSING
+    num_chains: int = MISSING
+    num_samples: int = MISSING
+    warmup_steps: int = MISSING
+    thinning: int = MISSING
+
+
+@dataclass
 class BaseTrainConfig:
     trainer_name: str = MISSING
     max_steps: Optional[int] = MISSING
@@ -96,6 +116,8 @@ class BaseTrainConfig:
     save_dir: Optional[Path] = None
     multi_gpu: str = MISSING
     val_check_internals: Optional[bool] = MISSING
+    save_energy_every: int = MISSING
+    samples_every: int = MISSING
 
     def __post_init__(self):
         if self.task_type not in ["regression", "distribution estimation"]:
@@ -165,6 +187,8 @@ def main():
         node=BaseEnergyDistributionConfig,
     )
     cs.store(name="self_normalized_name", group="train", node=BaseTrainConfig)
+    cs.store(name="no_sampler_name", group="sampler", node=BaseSamplerConfig)
+    cs.store(name="nuts_name", group="sampler", node=NutsConfig)
 
 
 if __name__ == "__main__":

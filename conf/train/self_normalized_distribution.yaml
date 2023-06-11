@@ -13,3 +13,6 @@ decay_ema: null
 task_type: 'distribution estimation'
 save_dir: null
 multi_gpu: "single"
+val_check_internals: null
+save_energy_every: 10
+samples_every: 10
