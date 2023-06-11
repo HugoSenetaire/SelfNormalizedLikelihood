@@ -40,6 +40,7 @@ class BaseRegressionDatasetConfig:
 @dataclass
 class BaseEnergyDistributionConfig:
     energy_name: str = MISSING
+    ebm_pretraining: bool = MISSING
 
 
 @dataclass
@@ -70,7 +71,7 @@ class BaseProposalConfig:
     num_sample_proposal_test: int = MISSING
     train_proposal: bool = MISSING
     proposal_loss_name: str = MISSING
-    proposal_pretraining: Optional[str] = MISSING
+    proposal_pretraining: bool = MISSING
 
     def __post_init__(self):
         if self.proposal_loss_name not in ["log_prob", "kl", "log_prob_kl"]:
@@ -82,7 +83,8 @@ class BaseProposalConfig:
 @dataclass
 class BaseTrainConfig:
     trainer_name: str = MISSING
-    max_steps: int = MISSING
+    max_steps: Optional[int] = MISSING
+    max_epochs: Optional[int] = MISSING
     batch_size: int = MISSING
     num_workers: int = MISSING
     output_folder: str = MISSING
@@ -92,11 +94,28 @@ class BaseTrainConfig:
     decay_ema: Optional[float] = MISSING
     task_type: str = MISSING
     save_dir: Optional[Path] = None
+    multi_gpu: str = MISSING
+    val_check_internals: Optional[bool] = MISSING
 
     def __post_init__(self):
         if self.task_type not in ["regression", "distribution estimation"]:
             raise RuntimeError(
                 f"task_type should be in ['regression', 'distribution estimation'] but got {self.task_type}"
+            )
+        if self.save_dir is None:
+            logger.warning("save_dir is None")
+
+        if self.multi_gpu not in ["single", "ddp"]:
+            raise RuntimeError(
+                f"multi_gpu should be in ['single', 'ddp'] but got {self.multi_gpu}"
+            )
+
+        if self.max_steps is None and self.max_epochs is None:
+            raise RuntimeError("max_steps and max_epochs are both None. Please set one")
+
+        if self.max_steps is not None and self.max_epochs is not None:
+            raise RuntimeError(
+                "max_steps and max_epochs are both not None. Please set only one"
             )
 
 
@@ -120,6 +139,11 @@ class Config:
     def __post_init__(self):
         self._complete_dataset()
         self._complete_train()
+
+        if self.train.just_test:
+            logger.info("Just testing the model, setting pretraining to False")
+            self.energy.ebm_pretraining = False
+            self.proposal.proposal_pretraining = False
 
 
 def main():

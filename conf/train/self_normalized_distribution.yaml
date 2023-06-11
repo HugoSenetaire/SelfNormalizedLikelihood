@@ -3,6 +3,7 @@ defaults:
 trainer_name: 'self_normalized'
 batch_size: 128
 max_steps: 3000
+max_epochs: null
 num_workers: 2
 output_folder: './Results'
 load_from_checkpoint: false
@@ -10,3 +11,5 @@ seed: 42
 just_test: false
 decay_ema: null
 task_type: 'distribution estimation'
+save_dir: null
+multi_gpu: "single"

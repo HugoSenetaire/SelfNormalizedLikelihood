@@ -6,4 +6,4 @@ proposal_loss_name: 'kl'
 num_sample_proposal: 512
 num_sample_proposal_val: 1024
 num_sample_proposal_test: 20000
-proposal_pretraining: null
+proposal_pretraining: false
