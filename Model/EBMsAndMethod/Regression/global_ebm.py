@@ -258,7 +258,7 @@ class EBMRegression(nn.Module):
                 current_nb_sample = 2048
                 if k == number_iter - 1 and last_iter_remaining != 0 :
                     current_nb_sample = last_iter_remaining
-                _, current_dic_output = self.estimate_log_z_onepass(x_feature, nb_sample = current_nb_sample)
+                _, current_dic_output = self._estimate_log_z_onepass(x_feature, nb_sample = current_nb_sample)
 
                 # Update the dic_output :
                 for key in current_dic_output :
