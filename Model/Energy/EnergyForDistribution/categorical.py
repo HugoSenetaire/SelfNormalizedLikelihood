@@ -52,6 +52,6 @@ class EnergyCategoricalDistrib(nn.Module):
             x: Float[torch.Tensor, "batch_size num_categories"], the input of the energy. This is a batch of vectors of size dim.
 
         Returns:
-            Float[torch.Tensor, "batch_size"], E(x), the energy of the categorical distribution.
+            Float[torch.Tensor, "batch_size 1"], E(x), the energy of the categorical distribution.
         """
-        return x @ self.theta
+        return (x @ self.theta).reshape(-1, 1)

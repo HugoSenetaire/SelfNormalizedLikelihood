@@ -1,14 +1,3 @@
-import os
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pytorch_lightning as pl
-import torch
-import yaml
-
-from ...Sampler import get_sampler
-from ...Utils.optimizer_getter import get_optimizer, get_scheduler
-from ...Utils.plot_utils import plot_energy_2d, plot_images
 from .abstract_trainer import AbstractDistributionEstimation
 
 class SelfNormalizedTrainer(AbstractDistributionEstimation):
@@ -36,18 +25,12 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
-
-        if (
-            self.args_dict["switch_mode"] is not None
-            and self.global_step == self.args_dict["switch_mode"]
-        ):
-            self.ebm.switch_mode()
         x = batch['data']
         if hasattr(self.ebm.proposal, 'set_x'):
             self.ebm.proposal.set_x(x)
         energy_samples, dic_output = self.ebm.calculate_energy(x)
 
-        estimate_log_z, dic = self.ebm.estimate_log_z(x, self.ebm.nb_sample)
+        estimate_log_z, dic = self.ebm.estimate_log_z(x, self.num_samples_train)
         estimate_log_z = estimate_log_z.mean()
         loss_estimate_z = estimate_log_z
 
@@ -63,27 +46,12 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         )
 
         # Update the parameters of the proposal
-        if self.train_proposal:
-            proposal_opt.zero_grad()
-            log_prob_proposal = self.ebm.proposal.log_prob(
-                x,
-            )
-            self.log("proposal_log_likelihood", log_prob_proposal.mean())
-            proposal_loss = self.proposal_loss(
-                log_prob_proposal,
-                estimate_log_z,
-            )
-            self.manual_backward(
-                (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
-            )         
-            proposal_opt.step()
+        self._proposal_step(x = x, estimate_log_z = estimate_log_z, proposal_opt = proposal_opt, dic_output=dic_output,)
+
         # Update the parameters of the ebm
         ebm_opt.step()
         dic_output.update(dic)
 
-        self.post_train_step_handler(
-            x,
-            dic_output,
-        )
+        self.post_train_step_handler(x,dic_output,)
 
         return loss_total

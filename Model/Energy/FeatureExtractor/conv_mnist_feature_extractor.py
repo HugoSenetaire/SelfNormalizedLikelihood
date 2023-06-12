@@ -10,7 +10,7 @@ import os
 
 
 class Resnet18_FeatureExtractorDistribution(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_size_x):
         super().__init__()
 
         resnet18 = models.resnet18(pretrained=True)
@@ -25,4 +25,4 @@ class Resnet18_FeatureExtractorDistribution(nn.Module):
         x_feature = self.avg_pool(x_feature) # (shape: (batch_size, 512, 1, 1))
         x_feature = x_feature.squeeze(2).squeeze(2) # (shape: (batch_size, 512))
 
-        return x_feature
+        return x_feature.reshape(-1, 1, self.output_size) # (shape: (batch_size, 512))

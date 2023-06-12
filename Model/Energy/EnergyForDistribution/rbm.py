@@ -60,7 +60,5 @@ class EnergyRBM(nn.Module):
             Float[torch.Tensor, "batch_size"], E(x), the energy of the RBM
         """
         x = x.flatten(1)
-        return (
-            -torch.sum(F.softplus(torch.matmul(x, self.W.T) + self.b), dim=1)
-            - x @ self.c
-        )
+        energy = -torch.sum(F.softplus(torch.matmul(x, self.W.T) + self.b), dim=1) - x @ self.c
+        return energy.reshape(-1, 1)

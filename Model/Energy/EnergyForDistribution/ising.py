@@ -58,4 +58,5 @@ class EnergyIsing(nn.Module):
         """
         x = x.flatten(1)
         Wx = torch.matmul(x, self.W.T)
-        return -torch.sum(x * Wx, dim=1) - x @ self.b
+        energy = -torch.sum(x * Wx, dim=1) - x @ self.b
+        return energy.reshape(-1, 1)

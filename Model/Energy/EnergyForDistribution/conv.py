@@ -42,4 +42,4 @@ class ConvEnergy(nn.Module):
         x = self.fc2(x)
         if self.activation is not None :
             x = self.activation(x)
-        return x 
+        return x.reshape(-1,1)

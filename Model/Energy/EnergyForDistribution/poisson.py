@@ -55,6 +55,6 @@ class EnergyPoissonDistribution(nn.Module):
         Returns:
             Float[torch.Tensor, "batch_size 1"], E(x), the energy of the poisson distribution
         """
-        # print(f"self.lambda_: {self.lambda_}")
-        # print(f"x: {x.shape}")
-        return torch.lgamma(x + 1) - x * torch.log(self.lambda_)
+
+        energy = torch.lgamma(x + 1) - x * torch.log(self.lambda_)
+        return energy.reshape(-1, 1)

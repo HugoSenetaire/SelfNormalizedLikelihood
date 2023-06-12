@@ -10,7 +10,7 @@ from default_args import check_args_for_yaml, default_args_main
 from Model.Trainer import dic_trainer
 from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
-from Model.Utils.model_getter import get_model
+from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
 
 try:

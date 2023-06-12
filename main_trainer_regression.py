@@ -1,6 +1,6 @@
 from default_args import default_args_main, check_args_for_yaml
 from Dataset.MissingDataDataset.prepare_data import get_dataset
-from Model.Utils.model_getter import get_model_regression
+from Model.Utils.model_getter_regression import get_model_regression
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.Callbacks import EMA
 from Model.Trainer import dic_trainer_regression
@@ -93,22 +93,26 @@ if __name__ == '__main__' :
 
 
     # Get Trainer :
+    print("Trainer name : ", args_dict['trainer_name'],"\n")
     algo = dic_trainer_regression[args_dict['trainer_name']](ebm = ebm, args_dict = args_dict, complete_dataset=complete_dataset,)
 
 
-    nb_gpu = 1
-    if nb_gpu > 1 and algo.config["MULTIGPU"] != "ddp":
-        raise ValueError("You can only use ddp strategy for multi-gpu training")
-    if nb_gpu>1 and algo.config["MULTIGPU"] == "ddp":
-        strategy = "ddp"
+    if torch.cuda.is_available():
+        nb_gpu = torch.cuda.device_count()
+        if nb_gpu > 1 and algo.config["MULTIGPU"] != "ddp":
+            raise ValueError("You can only use ddp strategy for multi-gpu training")
+        if nb_gpu>1 and algo.config["MULTIGPU"] == "ddp":
+            strategy = "ddp"
+        else :
+            strategy = None
+        if nb_gpu > 0 :
+            accelerator = 'gpu'
+            devices = [k for k in range(nb_gpu)]
+        else:
+            accelerator = None
+            devices = None
     else :
-        strategy = None
-    if nb_gpu > 0 :
-        accelerator = 'gpu'
-        devices = [k for k in range(nb_gpu)]
-    else:
-        accelerator = None
-        devices = None
+        accelerator = 'cpu'
 
     # accelerator = 'mps'
 
@@ -136,13 +140,14 @@ if __name__ == '__main__' :
     if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
         max_steps = args_dict["max_epoch"] * len(train_loader)
         args_dict["max_steps"] = max_steps
+
     # Train :
     trainer = pl.Trainer(accelerator=accelerator,
                         # logger=logger,
                         default_root_dir=save_dir,
                         callbacks=checkpoints,
                         # devices = len(devices),
-                        strategy = strategy,
+                        strategy = None,
                         precision=64,
                         max_steps = args_dict['max_steps'],
                         resume_from_checkpoint = ckpt_path,

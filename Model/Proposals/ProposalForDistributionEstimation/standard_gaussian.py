@@ -2,14 +2,13 @@ import torch.distributions as dist
 import numpy as np
 import torch
 import torch.nn as nn
+from .abstract_proposal import AbstractProposal
 
-class StandardGaussian(nn.Module):
-    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', **kwargs) -> None:
-        super().__init__()
-        self.input_size = input_size
+class StandardGaussian(AbstractProposal):
+    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', nb_sample_estimate = 10000, **kwargs) -> None:
+        super().__init__(input_size=input_size)
         print("Init Standard Gaussian...")
-        index = np.random.choice(len(dataset), min(10000, len(dataset)))
-        data = torch.cat([dataset.__getitem__(i)[0] for i in index]).reshape(-1, *self.input_size)
+        data = self.get_data(dataset, nb_sample_estimate)
 
         if mean == 'dataset' :
             self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=False)
@@ -23,12 +22,12 @@ class StandardGaussian(nn.Module):
         
         print("Init Standard Gaussian... end")
 
-    def sample(self, nb_sample = 1):
+    def sample_simple(self, nb_sample = 1):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
-        samples = self.distribution.sample((nb_sample,)).reshape(nb_sample, *self.input_size).detach()
+        samples = self.distribution.sample((nb_sample,))
         return samples
     
-    def log_prob(self, x):
+    def log_prob_simple(self, x):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
         return self.distribution.log_prob(x).flatten(1).sum(1)
     

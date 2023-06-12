@@ -1,21 +1,13 @@
 import os
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import yaml
 
 from ...Sampler import get_sampler
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
-from ...Utils.proposal_loss import log_prob_kl_loss, kl_loss, log_prob_loss
+from ...Utils.proposal_loss import proposal_loss_getter
 from ...Sampler import get_sampler
-import numpy as np
-import os
-import matplotlib.pyplot as plt
-import yaml
-import itertools
 
 
 
@@ -23,7 +15,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
     '''
     Abstract Trainer for EBM for distribution estimation.
     This makes sure that we compare all the different training loss in the same way.
-    To provide a new loss, one needs to inherit this class and define the training_step function.
+    To provide a new training loss, one needs to inherit this class and define the training_step function.
 
     Attributes:
     ----------
@@ -33,8 +25,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
         sampler (Sampler): The sampler to use for the visualization of the samples
         transform_back (function): The function to use to transform the samples back to the original space
                                     (for example, if the image is normalized, we need to unnormalize it)
-        nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant in training
+        num_samples_train (int): Number of samples used to estimate the normalization constant in training
         num_samples_val (int): Number of samples used to estimate the normalization constant in validation
+        num_samples_test (int): Number of samples used to estimate the normalization constant in test
         input_type (str): The type of input (1d, 2d, image, other)
         proposal_loss_name (str): The name of the loss used to train the proposal
         proposal_loss (function): The function used to train the proposal (Note that this function must be defined in the class)
@@ -73,7 +66,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
             ebm (EBM): The energy based model to train
             args_dict (dict): The dictionary of arguments
             complete_dataset (Dataset): One of the dataset to sample from for visualization
-            nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant in training
+            nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant to calculate the training loss
+                                            This is not the same as num_samples_train which is effectively used during training and backprop,
+                                            here it's only for providing a fair comparison between different number of samples.
+                                            
         '''
         super().__init__()
         self.ebm = ebm
@@ -84,8 +80,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.last_save_sample = 0 # To save the samples
         self.sampler = get_sampler(args_dict,)
         self.transform_back = complete_dataset.transform_back
+
         self.nb_sample_train_estimate = nb_sample_train_estimate
+        self.num_samples_train = args_dict["num_sample_proposal"]
         self.num_samples_val = args_dict["num_sample_proposal_val"]
+        self.num_samples_test = args_dict["num_sample_proposal_test"]
 
         if np.prod(self.args_dict["input_size"]) == 2:
             self.input_type = "2d"
@@ -97,15 +96,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             self.input_type = "other"
 
         self.proposal_loss_name = args_dict["proposal_loss_name"]
-        if self.proposal_loss_name == "log_prob":
-            self.proposal_loss = log_prob_loss
-        elif self.proposal_loss_name == "kl":
-            self.proposal_loss = kl_loss
-        elif self.proposal_loss_name == "log_prob_kl":
-            self.proposal_loss = log_prob_kl_loss
-        else:
-            raise ValueError("Proposal loss name not recognized")
-
+        self.proposal_loss = proposal_loss_getter(self.proposal_loss_name)
         self.initialize_examples(complete_dataset=complete_dataset)
         self.resample_base_dist()
         self.resample_proposal()
@@ -116,20 +107,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.train_base_dist = self.args_dict["train_base_dist"]
 
         if self.ebm.base_dist is not None :
-            if not self.train_base_dist:
-                for param in self.ebm.base_dist.parameters():
-                    param.requires_grad = False
-            else:
-                for param in self.ebm.base_dist.parameters():
-                    param.requires_grad = True
+            for param in self.ebm.base_dist.parameters():
+                param.requires_grad = self.train_base_dist
 
-
-        if not self.train_proposal:
-            for param in self.ebm.proposal.parameters():
-                param.requires_grad = False
-        else:
-            for param in self.ebm.proposal.parameters():
-                param.requires_grad = True
+        for param in self.ebm.proposal.parameters():
+            param.requires_grad = self.train_proposal
         
         if self.ebm.base_dist == self.ebm.proposal:
             # Overwrite before if base dist == proposal and one of them is trained
@@ -142,6 +124,25 @@ class AbstractDistributionEstimation(pl.LightningModule):
         The training step to be defined in inherited classes.
         '''
         raise NotImplementedError
+    
+    def _proposal_step(self, x, estimate_log_z, proposal_opt, dic_output):
+        '''
+        Update the parameters of the proposal to minimize the proposal loss.
+        
+        Parameters:
+        ----------
+            x (torch.Tensor): Batch
+            estimate_log_z (torch.Tensor): The estimate of the log normalization constant
+            proposal_opt (torch.optim): The optimizer for the proposal parameters
+        '''
+        if self.train_proposal :
+            proposal_opt.zero_grad()
+            log_prob_proposal_data = self.ebm.proposal.log_prob(x,)
+            self.log('proposal_log_likelihood', log_prob_proposal_data.mean())
+            proposal_loss = self.proposal_loss(log_prob_proposal_data, estimate_log_z,)
+            dic_output.update({"proposal_loss" : proposal_loss.mean()})
+            self.manual_backward((proposal_loss).mean(), inputs= list(self.ebm.proposal.parameters()))
+            proposal_opt.step()
 
     def post_train_step_handler(self, x, dic_output):
         '''
@@ -160,7 +161,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(None)
 
-        # Add some estimates of the log likelihood with a fixed number of samples
+        # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
         if (self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0):
             estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate)
             SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
@@ -400,10 +401,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
             except RuntimeError:
                 dic_output[name + key + "_mean"] = torch.cat([outputs[k][key].unsqueeze(0) for k in range(len(outputs))]).mean()
         mean_energy = dic_output[name + "energy_mean"]
-        if name == "val_":
-            log_z_estimate, dic = self.ebm.estimate_log_z(x=torch.zeros((1,), dtype=torch.float32, device=self.device), nb_sample=self.args_dict["num_sample_proposal_val"],)
-        else :
-            log_z_estimate, dic = self.ebm.estimate_log_z(x=torch.zeros((1,), dtype=torch.float32, device=self.device), nb_sample=self.args_dict["num_sample_proposal_test"],)
+
+        nb_sample = self.num_samples_val if name == "val_" else self.num_samples_test
+        log_z_estimate, dic = self.ebm.estimate_log_z(x=torch.zeros((1,), dtype=torch.float32, device=self.device), nb_sample=nb_sample,)
 
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})

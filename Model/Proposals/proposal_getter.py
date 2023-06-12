@@ -1,6 +1,5 @@
 from .ProposalForDistributionEstimation.standard_gaussian import StandardGaussian
 from .ProposalForDistributionEstimation.kde import KernelDensity
-from .ProposalForDistributionEstimation.kde_adaptive import KernelDensityAdaptive
 from .ProposalForDistributionEstimation.gaussian_mixture import GaussianMixtureProposal
 from .ProposalForDistributionEstimation.kde import KernelDensity
 from .ProposalForDistributionEstimation.poisson import Poisson
@@ -21,7 +20,6 @@ dic_proposals = {
     "gaussian_mixture": GaussianMixtureProposal,
     "poisson": Poisson,
     "uniform_categorical": Categorical,
-    'kernel_density_adaptive': KernelDensityAdaptive,
     'gaussian_mixture_adaptive': GaussianMixtureAdaptiveProposal,
     'noise_gradation_adaptive' : NoiseGradationAdaptiveProposal,
     'student' : StudentProposal,
@@ -82,27 +80,36 @@ dic_proposals_regression = {
 
 
 
-def get_base_dist_regression(args_dict, proposal, input_size_x, input_size_y, dataset,):
+def get_base_dist_regression(args_dict, proposal, input_size_x_feature, input_size_y, dataset,):
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
+
+    # If there is no base distribution, we return None
     if args_dict['base_dist_name'] == 'none' :
         return None
-    if args_dict['base_dist_name'] == 'proposal' :
+    # If the base distribution is the proposal, we return the proposal
+    if args_dict['base_dist_name'] == 'proposal' : 
+        assert 'adaptive' not in args_dict['proposal_name'], 'Adaptive proposal should not be used as base distribution'
         return proposal
+
     base_dist = dic_proposals_regression[args_dict["base_dist_name"]]
     if "base_dist_parameters" not in args_dict:
         args_dict['base_dist_parameters'] = {}
-    base_dist = base_dist(input_size_x, input_size_y, dataset, **args_dict["base_dist_parameters"])
+    base_dist = base_dist(input_size_x_feature, input_size_y, dataset, **args_dict["base_dist_parameters"])
+
+
     return base_dist
 
 
-def get_proposal_regression(args_dict, input_size_x, input_size_y, dataset,):
+def get_proposal_regression(args_dict, input_size_x_feature, input_size_y, dataset,):
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
+
+
     proposal = dic_proposals_regression[args_dict["proposal_name"]]
     if "proposal_parameters" not in args_dict:
         args_dict['proposal_parameters'] = {}
-    proposal = proposal(input_size_x, input_size_y, dataset, **args_dict["proposal_parameters"])
+    proposal = proposal(input_size_x_feature, input_size_y, dataset, **args_dict["proposal_parameters"])
     return proposal

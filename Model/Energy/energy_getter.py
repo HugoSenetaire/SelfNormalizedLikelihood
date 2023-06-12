@@ -7,7 +7,7 @@ from .EnergyForDistribution import (
     fc_energy,
 )
 from .EnergyForRegression import EnergyNetworkRegression_Large, EnergyNetworkRegression_Toy
-from .FeatureExtractor import Resnet18_FeatureExtractor, ToyFeatureNet
+from .FeatureExtractor import Resnet18_FeatureExtractor, ToyFeatureNet, MockFeatureExtractor
 
 import numpy as np
 dic_energy = {
@@ -39,7 +39,7 @@ def get_energy(input_size, args_dict):
     return energy
 
 
-def get_energy_regression(input_size_x, input_size_y, args_dict):
+def get_energy_regression(input_size_x_feature, input_size_y, args_dict):
     if "energy_name" not in args_dict:
         raise ValueError("Energy name not specified")
     if args_dict["energy_name"] not in dic_energy_regression:
@@ -49,7 +49,7 @@ def get_energy_regression(input_size_x, input_size_y, args_dict):
     if "energy_parameters" not in args_dict:
         args_dict["energy_parameters"] = {}
     energy = energy(
-        input_dim_x=input_size_x, input_dim_y=input_size_y, **args_dict["energy_parameters"]
+        input_size_x_feature=input_size_x_feature, input_size_y=input_size_y, **args_dict["energy_parameters"]
     )
 
     return energy
@@ -66,14 +66,14 @@ def get_feature_extractor(
     input_size_x,
 ):
     if "feature_extractor_name" not in args_dict:
-        return None
+        return MockFeatureExtractor(input_size_x = input_size_x)
     if args_dict["feature_extractor_name"] not in dic_feature_extractor:
         raise ValueError("Feature extractor name not valid")
     
     feature_extractor = dic_feature_extractor[args_dict['feature_extractor_name']]
     if 'feature_extractor_parameters' not in args_dict.keys():
         args_dict['feature_extractor_parameters'] = {}
-    feature_extractor = feature_extractor(input_dim=input_size_x, **args_dict['feature_extractor_parameters'])
+    feature_extractor = feature_extractor(input_size_x=input_size_x, **args_dict['feature_extractor_parameters'])
     print(args_dict['train_feature_extractor'])
     if args_dict['train_feature_extractor'] == False :
         for param in feature_extractor.parameters():
@@ -89,7 +89,7 @@ dic_explicit_bias_regression = {
 }
 
 def get_explicit_bias_regression(args_dict,
-                      input_size_x,
+                      input_size_x_feature,
                       ):
     if 'explicit_bias_name' not in args_dict:
         return None
@@ -101,5 +101,5 @@ def get_explicit_bias_regression(args_dict,
     if 'explicit_bias_parameters' not in args_dict.keys():
         args_dict['explicit_bias_parameters'] = {}
 
-    explicit_bias = explicit_bias(input_size_x=input_size_x, **args_dict['explicit_bias_parameters'])
+    explicit_bias = explicit_bias(input_size_x_feature=input_size_x_feature, **args_dict['explicit_bias_parameters'])
     return explicit_bias

@@ -45,7 +45,7 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
 
 def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataloader, dataset, args_dict):
     '''
-    Initialize the energy to a standard gaussian to make sure it's integrable
+    Initialize the energy to a standard gaussian to make sure it's integrable for all the inputs
     '''
     dtype = torch.float32
     if torch.cuda.is_available():
@@ -87,6 +87,9 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
 
 
 def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
+    '''
+    Initialize the proposal to the data
+    '''
     dtype = torch.float32
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -115,6 +118,9 @@ def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
     return proposal
 
 def init_proposal_to_data_regression(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
+    '''
+    Initialize the proposal to the data
+    '''
     dtype = torch.float32
     if torch.cuda.is_available():
         device = torch.device('cuda')

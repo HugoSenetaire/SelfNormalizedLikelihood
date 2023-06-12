@@ -27,7 +27,6 @@ def default_args_ebm(parser = None):
                             log_prob_kl consider maximizing the likelihood of the proposal with the data and the KL divergence between the proposal and the ebm')
     parser.add_argument('--ebm_pretraining', type = str, default = None, help='Choose what type of pretraining is done on the network')
     parser.add_argument('--proposal_pretraining', type = str, default = None, help='Choose what type of pretraining is done on the network')
-    parser.add_argument('--switch_mode', type = int, default = None, help='Number of steps before switching loss to self-normalized')
     
     parser.add_argument('--base_dist_name', type=str, default='none', help='Base distribution to multiply the energy with', choices = ['none', 'Normal', 'proposal'])
     
