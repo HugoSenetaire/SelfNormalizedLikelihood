@@ -38,11 +38,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
 
-        if (
-            self.args_dict["switch_mode"] is not None
-            and self.global_step == self.args_dict["switch_mode"]
-        ):
-            self.ebm.switch_mode()
         x = batch["data"]
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(x)

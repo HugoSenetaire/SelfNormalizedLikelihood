@@ -27,18 +27,11 @@ class ProposalTrainer(AbstractDistributionEstimation):
     """
 
     def __init__(
-        self,
-        ebm,
-        args_dict,
-        complete_dataset=None,
-        nb_sample_train_estimate=1024,
-        **kwargs
+        self, ebm, cfg, complete_dataset=None, nb_sample_train_estimate=1024, **kwargs
     ):
-        logger.warning("args_dict is deprecated, use cfg instead")
-        raise NotImplementedError
         super().__init__(
             ebm=ebm,
-            args_dict=args_dict,
+            cfg=cfg,
             complete_data=complete_dataset,
             nb_sample_train_estimate=nb_sample_train_estimate,
             **kwargs

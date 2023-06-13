@@ -74,7 +74,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         Parameters:
         ----------
             ebm (EBM): The energy based model to train
-            args_dict (dict): The dictionary of arguments
+            cfg (dataclass): The dataclass of arguments
             complete_dataset (Dataset): One of the dataset to sample from for visualization
             nb_sample_train_estimate (int): Number of samples to use for the estimation of the normalization constant in training
         """
@@ -410,10 +410,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 if name != "proposal"
             ]
         # parameters_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer(
-            args_dict=self.args_dict, list_parameters_gen=parameters_ebm
-        )
-        ebm_sch = get_scheduler(args_dict=self.args_dict, optim=ebm_opt)
+        ebm_opt = get_optimizer(cfg=self.cfg, list_parameters_gen=parameters_ebm)
+        ebm_sch = get_scheduler(cfg=self.cfg, optim=ebm_opt)
 
         if (
             not self.cfg.proposal.train_proposal
@@ -428,9 +426,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 else []
             )
             proposal_opt = get_optimizer(
-                args_dict=self.args_dict, list_parameters_gen=parameters_proposal
+                cfg=self.cfg, list_parameters_gen=parameters_proposal
             )
-            proposal_sch = get_scheduler(args_dict=self.args_dict, optim=proposal_opt)
+            proposal_sch = get_scheduler(cfg=self.cfg, optim=proposal_opt)
 
         opt_list = [ebm_opt]
         if proposal_opt is not None:

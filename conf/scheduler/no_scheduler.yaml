@@ -1,0 +1,3 @@
+defaults:
+  - no_scheduler_name
+scheduler: 'no_scheduler'

@@ -21,14 +21,14 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def __init__(
         self,
         ebm,
-        args_dict,
+        cfg,
         complete_dataset=None,
         nb_sample_train_estimate=1024,
         **kwargs,
     ):
         super().__init__(
             ebm=ebm,
-            args_dict=args_dict,
+            cfg=cfg,
             complete_data=complete_dataset,
             nb_sample_train_estimate=nb_sample_train_estimate,
             **kwargs,
@@ -38,11 +38,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
 
-        if (
-            self.args_dict["switch_mode"] is not None
-            and self.global_step == self.args_dict["switch_mode"]
-        ):
-            self.ebm.switch_mode()
         x = batch["data"]
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(x)

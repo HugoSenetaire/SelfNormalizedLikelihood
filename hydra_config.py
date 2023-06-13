@@ -64,6 +64,11 @@ class AdamwConfig(BaseOptimConfig):
 
 
 @dataclass
+class BaseSchedulerConfig:
+    scheduler: str = MISSING
+
+
+@dataclass
 class BaseProposalConfig:
     proposal_name: str = MISSING
     num_sample_proposal: int = MISSING
@@ -180,6 +185,7 @@ def main():
         node=BaseDatasetDistributionConfig,
     )
     cs.store(name="adamw_name", group="optim", node=AdamwConfig)
+    cs.store(name="no_scheduler_name", group="scheduler", node=BaseSchedulerConfig)
     cs.store(name="gaussian_name", group="proposal", node=BaseProposalConfig)
     cs.store(
         name="distribution_conv_name",
