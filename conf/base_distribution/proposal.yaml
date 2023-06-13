@@ -1,0 +1,4 @@
+defaults:
+  - proposal_name
+base_dist_name : 'proposal'
+train_base_dist: false

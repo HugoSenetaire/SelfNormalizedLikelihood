@@ -130,3 +130,5 @@ dmypy.json
 
 /*Results*
 /Dataset/Downloaded/*
+/outputs/*
+.DS_Store

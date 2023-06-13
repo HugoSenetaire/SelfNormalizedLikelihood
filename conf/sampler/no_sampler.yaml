@@ -1,0 +1,3 @@
+defaults:
+  - no_sampler_name
+sampler_name: 'no_sampler'

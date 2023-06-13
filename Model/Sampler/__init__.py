@@ -1,17 +1,25 @@
+import logging
+
 from .nuts import NutsSampler
 
-def get_sampler(args_dict):
-    if not "sampler_parameters" in args_dict.keys():
-        args_dict["sampler_parameters"] = {}
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
+    datefmt="[%Y-%m-%d %H:%M:%S]",
+)
+logger = logging.getLogger(__name__)
 
-    if "sampler_name" not in args_dict.keys():
-        # args_dict["sampler_name"] = "nuts"
-        print("No sampler specified, using ")
+
+def get_sampler(cfg):
+    if cfg.sampler.sampler_name is "no_sampler":
+        logger.warning("No sampler specified, using ")
         return None
 
-    
-    if args_dict["sampler_name"] == "nuts":
-        return NutsSampler(input_size=args_dict['input_size'],**args_dict["sampler_parameters"])
-    else :
-        raise NotImplementedError("Sampler {} not implemented".format(args_dict["sampler"]))
-    
+    elif cfg.sampler.sampler_name == "nuts":
+        return NutsSampler(
+            input_size=cfg.dataset.input_size,
+            num_chains=cfg.sampler.num_chains,
+            num_samples=cfg.sampler.num_samples,
+            warmup_steps=cfg.sampler.warmup_steps,
+            thinning=cfg.sampler.thinning,
+        )

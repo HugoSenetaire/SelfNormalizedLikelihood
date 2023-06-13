@@ -1,0 +1,4 @@
+defaults:
+  - distribution_fc_name
+energy_name: 'fc'
+ebm_pretraining: false
