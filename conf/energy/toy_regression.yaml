@@ -1,0 +1,3 @@
+defaults:
+  - distribution_toy_name
+energy_name: 'toy'

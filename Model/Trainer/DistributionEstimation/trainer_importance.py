@@ -1,5 +1,6 @@
 from .abstract_trainer import AbstractDistributionEstimation
 
+
 class SelfNormalizedTrainer(AbstractDistributionEstimation):
     """
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
@@ -9,15 +10,15 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def __init__(
         self,
         ebm,
-        args_dict,
+        cfg,
         complete_dataset=None,
         nb_sample_train_estimate=1024,
         **kwargs,
     ):
         super().__init__(
             ebm=ebm,
-            args_dict=args_dict,
-            complete_dataset=complete_dataset,
+            cfg=cfg,
+            complete_data=complete_dataset,
             nb_sample_train_estimate=nb_sample_train_estimate,
             **kwargs,
         )

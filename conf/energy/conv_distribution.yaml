@@ -1,0 +1,4 @@
+defaults:
+  - distribution_conv_name
+energy_name: 'conv'
+ebm_pretraining: false
