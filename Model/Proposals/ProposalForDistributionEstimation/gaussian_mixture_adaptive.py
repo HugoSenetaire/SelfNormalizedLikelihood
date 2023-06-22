@@ -8,6 +8,15 @@ import numpy as np
 from .abstract_proposal import AbstractAdaptiveProposal
 
 
+def get_GaussianMixtureAdaptiveProposal(default_proposal, input_size, dataset, cfg,):
+    return GaussianMixtureAdaptiveProposal(
+                default_proposal,
+                input_size,
+                dataset,
+                cfg.nb_sample_estimate,
+                )
+                                           
+
 class GaussianMixtureAdaptiveProposal(AbstractAdaptiveProposal):
     '''
     Gaussian mixture proposal with adaptive parameters. Sample from a mixture of gaussian whose means are given by the batch x
@@ -30,9 +39,9 @@ class GaussianMixtureAdaptiveProposal(AbstractAdaptiveProposal):
     log_prob_adaptive(x): compute the log probability of the proposal with the adaptive parameters.
     sample_adaptive(nb_sample): sample from the proposal with the adaptive parameters.
     '''
-    def __init__(self, default_proposal, input_size, dataset, nb_sample_for_estimate = 10000, **kwargs) -> None:
+    def __init__(self, default_proposal, input_size, dataset, nb_sample_estimate = 10000,) -> None:
         super().__init__(input_size=input_size, default_proposal=default_proposal)
-        data = self.get_data(dataset, nb_sample_for_estimate)
+        data = self.get_data(dataset, nb_sample_estimate)
         data += torch.randn_like(data) * 1e-2
         self.std = nn.Parameter(data.std(0).reshape(input_size), requires_grad=False)
         self.x = None

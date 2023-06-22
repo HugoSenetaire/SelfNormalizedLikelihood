@@ -1,9 +1,13 @@
 defaults:
-  - config_name
-  - base_distribution: proposal_name
-  - dataset: checkerboard_name
-  - energy: distribution_conv_name
-  - optim: adamw_name
-  - proposal: gaussian_name
-  - train: self_normalized_name
-  - sampler: nuts_name
+  - base_config
+  - dataset: checkerboard
+  - base_distribution: proposal
+  - proposal: gaussian
+  - proposal_training : no_proposal_training
+  - energy: fc_regression
+  - feature_extractor : null
+  - explicit_bias : no_explicit_bias
+  - train: self_normalized_distribution
+  - optim: adamw
+  - sampler: null
+

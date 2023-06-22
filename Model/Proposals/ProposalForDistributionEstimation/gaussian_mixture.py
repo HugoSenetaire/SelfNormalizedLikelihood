@@ -3,8 +3,44 @@ import torch
 import torch.nn as nn
 import numpy as np
 import pickle as pkl
+
+# from typing import Any, Optional, Union
+# from dataclasses import dataclass
+
 from ..gmm_torch.gmm import GaussianMixture
 from .abstract_proposal import AbstractProposal
+# from ..hydra_helper import SingleProposalConfig
+
+
+
+# @dataclass
+# class GaussianMixtureProposalConfig(SingleProposalConfig):
+#     covariance_type: Optional[str] = "diag"
+#     eps: Optional[float] = 1.e-6
+#     n_components: Optional[int] = 10
+#     nb_sample_estimate: Optional[int] = 10000
+#     init_parameters: Optional[str] = "kmeans"
+#     delta: Optional[float] = 1e-3
+#     n_iter: Optional[int] = 100
+#     warm_start: Optional[bool] = False
+#     fit: Optional[bool] = True
+
+
+def get_GaussianMixtureProposal(input_size, dataset, cfg,):
+    return GaussianMixtureProposal(input_size,
+                                dataset,
+                                cfg.covariance_type,
+                                cfg.eps,
+                                cfg.n_components,
+                                cfg.nb_sample_estimate,
+                                cfg.init_parameters,
+                                cfg.delta,
+                                cfg.n_iter,
+                                cfg.warm_start,
+                                cfg.fit,
+                                )
+
+
 
 class GaussianMixtureProposal(AbstractProposal):
     '''
@@ -30,7 +66,7 @@ class GaussianMixtureProposal(AbstractProposal):
         The epsilon parameter of the gaussian mixture model.
     init_parameters : str
         The type of initialization to use for the gaussian mixture model (kmeans, random).
-    nb_sample_for_estimate : int
+    nb_sample_estimate : int
         The number of samples to use to estimate the gaussian mixture model.
 
     Methods:
@@ -39,7 +75,7 @@ class GaussianMixtureProposal(AbstractProposal):
     sample_simple(nb_sample): sample from the proposal.
     '''
 
-    def __init__(self, input_size, dataset, covariance_type="diag", eps=1.e-6, n_components = 10, nb_sample_for_estimate = 10000, init_parameters="kmeans", delta = 1e-3, n_iter = 100, warm_start = False, fit = True, **kwargs) -> None:
+    def __init__(self, input_size, dataset, covariance_type="diag", eps=1.e-6, n_components = 10, nb_sample_estimate = 10000, init_parameters="kmeans", delta = 1e-3, n_iter = 100, warm_start = False, fit = True, **kwargs) -> None:
         super().__init__(input_size=input_size)
         self.n_components = n_components
         self.delta = delta
@@ -47,7 +83,7 @@ class GaussianMixtureProposal(AbstractProposal):
         self.warm_start = warm_start
 
         n_features = np.prod(input_size)
-        data = self.get_data(dataset, nb_sample_for_estimate)
+        data = self.get_data(dataset, nb_sample_estimate)
         data += torch.randn_like(data) * 1e-2
         
         self.gmm = GaussianMixture(n_features=n_features, n_components=n_components, covariance_type=covariance_type, eps=eps, init_parameters=init_parameters)
@@ -64,4 +100,5 @@ class GaussianMixtureProposal(AbstractProposal):
         sample = x.flatten(1)
         log_prob = self.gmm.score_samples(sample)
         return log_prob
+
 

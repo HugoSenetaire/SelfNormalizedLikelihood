@@ -33,7 +33,7 @@ def default_args_ebm(parser=None):
     parser.add_argument(
         "--proposal_name",
         type=str,
-        default="standard_gaussian",
+        default="gaussian",
         help="Name of the proposal",
         choices=dic_proposals.keys(),
     )

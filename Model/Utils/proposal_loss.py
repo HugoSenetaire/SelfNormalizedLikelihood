@@ -35,7 +35,9 @@ def log_prob_kl_loss(log_prob_proposal, log_estimate_z):
 
 
 def proposal_loss_getter(name):
-    if name == 'log_prob':
+    if name is None :
+        return None
+    elif name == 'log_prob':
         return log_prob_loss
     elif name == 'kl':
         return kl_loss

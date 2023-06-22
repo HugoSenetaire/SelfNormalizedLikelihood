@@ -4,6 +4,14 @@ import torch
 import torch.nn as nn
 from .abstract_proposal import AbstractProposal
 
+def get_StudentProposal(input_size, dataset, cfg, ):
+    return StudentProposal(input_size,
+                            dataset,
+                            cfg.mean,
+                            cfg.std,
+                            cfg.nb_sample_estimate,
+                            )
+
 class StudentProposal(AbstractProposal):
     def __init__(self, input_size, dataset, mean='dataset', std ='dataset', **kwargs) -> None:
         super().__init__(input_size=input_size)

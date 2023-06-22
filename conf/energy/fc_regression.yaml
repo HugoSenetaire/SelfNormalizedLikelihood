@@ -1,3 +1,4 @@
 defaults:
-  - regression_fc_name
+  - base_energy_config_name
 energy_name: 'fc'
+ebm_pretraining: null

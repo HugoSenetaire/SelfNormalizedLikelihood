@@ -10,6 +10,9 @@ from torch.utils.data import Dataset
 from .abstract_proposal import AbstractProposal
 
 
+def get_Categorical(input_size, dataset, cfg):
+    return Categorical(input_size, dataset)
+
 class Categorical(AbstractProposal):
     """Module that implements a uniform categorical distribution"""
 

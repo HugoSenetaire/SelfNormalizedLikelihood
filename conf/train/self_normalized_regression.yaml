@@ -1,0 +1,11 @@
+defaults:
+  - base_train_config_name
+batch_size: 128
+max_steps: 3000
+output_folder: './Results'
+load_from_checkpoint: false
+train_feature_extractor: false
+seed: 42
+just_test: false
+decay_ema: null
+task: 'regression'

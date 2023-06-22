@@ -30,7 +30,7 @@ class AbstractProposal(nn.Module):
         Consider a subset of data for initialization
         '''
         index = np.random.choice(len(dataset), min(10000, len(dataset)))
-        data = torch.cat([dataset.__getitem__(i)[0] for i in index]).reshape(-1, *self.input_size)
+        data = torch.cat([dataset.__getitem__(i)['data'] for i in index]).reshape(-1, *self.input_size)
         return data
 
     def log_prob_simple(self, x):

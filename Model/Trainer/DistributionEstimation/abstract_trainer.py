@@ -61,8 +61,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
         ebm,
         cfg,
         complete_dataset=None,
-        nb_sample_train_estimate=1024,
-        **kwargs,
     ):
         '''
         Create a trainer using the EBM and the arguments dictionary.
@@ -87,15 +85,13 @@ class AbstractDistributionEstimation(pl.LightningModule):
         logger.info(f"You might want to save some hparams here")
         self.last_save = -float("inf")  # To save the energy contour plot
         self.last_save_sample = 0  # To save the samples
-        self.sampler = get_sampler(
-            cfg,
-        )
+        self.sampler = get_sampler(cfg,)
         self.transform_back = complete_dataset.transform_back
 
-        self.nb_sample_train_estimate = nb_sample_train_estimate
-        self.num_samples_train = cfg.proposal.num_sample_proposal
-        self.num_samples_val = cfg.proposal.num_sample_proposal_val
-        self.num_samples_test = cfg.proposal.num_sample_proposal_test
+        self.nb_sample_train_estimate = cfg.proposal_training.num_sample_train_estimate
+        self.num_samples_train = cfg.proposal_training.num_sample_proposal
+        self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
+        self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
 
         if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
@@ -106,7 +102,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         else:
             self.input_type = "other"
 
-        self.proposal_loss_name = cfg.proposal.proposal_loss_name
+        self.proposal_loss_name = cfg.proposal_training.proposal_loss_name
         self.proposal_loss = proposal_loss_getter(self.proposal_loss_name)
         self.initialize_examples(complete_dataset=complete_dataset)
         self.resample_base_dist()
@@ -114,7 +110,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.proposal_visualization()
         self.base_dist_visualization()
         self.automatic_optimization = False
-        self.train_proposal = cfg.proposal.train_proposal
+        self.train_proposal = cfg.proposal_training.train_proposal
         self.train_base_dist = cfg.base_distribution.train_base_dist
 
         if self.ebm.base_dist is not None :
@@ -259,7 +255,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
                 self.example = torch.cat(
                     [
-                        complete_dataset.dataset_train.__getitem__(i)[0].reshape(1, -1)
+                        complete_dataset.dataset_train.__getitem__(i)['data'].reshape(1, -1)
                         for i in indexes_to_print
                     ],
                     dim=0,
@@ -283,7 +279,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
                 self.example = torch.cat(
                     [
-                        complete_dataset.dataset_train.__getitem__(i)[0].unsqueeze(0)
+                        complete_dataset.dataset_train.__getitem__(i)['data'].unsqueeze(0)
                         for i in indexes_to_print
                     ],
                     dim=0,
@@ -299,7 +295,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 if complete_dataset is not None:
                     self.example = torch.cat(
                         [
-                            complete_dataset.dataset_train.__getitem__(i)[0]
+                            complete_dataset.dataset_train.__getitem__(i)['data']
                             for i in range(64)
                         ],
                         dim=0,
@@ -397,7 +393,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             opt_list (list): The list of optimizers
             sch_list (list): The list of schedulers
         """
-        if self.cfg.proposal.train_proposal and self.ebm.proposal == self.ebm.base_dist:
+        if self.cfg.proposal_training.train_proposal and self.ebm.proposal == self.ebm.base_dist:
             # In case the base dist is equal to the proposal, I can't train both of them with the same loss
             # If I want to train the proposal it takes priority over the base distribution
             parameters_ebm = [
@@ -417,7 +413,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         ebm_sch = get_scheduler(cfg=self.cfg, optim=ebm_opt)
 
         if (
-            not self.cfg.proposal.train_proposal
+            not self.cfg.proposal_training.train_proposal
             and self.ebm.proposal == self.ebm.base_dist
         ):
             proposal_opt = None

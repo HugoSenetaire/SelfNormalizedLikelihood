@@ -23,7 +23,7 @@ def get_optimizer(cfg, list_parameters_gen):
 
 
 def get_scheduler(cfg, optim):
-    if cfg.scheduler.scheduler == "no_scheduler":
+    if cfg.scheduler is None or cfg.scheduler.scheduler_name is None or cfg.scheduler.scheduler_name == "no_scheduler":
         return None
 
 

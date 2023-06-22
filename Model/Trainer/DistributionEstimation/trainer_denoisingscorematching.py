@@ -16,16 +16,14 @@ class DenoisingScoreMatchingTrainer(AbstractDistributionEstimation):
     """
 
     def __init__(
-        self, ebm, cfg, complete_dataset=None, nb_sample_train_estimate=1024, **kwargs
+        self, ebm, cfg, complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
-            complete_data=complete_dataset,
-            nb_sample_train_estimate=nb_sample_train_estimate,
-            **kwargs
+            complete_dataset=complete_dataset,
         )
-        cfg.trainer.sigma = cfg.trainer.sigma 
+        self.sigma = cfg.trainer.sigma 
         logger.warning("DSM not taken in charge yet")
         raise NotImplementedError
 

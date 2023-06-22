@@ -4,8 +4,18 @@ import torch
 import torch.nn as nn
 from .abstract_proposal_regression import AbstractProposalRegression
 
+def get_UniformRegression(input_size_x_feature, input_size_y, dataset, cfg, ):
+    return UniformRegression(input_size_x_feature,
+                            input_size_y,
+                            dataset,
+                            cfg.min_data,
+                            cfg.max_data,
+                            cfg.shift_min,
+                            cfg.shift_max,
+                            )
+
 class UniformRegression(AbstractProposalRegression):
-    def __init__(self, input_size_x_feature, input_size_y, dataset, min_data='dataset', max_data ='dataset', shift_min = 0, shift_max = 0, **kwargs) -> None:
+    def __init__(self, input_size_x_feature, input_size_y, dataset, min_data='dataset', max_data ='dataset', shift_min = 0, shift_max = 0,) -> None:
         super().__init__(input_size_x_feature=input_size_x_feature, input_size_y=input_size_y)
         print("Init UNIFORM...")
 

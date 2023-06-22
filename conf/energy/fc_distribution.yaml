@@ -1,4 +1,4 @@
 defaults:
-  - distribution_fc_name
+  - base_energy_config_name
 energy_name: 'fc'
-ebm_pretraining: false
+ebm_pretraining: null

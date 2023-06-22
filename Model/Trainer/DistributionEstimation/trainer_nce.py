@@ -16,28 +16,13 @@ class NCETrainer(AbstractDistributionEstimation):
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
     """
-    def __init__(self,
-        ebm,
-        cfg,
-        complete_dataset = None,
-        nb_sample_train_estimate=1024,
-        **kwargs):
-        super().__init__(ebm = ebm,
-            cfg = cfg,
-            complete_dataset = complete_dataset,
-            nb_sample_train_estimate=nb_sample_train_estimate,
-            **kwargs)
-
-
     def __init__(
-        self, ebm, cfg, complete_dataset=None, nb_sample_train_estimate=1024, **kwargs
+        self, ebm, cfg, complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
-            complete_data=complete_dataset,
-            nb_sample_train_estimate=nb_sample_train_estimate,
-            **kwargs
+            complete_dataset=complete_dataset,
         )
 
     def training_step(self, batch, batch_idx):
@@ -62,7 +47,7 @@ class NCETrainer(AbstractDistributionEstimation):
 
         samples = self.ebm.sample(self.num_samples_train).to(x.device, x.dtype)
         energy_samples = self.ebm.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-        if self.ebm.bias_explicit :
+        if self.ebm.explicit_bias :
             energy_samples = self.ebm.explicit_bias_module(energy_samples)
         dic_output["f_theta_samples"] = energy_samples
 

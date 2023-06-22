@@ -23,6 +23,8 @@ class AbstractRegression(pl.LightningModule):
         sampler (Sampler): The sampler to use for the visualization of the samples
         transform_back (function): The function to use to transform the samples back to the original space
                                     (for example, if the image is normalized, we need to unnormalize it)
+        num_samples_train_estimate(int): Number of samples used to estimate the normalization constant 
+                                        in training but not actually used in training. This is just for comparison
         num_samples_train (int): Number of samples used to estimate the normalization constant in training
         num_samples_val (int): Number of samples used to estimate the normalization constant in validation
         num_samples_test (int): Number of samples used to estimate the normalization constant in testing
@@ -45,12 +47,13 @@ class AbstractRegression(pl.LightningModule):
         base_dist_visualization: Visualize the base distribution (if it exists)
 
     '''
-    def __init__(self, ebm, args_dict, complete_dataset = None, **kwargs):
+    def __init__(self, ebm, args_dict, complete_dataset = None,):
         super().__init__()
         self.ebm = ebm
         self.args_dict = args_dict
         self.hparams.update(args_dict)
         self.last_save = -float('inf')
+        self.num_samples_train_estimate = self.args_dict['num_sample_train_estimate']
         self.num_samples_train = self.args_dict['num_sample_proposal']
         self.num_samples_val = self.args_dict['num_sample_proposal_val']
         self.num_samples_test = self.args_dict['num_sample_proposal_test']
@@ -200,7 +203,7 @@ class AbstractRegression(pl.LightningModule):
                 nb_samples_max = 10
             indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), min(nb_samples_max, len(complete_dataset.dataset_train)), replace=False)
             
-            self.example_x = torch.cat([complete_dataset.dataset_train.__getitem__(i)[0] for i in indexes_to_print], dim=0).reshape(-1, *self.args_dict['input_size_x']).to(dtype=self.dtype)
+            self.example_x = torch.cat([complete_dataset.dataset_train.__getitem__(i)['data'] for i in indexes_to_print], dim=0).reshape(-1, *self.args_dict['input_size_x']).to(dtype=self.dtype)
             self.example_x_default = self.example_x.clone()
             self.example_x = self.example_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x'])
             self.example_y = torch.cat([complete_dataset.dataset_train.__getitem__(i)[1].unsqueeze(0) for i in indexes_to_print], dim=0).reshape(-1, np.prod(self.args_dict['input_size_y'])).unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_y'])

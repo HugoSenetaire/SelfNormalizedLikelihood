@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_sampler(cfg):
-    if cfg.sampler.sampler_name is "no_sampler":
+    if cfg.sampler is None or cfg.sampler.sampler_name is None:
         logger.warning("No sampler specified, using ")
         return None
 

@@ -5,14 +5,23 @@ import numpy as np
 from .abstract_proposal import AbstractAdaptiveProposal
 
 
+def get_NoiseGradationAdaptiveProposal(default_proposal, input_size, dataset, cfg,):
+    return NoiseGradationAdaptiveProposal(
+                default_proposal,
+                input_size,
+                dataset,
+                cfg.ranges_std,
+                cfg.nb_sample_estimate,
+                )
+
 class NoiseGradationAdaptiveProposal(AbstractAdaptiveProposal):
     '''
     Gaussian mixture adaptive but with different gradation of noise controlled by range std.
     The base std is calculated with the data and then we multiply it by the range std.
     '''
-    def __init__(self, default_proposal, input_size, dataset, ranges_std = [0.1, 1.,], nb_sample_for_estimate = 10000, **kwargs) -> None:
+    def __init__(self, default_proposal, input_size, dataset, ranges_std = [0.1, 1.,], nb_sample_estimate = 10000, **kwargs) -> None:
         super().__init__(input_size=input_size, default_proposal=default_proposal)
-        data = self.get_data(dataset, nb_sample_for_estimate).reshape(-1, np.prod(self.input_size))
+        data = self.get_data(dataset, nb_sample_estimate).reshape(-1, np.prod(self.input_size))
         data += torch.randn_like(data) * 1e-2
         self.ranges_std = ranges_std
         self.nb_gradation = len(self.ranges_std)

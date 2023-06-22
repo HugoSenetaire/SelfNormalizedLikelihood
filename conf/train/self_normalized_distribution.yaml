@@ -1,18 +1,16 @@
 defaults:
-  - self_normalized_name
+  - base_train_config_name
 trainer_name: 'self_normalized'
-batch_size: 128
-max_steps: 3000
-max_epochs: null
-num_workers: 2
+max_steps: null
+max_epochs: 100
 output_folder: './Results'
 load_from_checkpoint: false
 seed: 42
 just_test: false
 decay_ema: null
-task_type: 'distribution estimation'
+task: 'distribution_estimation'
 save_dir: null
-multi_gpu: "single"
-val_check_internals: null
-save_energy_every: 10
-samples_every: 10
+multi_gpu: single
+val_check_interval: null
+save_energy_every: 100
+samples_every: 100

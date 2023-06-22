@@ -4,7 +4,7 @@ import itertools
 import torch.nn as nn
 
 
-class BiasExplicit(nn.Module):
+class ExplicitBias(nn.Module):
     '''
     Used to handle the explicit bias of the EBM model.
     '''
@@ -14,19 +14,6 @@ class BiasExplicit(nn.Module):
     
     def forward(self, x):
         return x + self.explicit_bias
-    
-class NoneBaseDist(nn.Module):
-    '''
-    Used when no base distribution is provided, just implement a log_prob returning 0.
-    '''
-    def __init__(self) -> None:
-        super().__init__()
-    
-    def log_prob(self, x):
-        '''
-        Mock log probability returning 0.
-        '''
-        return torch.zeros(x.shape[0], 1, dtype=x.dtype, device=x.device)
 
 
 class ImportanceWeightedEBM(nn.Module):
@@ -41,9 +28,9 @@ class ImportanceWeightedEBM(nn.Module):
         The proposal distribution of the EBM, as implemented in ../Proposal
     base_dist : torch.nn.Module
         The base distribution of the EBM, simply requires a log_prob function.
-    bias_explicit : bool
-        Whether to use explicit bias or not, if yes, the bias is stored in self.explicit_bias_module.explicit_bias
-    nb_sample_bias_explicit : int
+    explicit_bias : bool
+        Whether to use explicit bias or not, if yes, the bias is stored in self.explicit_bias.explicit_bias
+    nb_sample_init_bias : int
         The number of samples to use to estimate the explicit bias of the EBM either at the beginning of training.
     
     Methods :
@@ -61,30 +48,22 @@ class ImportanceWeightedEBM(nn.Module):
         self,
         energy,
         proposal,
-        base_dist=None,
-        bias_explicit=False,
-        nb_sample_bias_explicit=1024,
-        **kwargs,
+        base_dist,
+        explicit_bias,
+        nb_sample_init_bias=1024,
     ):
         super(ImportanceWeightedEBM, self).__init__()
         self.energy = energy
         self.proposal = proposal
-        self.nb_sample_bias_explicit = nb_sample_bias_explicit
-
-        # If no base distribution is provided, use a mock one returning 0.
-        if base_dist is None:
-            base_dist = NoneBaseDist()
+        self.nb_sample_init_bias = nb_sample_init_bias
         self.base_dist = base_dist
+        self.explicit_bias = explicit_bias
         
         # If we use explicit bias, set it to a first estimation of the normalization constant.
-        self.bias_explicit = bias_explicit
-        if bias_explicit:
-            self.explicit_bias_module = BiasExplicit() 
-            self.explicit_bias = self.explicit_bias_module.explicit_bias
-            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_bias_explicit)
-            self.explicit_bias_module.explicit_bias.data = log_z_estimate
-        else :
-            self.explicit_bias_module = None
+        if hasattr(self.explicit_bias, 'bias'):
+            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1, dtype=torch.float32,), nb_sample = self.nb_sample_init_bias)
+            self.explicit_bias.bias.data = log_z_estimate
+
 
     def sample(self, nb_sample=1):
         """
@@ -123,9 +102,8 @@ class ImportanceWeightedEBM(nn.Module):
         
 
         # Add the explicit bias contribution to the energy
-        if self.explicit_bias_module is not None :
-            f_theta = self.explicit_bias_module(f_theta)
-            dic_output.update({"log_bias_explicit" : self.explicit_bias_module.explicit_bias})
+        f_theta = self.explicit_bias(f_theta)
+        dic_output.update({"log_explicit_bias" : self.explicit_bias.bias})
 
         # Add the base distribution contribution to the energy
         if use_base_dist:
@@ -169,8 +147,8 @@ class ImportanceWeightedEBM(nn.Module):
 
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal = self.energy(samples_proposal).view(samples_proposal.size(0), -1).sum(1).unsqueeze(1)
-        if self.bias_explicit :
-            f_theta_proposal = self.explicit_bias_module(f_theta_proposal)
+        if self.explicit_bias :
+            f_theta_proposal = self.explicit_bias(f_theta_proposal)
         dic_output['f_theta_proposal'] = f_theta_proposal # Store the energy without the base distribution
         
         # Add the base distribution and proposal contributions to the energy if they are different

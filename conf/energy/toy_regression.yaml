@@ -1,3 +1,4 @@
 defaults:
-  - distribution_toy_name
+  - base_energy_config_name
 energy_name: 'toy'
+ebm_pretraining: null

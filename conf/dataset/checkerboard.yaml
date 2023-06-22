@@ -1,7 +1,6 @@
 defaults:
-  - checkerboard_name
+  - base_dataset_config_name
 download : True
 dataset_name : 'checkerboard'
-missing_mechanism : "none"
 
 

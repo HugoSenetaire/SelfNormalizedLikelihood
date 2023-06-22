@@ -1,0 +1,13 @@
+defaults:
+  - base_config
+  - dataset: checkerboard
+  - base_distribution: proposal
+  - proposal: gaussian
+  - proposal_training : no_proposal_training
+  - energy: fc_regression
+  - feature_extractor : null
+  - explicit_bias : null
+  - train: self_normalized_regression
+  - optim: adamw
+  - sampler: null
+

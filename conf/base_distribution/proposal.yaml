@@ -1,4 +1,4 @@
 defaults:
-  - proposal_name
-base_dist_name : 'proposal'
+  - base_distribution_config_name
+proposal_name : 'proposal'
 train_base_dist: false

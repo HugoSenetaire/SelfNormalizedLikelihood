@@ -1,9 +1,6 @@
 defaults:
-  - gaussian_name
-proposal_name : 'standard_gaussian'
-train_proposal: false
-proposal_loss_name: 'kl'
-num_sample_proposal: 512
-num_sample_proposal_val: 1024
-num_sample_proposal_test: 20000
-proposal_pretraining: false
+  - base_proposal_config_name
+proposal_name : 'gaussian'
+mean : dataset
+std : dataset
+

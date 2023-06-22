@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 
-def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
+def init_energy_to_gaussian(energy, input_size, dataset, cfg):
     '''
     Initialize the energy to a standard gaussian to make sure it's integrable
     '''
@@ -43,7 +43,7 @@ def init_energy_to_gaussian(energy, input_size, dataset, args_dict):
     return energy
 
 
-def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataloader, dataset, args_dict):
+def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, input_size_y, dataloader, dataset, cfg):
     '''
     Initialize the energy to a standard gaussian to make sure it's integrable for all the inputs
     '''
@@ -60,7 +60,6 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
     data_y = torch.cat([dataset[i][1].unsqueeze(0) for i in range(len(dataset))]).to(device, dtype)
     dist_y = Normal(data_y.mean(0), data_y.std(0))
     epochs = 20
-    batch_size = args_dict['batch_size']
     for k in range(epochs):
         ranges = tqdm.tqdm(enumerate(dataloader))
         for batch_idx, batch in ranges:
@@ -86,7 +85,7 @@ def init_energy_to_gaussian_regression(feature_extractor, energy, input_size_x, 
 
 
 
-def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
+def init_proposal_to_data(proposal, input_size, dataloader, cfg):
     '''
     Initialize the proposal to the data
     '''
@@ -117,7 +116,7 @@ def init_proposal_to_data(proposal, input_size, dataloader, args_dict):
     print("Init proposal to data... end")
     return proposal
 
-def init_proposal_to_data_regression(feature_extractor, proposal, input_size_x, input_size_y, dataloader, args_dict):
+def init_proposal_to_data_regression(feature_extractor, proposal, input_size_x, input_size_y, dataloader, cfg):
     '''
     Initialize the proposal to the data
     '''

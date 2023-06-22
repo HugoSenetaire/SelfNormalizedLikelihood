@@ -4,7 +4,7 @@ max_epoch : 25
 save_energy_every : 10
 samples_every: 10
 batch_size : 32
-nb_sample_bias_explicit : 1024
+nb_sample_init_bias : 1024
 explicit_bias_name : 'none'
 num_sample_proposal : 32
 train_proposal : True

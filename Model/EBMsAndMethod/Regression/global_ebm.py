@@ -4,23 +4,6 @@ import torch
 import torch.distributions as distributions
 import numpy as np
 
-from ...Energy.FeatureExtractor.default_feature_extractor import MockFeatureExtractor
-from ...Energy.ExplicitBiasForRegression.mock_explicit_bias import MockBiasRegression
-
-
-
-class MockBaseDist(nn.Module):
-    '''
-    Mock base distribution returning 0. 
-    '''
-    def __init__(self) -> None:
-        super().__init__()
-    
-    def log_prob(self, x, y):
-        '''
-        Mock log probability returning 0.
-        '''
-        return torch.zeros(y.shape[0], 1, dtype=x.dtype, device=x.device)
 
 
 class EBMRegression(nn.Module):
@@ -65,18 +48,12 @@ class EBMRegression(nn.Module):
     '''
 
 
-    def __init__(self, energy, proposal, feature_extractor, base_dist = None, explicit_bias = None,  **kwargs):
+    def __init__(self, energy, proposal, feature_extractor, base_dist, explicit_bias, ):
         super(EBMRegression, self).__init__()
         self.energy = energy
         self.proposal = proposal
         self.feature_extractor = feature_extractor
-
-        if base_dist is None :
-            base_dist = MockBaseDist()
         self.base_dist = base_dist
-
-        if explicit_bias is None :
-            explicit_bias = MockBiasRegression(input_size = energy.input_size_x_feature)
         self.explicit_bias = explicit_bias
         
         

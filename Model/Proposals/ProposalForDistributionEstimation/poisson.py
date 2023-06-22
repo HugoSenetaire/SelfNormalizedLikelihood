@@ -9,6 +9,9 @@ from torch.utils.data import Dataset
 from .abstract_proposal import AbstractProposal
 
 
+def get_Poisson(input_size, dataset, cfg):
+    return Poisson(input_size, dataset, cfg.lambda_)
+
 class Poisson(AbstractProposal):
     """Module that implements a uniform Poisson distribution. Default parameter is 10. Looks like a Normal"""
 

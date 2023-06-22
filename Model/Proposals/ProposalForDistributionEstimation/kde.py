@@ -4,6 +4,15 @@ import torch
 import sklearn.neighbors
 from .abstract_proposal import AbstractProposal
 
+
+def get_KernelDensity(input_size, dataset, cfg, ):
+    return KernelDensity(input_size,
+                        dataset,
+                        cfg.kernel,
+                        cfg.bandwith,
+                        cfg.nb_center,
+                        )
+
 class KernelDensity(AbstractProposal):
     '''
     Kernel density estimation using sklearn.

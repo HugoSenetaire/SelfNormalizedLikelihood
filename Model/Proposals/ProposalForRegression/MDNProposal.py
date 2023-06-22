@@ -4,8 +4,14 @@ import numpy as np
 from .proposal_regression_utils import MDNProposal_Network
 from .abstract_proposal_regression import AbstractProposalRegression
 
+def get_MDNProposalRegression(input_size_x_feature, input_size_y, cfg, ):
+    return MDNProposalRegression(input_size_x_feature,
+                            input_size_y,
+                            cfg.K,
+                            )
+
 class MDNProposalRegression(AbstractProposalRegression):
-    def __init__(self, input_size_x_feature, input_size_y, dataset, K = 4, **kwargs):
+    def __init__(self, input_size_x_feature, input_size_y, K = 4, **kwargs):
         super().__init__(input_size_x_feature=input_size_x_feature, input_size_y=input_size_y)
         self.K = K
         self.input_dim_y = np.prod(input_size_y)

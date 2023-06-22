@@ -1,5 +1,3 @@
-import os
-from dataclasses import asdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,12 +5,12 @@ import pytorch_lightning as pl
 import torch
 
 from Dataset.MissingDataDataset.prepare_data import get_dataset
-from default_args import check_args_for_yaml, default_args_main
 from Model.Trainer import dic_trainer
 from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
+from Model.Utils.save_dir_utils import seed_everything, get_accelerator, setup_callbacks
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -24,6 +22,8 @@ from pprint import pformat
 
 import hydra
 from omegaconf import OmegaConf
+import os
+from dataclasses import asdict
 
 import helpers
 import hydra_config
@@ -38,35 +38,20 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-def find_last_version(dir):
-    # Find all the version folders
-    list_dir = os.listdir(dir)
-    list_dir = [d for d in list_dir if "version_" in d]
 
-    # Find the last version
-    last_version = 0
-    for d in list_dir:
-        version = int(d.split("_")[-1])
-        if version > last_version:
-            last_version = version
-    return last_version
-
-
-@hydra.main(version_base=None, config_path="conf", config_name="config")
+@hydra.main(version_base='1.1', config_path="conf", config_name="config")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     cfg = helpers._trigger_post_init(cfg)
     logger.info(os.linesep + pformat(cfg))
 
-    pl.seed_everything(cfg.train.seed)
-    np.random.seed(cfg.train.seed)
-    torch.manual_seed(cfg.train.seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    if cfg.dataset.seed is not None:
+        seed_everything(cfg.dataset.seed)
 
+
+    # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)
-
     complete_dataset, complete_masked_dataset = get_dataset(
         args_dict,
     )
@@ -75,14 +60,11 @@ def main(cfg):
     )
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
-
     cfg.dataset.input_size = complete_dataset.get_dim_input()
 
     # name and save_dir will be in cfg
 
-    ebm = get_model(
-        cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader
-    )
+    ebm = get_model(cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader)
 
     algo = dic_trainer[cfg.train.trainer_name](
         ebm=ebm,
@@ -90,20 +72,7 @@ def main(cfg):
         complete_dataset=complete_dataset,
     )
 
-    nb_gpu = torch.cuda.device_count()
-
-    if nb_gpu > 1 and cfg.train.multi_gpu != "ddp":
-        raise ValueError("You can only use ddp strategy for multi-gpu training")
-    if nb_gpu > 1 and cfg.train.multi_gpu == "ddp":
-        strategy = "ddp"
-    else:
-        strategy = None
-    if nb_gpu > 0:
-        accelerator = "gpu"
-        devices = [k for k in range(nb_gpu)]
-    else:
-        accelerator = None
-        devices = None
+    nb_gpu, accelerator, strategy = get_accelerator(cfg)
 
     if cfg.train.load_from_checkpoint or cfg.train.just_test:
         ckpt_dir = os.path.join(cfg.train.save_dir, "val_checkpoint")
@@ -116,36 +85,19 @@ def main(cfg):
         ckpt_path = None
 
     # Checkpoint callback :
-    checkpoint_callback_val = pl.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(cfg.train.save_dir, "val_checkpoint"),
-        save_top_k=2,
-        monitor="val_loss",
-    )
-    checkpoint_callback_train = pl.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(cfg.train.save_dir, "train_checkpoint"),
-        save_top_k=2,
-        monitor="train_loss",
-    )
-    checkpoints = [checkpoint_callback_val, checkpoint_callback_train]
-    if cfg.train.decay_ema is not None and cfg.train.decay_ema > 0:
-        ema_callback = EMA(decay=cfg.train.decay_ema)
-        checkpoints.append(ema_callback)
+    checkpoint_callback_val, checkpoints = setup_callbacks(cfg)
 
+    # Handle training duration :
     if cfg.train.max_epochs is not None:
         max_steps = cfg.train.max_epochs * (len(train_loader) + len(val_loader))
         cfg.train.max_steps = max_steps
+    val_check_interval = cfg.train.val_check_interval
 
-    if cfg.train.val_check_interval is not None:
-        val_check_interval = args_dict["val_check_interval"]
-    else:
-        val_check_interval = None
-
+    # Get Trainer
     trainer = pl.Trainer(
         accelerator=accelerator,
-        # logger=logger,
         default_root_dir=cfg.train.save_dir,
         callbacks=checkpoints,
-        # devices = len(devices),
         strategy=strategy,
         precision=16,
         max_steps=cfg.train.max_steps,
@@ -186,5 +138,5 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    hydra_config.main()
+    hydra_config.store_main()
     main()

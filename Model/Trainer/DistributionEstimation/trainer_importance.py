@@ -12,15 +12,11 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         ebm,
         cfg,
         complete_dataset=None,
-        nb_sample_train_estimate=1024,
-        **kwargs,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
-            complete_data=complete_dataset,
-            nb_sample_train_estimate=nb_sample_train_estimate,
-            **kwargs,
+            complete_dataset=complete_dataset,
         )
 
     def training_step(self, batch, batch_idx):

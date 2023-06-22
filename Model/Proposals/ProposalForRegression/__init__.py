@@ -1,3 +1,3 @@
-from .MDNProposal import MDNProposalRegression
-from .standard_gaussian import StandardGaussianRegression
-from .uniform import UniformRegression
+from .MDNProposal import MDNProposalRegression, get_MDNProposalRegression
+from .gaussian import GaussianRegression, get_GaussianRegression
+from .uniform import UniformRegression, get_UniformRegression
