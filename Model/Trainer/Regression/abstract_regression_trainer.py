@@ -18,7 +18,7 @@ class AbstractRegression(pl.LightningModule):
     Attributes:
     ----------
         ebm (EBM): The energy based model to train
-        args_dict (dict): The dictionary of arguments
+        cfg (OmegaConfig): Config file containing all the parameters
         complete_dataset (Dataset): One of the dataset to sample from for visualization
         sampler (Sampler): The sampler to use for the visualization of the samples
         transform_back (function): The function to use to transform the samples back to the original space
@@ -47,29 +47,30 @@ class AbstractRegression(pl.LightningModule):
         base_dist_visualization: Visualize the base distribution (if it exists)
 
     '''
-    def __init__(self, ebm, args_dict, complete_dataset = None,):
+    def __init__(self, ebm, cfg, complete_dataset = None,):
         super().__init__()
         self.ebm = ebm
-        self.args_dict = args_dict
-        self.hparams.update(args_dict)
+        self.cfg = cfg
         self.last_save = -float('inf')
-        self.num_samples_train_estimate = self.args_dict['num_sample_train_estimate']
-        self.num_samples_train = self.args_dict['num_sample_proposal']
-        self.num_samples_val = self.args_dict['num_sample_proposal_val']
-        self.num_samples_test = self.args_dict['num_sample_proposal_test']
+
+        self.nb_sample_train_estimate = cfg.proposal_training.num_sample_train_estimate
+        self.num_samples_train = cfg.proposal_training.num_sample_proposal
+        self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
+        self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
 
 
 
-        if np.prod(self.args_dict['input_size_x']) == 1 :
+
+        if np.prod(self.cfg.dataset.input_size_x) == 1 :
             self.input_type_x = '1d'
-        elif len(self.args_dict['input_size_x']) == 3 :
+        elif len(self.cfg.dataset.input_size_x) == 3 :
             self.input_type_x = 'images'
         else :
             self.input_type_x = 'other'
 
-        if np.prod(self.args_dict['input_size_y']) == 1 :
+        if np.prod(self.cfg.dataset.input_size_y) == 1 :
             self.input_type_y = '1d'
-        elif np.prod(self.args_dict['input_size_y']) == 2 :
+        elif np.prod(self.cfg.dataset.input_size_y) == 2 :
             self.input_type_y = '2d'
         else :
             self.input_type_y = 'other'
@@ -83,13 +84,13 @@ class AbstractRegression(pl.LightningModule):
         self.initialize_examples(complete_dataset)
         self.proposal_visualization()
 
-        self.train_proposal = self.args_dict['train_proposal']
+        self.train_proposal = self.cfg.proposal_training.train_proposal
 
         for param in self.ebm.proposal.parameters():
             param.requires_grad = self.train_proposal
 
 
-        self.proposal_loss_name = args_dict['proposal_loss_name']
+        self.proposal_loss_name = self.cfg.proposal_training.proposal_loss_name
         self.proposal_loss = proposal_loss_regression_getter(self.proposal_loss_name)
         self.test_name = None
         self.automatic_optimization = False
@@ -149,7 +150,7 @@ class AbstractRegression(pl.LightningModule):
         energy_data = energy_data.reshape(x.shape[0],)
         
         log_prob_proposal_data = self.ebm.log_prob_proposal(x,y, x_feature=x_feature).reshape(x.shape[0],)
-        save_dir = self.args_dict['save_dir']
+        save_dir = self.cfg.train.save_dir
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
@@ -176,12 +177,12 @@ class AbstractRegression(pl.LightningModule):
             if self.input_type_y != 'other':
                 if self.input_type_x == 'images':
                     self.example_proposal_x = self.example_x_default.to(dtype=self.dtype, device=self.device)
-                    self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y'])).to(dtype=self.dtype, device = self.device)
-                    self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x']).reshape(-1, 100, *self.args_dict['input_size_x']).to(dtype=self.dtype)
+                    self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.cfg.dataset.input_size_y)).to(dtype=self.dtype, device = self.device)
+                    self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, *self.cfg.dataset.input_size_x).reshape(-1, 100, *self.cfg.dataset.input_size_x).to(dtype=self.dtype)
                     self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y_original), max(torch.max(self.example_proposal_y), self.max_y_original)
                 elif self.input_type_x == '1d' :
                     self.example_proposal_x = torch.arange(self.min_x_original, self.max_x_original, (self.max_x_original-self.min_x_original)/100).reshape(-1, 1).to(dtype=self.dtype, device = self.device)
-                    self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.args_dict['input_size_y'])).to(dtype=self.dtype, device = self.device)
+                    self.example_proposal_y = self.ebm.sample_proposal(self.example_proposal_x, 100).reshape(-1, 100, np.prod(self.cfg.dataset.input_size_y)).to(dtype=self.dtype, device = self.device)
                     self.example_proposal_x = self.example_proposal_x.unsqueeze(1).expand(-1, 100, -1).reshape(-1, 100, 1)
                     self.min_y, self.max_y = min(torch.min(self.example_proposal_y), self.min_y_original), max(torch.max(self.example_proposal_y), self.max_y_original)
                 else :
@@ -202,11 +203,10 @@ class AbstractRegression(pl.LightningModule):
             elif self.input_type_x == 'images' :
                 nb_samples_max = 10
             indexes_to_print = np.random.choice(len(complete_dataset.dataset_train), min(nb_samples_max, len(complete_dataset.dataset_train)), replace=False)
-            
-            self.example_x = torch.cat([complete_dataset.dataset_train.__getitem__(i)['data'] for i in indexes_to_print], dim=0).reshape(-1, *self.args_dict['input_size_x']).to(dtype=self.dtype)
+            self.example_x = complete_dataset.dataset_train.__getitem__(indexes_to_print)['data'].reshape(-1, *self.cfg.dataset.input_size_x).to(dtype=self.dtype)
             self.example_x_default = self.example_x.clone()
-            self.example_x = self.example_x.unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_x'])
-            self.example_y = torch.cat([complete_dataset.dataset_train.__getitem__(i)[1].unsqueeze(0) for i in indexes_to_print], dim=0).reshape(-1, np.prod(self.args_dict['input_size_y'])).unsqueeze(1).expand(-1, 100, *self.args_dict['input_size_y'])
+            self.example_x = self.example_x.unsqueeze(1).expand(-1, 100, *self.cfg.dataset.input_size_x)
+            self.example_y =complete_dataset.dataset_train.__getitem__(indexes_to_print)['target'].reshape(-1, np.prod(self.cfg.dataset.input_size_y)).unsqueeze(1).expand(-1, 100, *self.cfg.dataset.input_size_y)
             self.example_y = self.example_y.to(dtype=self.dtype)
             if self.input_type_x == '1d' :
                 self.min_x_original, self.max_x_original = min(torch.min(self.example_x), self.min_x_original), max(torch.max(self.example_x), self.max_x_original)
@@ -235,10 +235,10 @@ class AbstractRegression(pl.LightningModule):
                 x_feature = self.ebm.feature_extractor(x)
                 return -self.ebm.log_prob_proposal(x,y, x_feature=x_feature)
             # energy_function = lambda x,y: -self.ebm.log_prob_proposal(x,y)
-            save_dir = self.args_dict['save_dir']
+            save_dir = self.cfg.train.save_dir
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            if np.prod(self.args_dict['input_size_x']) == 1 and np.prod(self.args_dict['input_size_y']) == 1:
+            if np.prod(self.cfg.dataset.input_size_x) == 1 and np.prod(self.cfg.dataset.input_size_y) == 1:
                 plot_energy_1d_1d_regression(self,
                                             save_dir=save_dir,
                                             name='proposal',
@@ -273,11 +273,11 @@ class AbstractRegression(pl.LightningModule):
         parameters_ebm = [child.parameters() for name,child in self.ebm.named_children() if name != 'proposal']
         parameters_proposal = [self.ebm.proposal.parameters()] if self.ebm.proposal is not None else []
         
-        ebm_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_ebm)
-        proposal_opt = get_optimizer( args_dict = self.args_dict, list_parameters_gen = parameters_proposal)
+        ebm_opt = get_optimizer( cfg = self.cfg, list_parameters_gen = parameters_ebm)
+        proposal_opt = get_optimizer( cfg = self.cfg, list_parameters_gen = parameters_proposal)
 
-        ebm_sch = get_scheduler(args_dict = self.args_dict, optim = ebm_opt)
-        proposal_sch = get_scheduler(args_dict = self.args_dict, optim = proposal_opt)
+        ebm_sch = get_scheduler(cfg = self.cfg, optim = ebm_opt)
+        proposal_sch = get_scheduler(cfg = self.cfg, optim = proposal_opt)
         if ebm_sch is not None and proposal_sch is not None :
             return [ebm_opt, proposal_opt], [ebm_sch, proposal_sch]      
         elif ebm_sch is not None :
@@ -345,10 +345,10 @@ class AbstractRegression(pl.LightningModule):
         Plot the energy contour if enough steps have passed since the last plot.
         Depending on the type of data points, the energy contour will be plotted differently.
         '''
-        if self.global_step - self.last_save > self.args_dict['save_energy_every'] :
+        if self.global_step - self.last_save > self.cfg.train.save_energy_every :
             self.last_save = self.global_step
             self.resample_proposal()
-            save_dir = self.args_dict['save_dir']
+            save_dir = self.cfg.train.save_dir
             save_dir = os.path.join(save_dir, "contour_energy")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)

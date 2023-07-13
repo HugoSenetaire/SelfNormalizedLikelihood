@@ -7,6 +7,7 @@ import numpy as np
 
 
 def get_model_regression(cfg, complete_dataset, complete_masked_dataset, loader_train):
+    print(cfg)
     input_size_x = complete_dataset.get_dim_input()
     input_size_y = complete_dataset.get_dim_output()
     cfg.dataset.input_size_x = input_size_x
@@ -34,7 +35,7 @@ def get_model_regression(cfg, complete_dataset, complete_masked_dataset, loader_
         raise ValueError("No proposal given")
     
     # if 'proposal_pretraining' in args_dict.keys() and args_dict['proposal_pretraining'] == 'data':
-    if cfg.proposal.proposal_pretraining == 'data':
+    if cfg.proposal_training.proposal_pretraining == 'data':
         proposal = init_proposal_to_data_regression(feature_extractor = feature_extractor, proposal = proposal, input_size_x = input_size_x, input_size_y = input_size_y, dataloader = loader_train, cfg = cfg)
     # Get base_dist :
     base_dist = get_base_dist_regression(cfg = cfg,

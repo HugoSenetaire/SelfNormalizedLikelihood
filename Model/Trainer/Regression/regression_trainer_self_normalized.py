@@ -1,8 +1,8 @@
 from .abstract_regression_trainer import AbstractRegression
 
 class RegressionTrainerSelfNormalized(AbstractRegression):
-    def __init__(self, ebm, args_dict, complete_dataset = None, **kwargs):
-        super().__init__(ebm, args_dict, complete_dataset = complete_dataset, **kwargs)
+    def __init__(self, ebm, cfg, complete_dataset = None, **kwargs):
+        super().__init__(ebm, cfg, complete_dataset = complete_dataset, **kwargs)
 
 
     def training_step(self, batch, batch_idx,):

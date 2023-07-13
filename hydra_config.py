@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class BaseDatasetConfig:
     download: bool = MISSING
     dataset_name: str = MISSING
-    dataset_parameters: Optional[dict] = None
+    dataset_parameters: Optional[dict] = field(default_factory=dict)
     dataloader_name: str = "default"
     batch_size: Optional[int] = 32
     num_workers: Optional[int] = 2
@@ -31,6 +31,7 @@ class BaseDatasetConfig:
     dynamic_generator_name: Optional[str] = None
     dynamic_generator_parameters: Optional[dict] = None
     seed: Optional[int] = None
+    root : Optional[str] = './data'
 
 
 # defaults_base_energy = [

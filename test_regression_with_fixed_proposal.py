@@ -160,7 +160,7 @@ if __name__ == '__main__' :
     current_uniform = get_proposal_regression(args_dict_uniform, input_size_x, input_size_y, complete_dataset.dataset_train)
     algo.test_name = 'UniformTest'
     algo.ebm.proposal = current_uniform
-    args_dict_gaussian = {'proposal_name' : 'standard_gaussian',}
+    args_dict_gaussian = {'proposal_name' : 'gaussian',}
     
     with torch.no_grad():
         trainer.test(algo, dataloaders = test_loader)

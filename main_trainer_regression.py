@@ -1,4 +1,3 @@
-from default_args import default_args_main, check_args_for_yaml
 from Dataset.MissingDataDataset.prepare_data import get_dataset
 from Model.Utils.model_getter_regression import get_model_regression
 from Model.Utils.dataloader_getter import get_dataloader
@@ -7,8 +6,6 @@ from Model.Trainer import dic_trainer_regression
 import pytorch_lightning as pl
 import os
 import torch
-import numpy as np
-import matplotlib.pyplot as plt
 try :
     from pytorch_lightning.loggers import WandbLogger
 except :
@@ -21,7 +18,8 @@ from omegaconf import OmegaConf
 import os
 from dataclasses import asdict
 import helpers
-import hydra_config
+
+from hydra_config import store_main
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,18 +48,19 @@ def main(cfg):
     train_loader = get_dataloader(complete_masked_dataset.dataset_train, args_dict, shuffle = True)
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
+
     cfg.dataset.input_size_x = complete_dataset.get_dim_input()
     cfg.dataset.input_size_y = complete_dataset.get_dim_output()
 
 
     # Get EBM :
 
-    ebm = get_model_regression(args_dict, complete_dataset, complete_masked_dataset, loader_train=train_loader)    
+    ebm = get_model_regression(cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader)    
 
 
     # Get Trainer :
-    print("Trainer name : ", args_dict['trainer_name'],"\n")
-    algo = dic_trainer_regression[args_dict['trainer_name']](ebm = ebm, args_dict = args_dict, complete_dataset=complete_dataset,)
+    print("Trainer name : ", cfg.train.trainer_name,"\n")
+    algo = dic_trainer_regression[cfg.train.trainer_name](ebm = ebm, cfg = cfg, complete_dataset=complete_dataset,)
 
     nb_gpu, accelerator, strategy = get_accelerator(cfg)
     
@@ -79,9 +78,12 @@ def main(cfg):
     checkpoint_callback_val, checkpoints = setup_callbacks(cfg)
 
 
-    if "max_epoch" in args_dict.keys() and args_dict["max_epoch"] is not None:
-        max_steps = args_dict["max_epoch"] * len(train_loader)
-        args_dict["max_steps"] = max_steps
+    # Handle training duration :
+    if cfg.train.max_epochs is not None:
+        max_steps = cfg.train.max_epochs * (len(train_loader) + len(val_loader))
+        cfg.train.max_steps = max_steps
+    val_check_interval = cfg.train.val_check_interval
+
 
     # Train :
     trainer = pl.Trainer(accelerator=accelerator,
@@ -89,17 +91,20 @@ def main(cfg):
                         callbacks=checkpoints,
                         strategy = None,
                         precision=64,
-                        max_steps = args_dict['max_steps'],
+                        max_steps = cfg.train.max_steps,
                         resume_from_checkpoint = ckpt_path,
                         log_every_n_steps=20,
                         )
     
 
-    if not args_dict['just_test']:
+    if not cfg.train.just_test:
         trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
         algo.load_state_dict(torch.load(checkpoint_callback_val.best_model_path)["state_dict"])
 
     trainer.test(algo, dataloaders=test_loader)
     
 
+if __name__=='__main__':
+    store_main()
+    main()
         

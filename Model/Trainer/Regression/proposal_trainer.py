@@ -1,12 +1,12 @@
 from .abstract_regression_trainer import AbstractRegression
 
 class ProposalRegressionTrainer(AbstractRegression):
-    def __init__(self, ebm, args_dict, complete_dataset = None, **kwargs):
+    def __init__(self, ebm, cfg, complete_dataset = None, **kwargs):
         '''
         Train a only the proposal from the model
         '''
-        args_dict['train_proposal'] = True
-        super().__init__(ebm, args_dict, complete_dataset = complete_dataset, **kwargs)
+        cfg.proposal_training.train_proposal = True
+        super().__init__(ebm, cfg, complete_dataset = complete_dataset, **kwargs)
 
     def training_step(self, batch, batch_idx,):
         # Get parameters

@@ -1,3 +1,4 @@
 defaults :
   - base_feature_extractor_config_name
 feature_extractor_name : 'resnet'
+train_feature_extractor : 1
