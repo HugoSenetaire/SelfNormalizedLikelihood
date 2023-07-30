@@ -1,7 +1,7 @@
 defaults:
   - base_config
   - dataset: checkerboard
-  - base_distribution: proposal
+  - base_distribution: no_base_distribution
   - proposal: gaussian
   - proposal_training : no_proposal_training
   - energy: fc_regression
