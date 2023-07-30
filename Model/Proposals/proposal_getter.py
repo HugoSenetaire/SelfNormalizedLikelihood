@@ -10,6 +10,7 @@ from .ProposalForDistributionEstimation.categorical import get_Categorical
 from .ProposalForDistributionEstimation.gaussian_mixture_adaptive import get_GaussianMixtureAdaptiveProposal
 from .ProposalForDistributionEstimation.noise_gradation_adaptive import get_NoiseGradationAdaptiveProposal
 from .ProposalForDistributionEstimation.student import get_StudentProposal
+from .ProposalForDistributionEstimation.real_nvp_proposal import get_RealNVPProposal
 from .ProposalForRegression import get_UniformRegression
 from .mock_base_dist import MockBaseDist
 import torch
@@ -24,6 +25,7 @@ dic_proposals = {
     'gaussian_mixture_adaptive': get_GaussianMixtureAdaptiveProposal,
     'noise_gradation_adaptive' : get_NoiseGradationAdaptiveProposal,
     'student' : get_StudentProposal,
+    'real_nvp': get_RealNVPProposal,
 }
 
 

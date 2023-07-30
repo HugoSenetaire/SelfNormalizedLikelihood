@@ -1,9 +1,9 @@
 defaults:
   - base_config
   - dataset: mnist
-  - base_distribution: no_base_distribution 
-  - proposal: gaussian
-  - proposal_training : no_proposal_training
+  - base_distribution: proposal 
+  - proposal: real_nvp
+  - proposal_training : log_prob_kl
   - energy: conv_distribution
   - feature_extractor : null
   - explicit_bias : no_explicit_bias

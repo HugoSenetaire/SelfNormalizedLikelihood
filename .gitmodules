@@ -4,3 +4,6 @@
 [submodule "Model/Proposals/gmm_torch"]
 	path = Model/Proposals/gmm_torch
 	url = git@github.com:HugoSenetaire/gmm_torch.git
+[submodule "Model/Proposals/real_nvp"]
+	path = Model/Proposals/real_nvp
+	url = git@github.com:HugoSenetaire/real_nvp.git
