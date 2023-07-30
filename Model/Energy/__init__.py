@@ -1,1 +1,2 @@
-from .energy_getter import dic_energy, get_energy, get_energy_regression, get_feature_extractor, get_explicit_bias_regression
+from .Regression.getter import  get_energy_regression, get_feature_extractor_regression, get_explicit_bias_regression
+from .Distribution import get_energy, get_explicit_bias

@@ -1,6 +1,6 @@
-from .standard_gaussian import StandardGaussian
-from .kde import KernelDensity
-from .gaussian_mixture import GaussianMixtureProposal
-from .gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal
-from .noise_gradation_adaptive import NoiseGradationAdaptiveProposal
-from .student import StudentProposal
+from .gaussian import Gaussian, get_Gaussian
+from .kde import KernelDensity, get_KernelDensity
+from .gaussian_mixture import GaussianMixtureProposal, get_GaussianMixtureProposal
+from .gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal, get_GaussianMixtureAdaptiveProposal
+from .noise_gradation_adaptive import NoiseGradationAdaptiveProposal, get_NoiseGradationAdaptiveProposal
+from .student import StudentProposal, get_StudentProposal

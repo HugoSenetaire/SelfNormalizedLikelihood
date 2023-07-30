@@ -1,6 +1,6 @@
-from .model_getter import get_model
+from .model_getter_distributionestimation import get_model
 from .optimizer_getter import get_optimizer
 from .dataloader_getter import get_dataloader
 from .Callbacks import EMACallback
 from .plot_utils import plot_energy_2d, plot_images
-from .proposal_loss import log_prob_kl_loss_regression, kl_loss_regression, log_prob_loss_regression, log_prob_kl_loss, kl_loss, log_prob_loss
+from .proposal_loss import proposal_loss_getter, proposal_loss_regression_getter

@@ -2,7 +2,7 @@ max_steps : 2001
 switch_mode_index : 5000
 save_energy_every : 500
 samples_every: 1000
-nb_sample_bias_explicit : 1024
-bias_explicit : True
+nb_sample_init_bias : 1024
+explicit_bias : True
 batch_size : 512
 num_sample_proposal : 512

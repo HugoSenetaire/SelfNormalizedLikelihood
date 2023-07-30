@@ -1,0 +1,3 @@
+defaults :
+  - base_explicit_bias_config_name
+explicit_bias_name : '3_layer_fc'

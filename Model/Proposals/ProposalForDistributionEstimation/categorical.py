@@ -7,18 +7,21 @@ from jaxtyping import Float
 from torch.distributions import categorical
 from torch.nn.parameter import Parameter
 from torch.utils.data import Dataset
+from .abstract_proposal import AbstractProposal
 
 
-class Categorical(nn.Module):
+def get_Categorical(input_size, dataset, cfg):
+    return Categorical(input_size, dataset)
+
+class Categorical(AbstractProposal):
     """Module that implements a uniform categorical distribution"""
 
     def __init__(self, input_size: Tuple[int], dataset: Dataset) -> None:
-        super(Categorical, self).__init__()
-        self.input_size = input_size
+        super(Categorical, self).__init__(input_size=input_size)
         self.num_categories = dataset.num_categories
         self.logit_parameters = Parameter(torch.ones(self.num_categories))
 
-    def sample(self, nb_sample: int = 1):
+    def sample_simple(self, nb_sample: int = 1):
         samples = torch.Tensor(
             categorical.Categorical(self.logit_parameters).sample((nb_sample,))
         ).type("torch.LongTensor")
@@ -28,7 +31,7 @@ class Categorical(nn.Module):
 
         return samples_one_hot
 
-    def log_prob(self, x: Float[torch.Tensor, "batch_size"]):
+    def log_prob_simple(self, x: Float[torch.Tensor, "batch_size"]):
         return (
             categorical.Categorical(self.logit_parameters).log_prob(x).flatten(1).sum(1)
         )
