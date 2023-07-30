@@ -96,7 +96,7 @@ class BaseSchedulerConfig:
 
 @dataclass
 class BaseProposalConfig:
-    proposal_name: str = MISSING
+    proposal_name: Union[str,None] = MISSING
     covariance_type: Optional[str] = "diag" # Used in gaussian
     eps: Optional[float] = 1.e-6 # Used in GaussianMixtureProposal
     n_components: Optional[int] = 10 # Used in GaussianMixtureProposal
