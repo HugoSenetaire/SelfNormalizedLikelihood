@@ -156,7 +156,7 @@ class ImportanceWeightedEBM(nn.Module):
             base_dist_log_prob = self.base_dist.log_prob(samples_proposal).view(samples_proposal.size(0), -1).sum(1).unsqueeze(1)
             samples_proposal_log_prob = self.proposal.log_prob(samples_proposal).reshape(samples_proposal.shape[0], -1).sum(1).unsqueeze(1)
             aux_prob = base_dist_log_prob - samples_proposal_log_prob 
-            log_z_estimate = torch.logsumexp(-f_theta_proposal + aux_prob,dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
+            log_z_estimate = (-f_theta_proposal + aux_prob).flatten()
 
             dic_output.update(
                 {"base_dist_log_prob_proposal": base_dist_log_prob,
@@ -164,9 +164,17 @@ class ImportanceWeightedEBM(nn.Module):
                 "aux_prob_proposal": aux_prob,
                 })
         else:
-            log_z_estimate = (-f_theta_proposal.flatten()).logsumexp(dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
+            log_z_estimate = -f_theta_proposal.flatten() 
+
+            
+
+        ESS_estimate_num = log_z_estimate.logsumexp(0)*2
+        ESS_estimate_denom = (2*log_z_estimate).logsumexp(0)
+        ESS_estimate = (ESS_estimate_num - ESS_estimate_denom).exp()
+        log_z_estimate = torch.logsumexp(log_z_estimate, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device)) 
 
         dic_output["log_z_estimate"] = log_z_estimate
+        dic_output["ESS_estimate"] = ESS_estimate
         return log_z_estimate, dic_output
 
     def forward(self, x):
