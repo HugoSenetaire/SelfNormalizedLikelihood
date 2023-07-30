@@ -5,7 +5,7 @@ from typing import Any, Optional, Union
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
 import hydra
-
+import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,7 +31,7 @@ class BaseDatasetConfig:
     dynamic_generator_name: Optional[str] = None
     dynamic_generator_parameters: Optional[dict] = None
     seed: Optional[int] = None
-    root : Optional[str] = './data'
+    root : Optional[str] = os.path.dirname(os.path.realpath(__file__)) + "/data"
 
 
 # defaults_base_energy = [
@@ -44,7 +44,7 @@ class BaseEnergyConfig:
     ebm_pretraining: Optional[str] = None
 
     dims : Optional[list] = field(default_factory=lambda: [100, 100, 100])
-    activation : Optional[str] = 'relu'
+    activation : Optional[str] = None
     last_layer_bias : Optional[bool] = False
 
     hidden_dim : Optional[int] = 10
@@ -140,7 +140,7 @@ class BaseBaseDistributionConfig(BaseProposalConfig):
 
 @dataclass
 class BaseProposalTrainingConfig:
-    num_sample_train_estimate: Optional[int] = 1024
+    num_sample_train_estimate: Optional[int] = None # This is used to compare multiple training at once.
     num_sample_proposal: int = MISSING
     num_sample_proposal_val: int = MISSING
     num_sample_proposal_test: int = MISSING
