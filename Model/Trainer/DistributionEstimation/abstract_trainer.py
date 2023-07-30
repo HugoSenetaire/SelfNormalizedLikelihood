@@ -218,7 +218,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self,
     ):
         """Base dist might be trained and need to be resampled during training"""
-        if self.ebm.base_dist is not None:
+        if hasattr(self.ebm.base_dist, 'sample'):
             if self.input_type == "2d":
                 self.example_base_dist = self.ebm.base_dist.sample(1000).flatten(1)
             elif self.input_type == "1d":

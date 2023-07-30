@@ -13,7 +13,7 @@ class MockBaseDist(nn.Module):
         '''
         Mock log probability returning 0.
         '''
-        return torch.zeros(x.shape[0], 1, dtype=x.dtype, device=x.device)
+        return torch.zeros((x.shape[0], 1,), dtype=x.dtype, device=x.device)
 
 class MockBaseDistRegression(nn.Module):
     '''
