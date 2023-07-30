@@ -31,7 +31,7 @@ class BaseDatasetConfig:
     dynamic_generator_name: Optional[str] = None
     dynamic_generator_parameters: Optional[dict] = None
     seed: Optional[int] = None
-    root : Optional[str] = os.path.dirname(os.path.realpath(__file__)) + "/data"
+    root : Optional[str] = os.path.dirname(os.path.realpath(__file__)) + "/Dataset/Downloaded"
 
 
 # defaults_base_energy = [
