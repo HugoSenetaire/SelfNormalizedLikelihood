@@ -35,7 +35,6 @@ class AbstractProposalRegression(nn.Module):
         '''
         assert x_feature.shape[0] == y.shape[0]
         log_prob = self.log_prob_simple(x_feature, y)
-        print(log_prob.shape)
         return log_prob
     
     def sample(self, x_feature, nb_sample):
