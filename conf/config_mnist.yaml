@@ -1,7 +1,8 @@
 defaults:
   - base_config
   - dataset: mnist
-  - base_distribution: proposal 
+  - base_distribution: proposal
+  - default_proposal: gaussian # Only used when proposal is adaptive
   - proposal: real_nvp
   - proposal_training : log_prob_kl
   - energy: conv_distribution
