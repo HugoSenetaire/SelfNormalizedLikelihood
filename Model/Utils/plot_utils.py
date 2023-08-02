@@ -59,7 +59,7 @@ def plot_energy_2d(
 
     for i, (s, s_title) in enumerate(zip(samples, samples_title)):
         if s is not None :
-            current_s = s[:1000]
+            current_s = s[:1000].detach()
             axs[i + 1].contourf(x, y, z, 100)
             axs[i + 1].scatter(current_s[:, 0], current_s[:, 1], c="r", alpha=0.1)
             axs[i + 1].set_title(s_title)
