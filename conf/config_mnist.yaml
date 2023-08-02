@@ -7,7 +7,7 @@ defaults:
   - proposal_training : log_prob_kl
   - energy: conv_distribution
   - feature_extractor : null
-  - explicit_bias : no_explicit_bias
+  - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution
   - optim: adamw
   - sampler: nuts

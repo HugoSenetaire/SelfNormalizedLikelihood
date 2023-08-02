@@ -7,7 +7,7 @@ defaults:
   - proposal_training : no_proposal_training
   - energy: fc_regression
   - feature_extractor : null
-  - explicit_bias : no_explicit_bias
+  - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution
   - optim: adamw
   - sampler: nuts
