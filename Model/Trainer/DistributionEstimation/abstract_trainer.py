@@ -568,7 +568,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 os.makedirs(save_dir)
             samples, init_samples = self.samples_mcmc(num_samples=num_samples)
 
-            if np.prod(self.cfg.train.input_size) == 2:
+            if self.input_type == "2d":
                 samples = samples.flatten(1)
                 plot_energy_2d(
                     self,
