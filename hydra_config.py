@@ -1,11 +1,13 @@
 import logging
+import os
+import pathlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union
+
+import hydra
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
-import hydra
-import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,9 +15,6 @@ logging.basicConfig(
     datefmt="[%Y-%m-%d %H:%M:%S]",
 )
 logger = logging.getLogger(__name__)
-
-
-
 
 
 @dataclass
@@ -31,53 +30,54 @@ class BaseDatasetConfig:
     dynamic_generator_name: Optional[str] = None
     dynamic_generator_parameters: Optional[dict] = None
     seed: Optional[int] = None
-    root : Optional[str] = os.path.dirname(os.path.realpath(__file__)) + "/Dataset/Downloaded"
+    root: Optional[str] = (
+        os.path.dirname(os.path.realpath(__file__)) + "/Dataset/Downloaded"
+    )
 
 
 # defaults_base_energy = [
 #     {"dims": [100, 100, 100],},
 # ]
 
+
 @dataclass
 class BaseEnergyConfig:
     energy_name: str = MISSING
     ebm_pretraining: Optional[str] = None
 
-    dims : Optional[list] = field(default_factory=lambda: [100, 100, 100])
-    activation : Optional[str] = None
-    last_layer_bias : Optional[bool] = False
+    dims: Optional[list] = field(default_factory=lambda: [100, 100, 100])
+    activation: Optional[str] = None
+    last_layer_bias: Optional[bool] = False
 
-    hidden_dim : Optional[int] = 10
+    hidden_dim: Optional[int] = 10
 
-    theta : Optional[float] = 1.0
-    learn_theta : Optional[bool] = False
+    theta: Optional[float] = 1.0
+    learn_theta: Optional[bool] = False
 
-    lambda_ : Optional[float] = 1.0
-    learn_lambda : Optional[bool] = False
+    lambda_: Optional[float] = 1.0
+    learn_lambda: Optional[bool] = False
 
-    learn_W : Optional[bool] = False
-    learn_b : Optional[bool] = False
-
+    learn_W: Optional[bool] = False
+    learn_b: Optional[bool] = False
 
 
 @dataclass
 class BaseExplicitBiasConfig:
     explicit_bias_name: Union[str, None] = MISSING
-    nb_sample_init_bias : Optional[int] = 1024
-
+    nb_sample_init_bias: Optional[int] = 1024
 
 
 @dataclass
 class BaseFeatureExtractorConfig:
     feature_extractor_name: Union[str, None] = MISSING
     train_feature_extractor: bool = MISSING
-    hidden_dim : Optional[int] = 10
-
+    hidden_dim: Optional[int] = 10
 
 
 @dataclass
 class BaseOptimConfig:
     optimizer: str = MISSING
+
 
 @dataclass
 class AdamwConfig(BaseOptimConfig):
@@ -96,75 +96,80 @@ class BaseSchedulerConfig:
 
 @dataclass
 class BaseProposalConfig:
-    proposal_name: Union[str,None] = MISSING
-    covariance_type: Optional[str] = "diag" # Used in gaussian
-    eps: Optional[float] = 1.e-6 # Used in GaussianMixtureProposal
-    n_components: Optional[int] = 10 # Used in GaussianMixtureProposal
-    nb_sample_estimate: Optional[int] = 10000 
+    proposal_name: Union[str, None] = MISSING
+    covariance_type: Optional[str] = "diag"  # Used in gaussian
+    eps: Optional[float] = 1.0e-6  # Used in GaussianMixtureProposal
+    n_components: Optional[int] = 10  # Used in GaussianMixtureProposal
+    nb_sample_estimate: Optional[int] = 10000
     init_parameters: Optional[str] = "kmeans"
     delta: Optional[float] = 1e-3
     n_iter: Optional[int] = 100
     warm_start: Optional[bool] = False
     fit: Optional[bool] = True
 
-    kernel : Optional[str] = 'gaussian' # Used in KernelDensity
-    bandwith : Optional[str] = 'scott' # Used in KernelDensity
-    nb_center : Optional[int] = 1000 # Used in KernelDensity
+    kernel: Optional[str] = "gaussian"  # Used in KernelDensity
+    bandwith: Optional[str] = "scott"  # Used in KernelDensity
+    nb_center: Optional[int] = 1000  # Used in KernelDensity
 
-    ranges_std : Optional[list] = field(default_factory=lambda:[0.1, 1.0]) # Used in noise gradation adaptive
+    ranges_std: Optional[list] = field(
+        default_factory=lambda: [0.1, 1.0]
+    )  # Used in noise gradation adaptive
 
-    lambda_ : Optional[float] = 0.1 # Used in Poisson
+    lambda_: Optional[float] = 0.1  # Used in Poisson
 
-    mean : Optional[str] = 'dataset' # Used in standard gaussian
-    std : Optional[str] = 'dataset' # Used in standard gaussian
-    std_multiplier : Optional[float] = 1.0 # Used in standard gaussian, just multiply the std to get larger proposal
+    mean: Optional[str] = "dataset"  # Used in standard gaussian
+    std: Optional[str] = "dataset"  # Used in standard gaussian
+    std_multiplier: Optional[
+        float
+    ] = 1.0  # Used in standard gaussian, just multiply the std to get larger proposal
 
-    K : Optional[int] = 4 # Used in MDN proposal regression
+    K: Optional[int] = 4  # Used in MDN proposal regression
 
-    min_data : Optional[str] = 'dataset' # Used in UNIFORM proposal regression
-    max_data : Optional[str] = 'dataset' # Used in UNIFORM proposal regression
-    shift_min : Optional[float] = 0.0 # Used in UNIFORM proposal regression
-    shift_max : Optional[float] = 0.0 # Used in UNIFORM proposal regression
+    min_data: Optional[str] = "dataset"  # Used in UNIFORM proposal regression
+    max_data: Optional[str] = "dataset"  # Used in UNIFORM proposal regression
+    shift_min: Optional[float] = 0.0  # Used in UNIFORM proposal regression
+    shift_max: Optional[float] = 0.0  # Used in UNIFORM proposal regression
 
-    real_nvp_num_scales : Optional[int] = 2 # Used in RealNVP proposal
-    real_nvp_mid_channels : Optional[int] = 64 # Used in RealNVP proposal
-    real_nvp_num_blocks : Optional[int] = 3 # Used in RealNVP proposal
-    real_nvp_preprocess : Optional[bool] = False # Used in RealNVP proposal
-    real_nvp_k : Optional[int] = 256 # Used in RealNVP proposal
-    
+    real_nvp_num_scales: Optional[int] = 2  # Used in RealNVP proposal
+    real_nvp_mid_channels: Optional[int] = 64  # Used in RealNVP proposal
+    real_nvp_num_blocks: Optional[int] = 3  # Used in RealNVP proposal
+    real_nvp_preprocess: Optional[bool] = False  # Used in RealNVP proposal
+    real_nvp_k: Optional[int] = 256  # Used in RealNVP proposal
+
 
 @dataclass
 class BaseBaseDistributionConfig(BaseProposalConfig):
     train_base_dist: Optional[bool] = False
 
     def post_init(self):
-        if 'adaptive' in self.proposal_name:
+        if "adaptive" in self.proposal_name:
             raise RuntimeError(f"Base distribution should not be adaptive")
-        
-    
 
 
 @dataclass
 class BaseProposalTrainingConfig:
-    num_sample_train_estimate: Optional[int] = None # This is used to compare multiple training at once.
+    num_sample_train_estimate: Optional[
+        int
+    ] = None  # This is used to compare multiple training at once.
     num_sample_proposal: int = MISSING
     num_sample_proposal_val: int = MISSING
     num_sample_proposal_test: int = MISSING
     train_proposal: bool = MISSING
-    proposal_loss_name: Union[str,None] = None
+    proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
 
     def __post_init__(self):
-        if self.train_proposal :
+        if self.train_proposal:
             if self.proposal_loss_name not in ["log_prob", "kl", "log_prob_kl"]:
                 raise RuntimeError(
                     f"proposal_loss_name should be in ['log_prob', 'kl', 'log_prob_kl'] but got {self.proposal_loss_name}"
                 )
-        else :
-            if self.proposal_loss_name is not None :
+        else:
+            if self.proposal_loss_name is not None:
                 raise RuntimeError(
                     f"proposal_loss_name should be None but got {self.proposal_loss_name}"
                 )
+
 
 @dataclass
 class BaseSamplerConfig:
@@ -179,7 +184,7 @@ class BaseSamplerConfig:
 
 @dataclass
 class NutsConfig(BaseSamplerConfig):
-    sampler_name: Optional[str] = 'nuts'
+    sampler_name: Optional[str] = "nuts"
     num_chains: int = MISSING
     num_samples: int = MISSING
     warmup_steps: int = MISSING
@@ -202,7 +207,7 @@ class BaseTrainConfig:
     val_check_interval: Optional[bool] = MISSING
     save_energy_every: int = MISSING
     samples_every: int = MISSING
-    sigma : Optional[float] = None
+    sigma: Optional[float] = None
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -224,11 +229,25 @@ class BaseTrainConfig:
             raise RuntimeError(
                 "max_steps and max_epochs are both not None. Please set only one"
             )
-    
-        if 'denoising' in self.trainer_name and self.sigma is None :
+
+        if "denoising" in self.trainer_name and self.sigma is None:
             raise RuntimeError(
                 "Sigma is needed when considering training with denoising models"
-                )
+            )
+
+
+@dataclass
+class Machine:
+    machine: str = MISSING
+    wandb_path: Optional[str] = MISSING
+
+    def __post_init__(self):
+        if self.machine == "karolina":
+            self.wandb_path = pathlib.Path(
+                pathlib.Path.home().parent.parent, self.wandb_path
+            )
+        else:
+            self.wandb_path = None
 
 
 @dataclass
@@ -239,12 +258,13 @@ class Config:
     optim: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
     proposal: BaseProposalConfig = MISSING
-    default_proposal: Optional[Union[BaseProposalConfig,None]] = None
+    default_proposal: Optional[Union[BaseProposalConfig, None]] = None
     train: BaseTrainConfig = MISSING
-    feature_extractor: Optional[Union[BaseFeatureExtractorConfig,None]] = None
+    feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
-    sampler : Optional[Union[BaseSamplerConfig,None]] = None
-    scheduler : Optional[Union[BaseSchedulerConfig,None]] = None
+    sampler: Optional[Union[BaseSamplerConfig, None]] = None
+    scheduler: Optional[Union[BaseSchedulerConfig, None]] = None
+    machine: Optional[Machine] = None
 
     # def _complete_dataset(self):
     #     self.dataset.seed = self.train.seed
@@ -269,36 +289,68 @@ def store_main():
     cs.store(name="base_config", node=Config)
 
     # Datasets
-    cs.store(name="base_dataset_config_name", group="dataset", node=BaseDatasetConfig,)
-    
+    cs.store(
+        name="base_dataset_config_name",
+        group="dataset",
+        node=BaseDatasetConfig,
+    )
+
     # Optimizers
     cs.store(name="base_optim_config_name", group="optim", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim", node=AdamwConfig)
 
     # Scheduler
-    cs.store(name="base_scheduler_config_name", group="scheduler", node=BaseSchedulerConfig)
-    
+    cs.store(
+        name="base_scheduler_config_name", group="scheduler", node=BaseSchedulerConfig
+    )
+
     # Proposal training
-    cs.store(name="base_proposal_training_config_name", group="proposal_training", node=BaseProposalTrainingConfig)
+    cs.store(
+        name="base_proposal_training_config_name",
+        group="proposal_training",
+        node=BaseProposalTrainingConfig,
+    )
 
     # Base Proposal
-    cs.store(name="base_proposal_config_name", group="proposal", node=BaseProposalConfig)
+    cs.store(
+        name="base_proposal_config_name", group="proposal", node=BaseProposalConfig
+    )
 
     # Base distributions
-    cs.store(name="base_distribution_config_name", group="base_distribution", node=BaseBaseDistributionConfig)
-    
+    cs.store(
+        name="base_distribution_config_name",
+        group="base_distribution",
+        node=BaseBaseDistributionConfig,
+    )
+
     # Base Default Proposal
-    cs.store(name="base_default_proposal_config_name", group="default_proposal", node=BaseProposalConfig)
-    
+    cs.store(
+        name="base_default_proposal_config_name",
+        group="default_proposal",
+        node=BaseProposalConfig,
+    )
+
     # Energy
-    cs.store(name="base_energy_config_name", group="energy", node=BaseEnergyConfig,)
+    cs.store(
+        name="base_energy_config_name",
+        group="energy",
+        node=BaseEnergyConfig,
+    )
 
     # Explicit bias
-    cs.store(name="base_explicit_bias_config_name", group="explicit_bias", node=BaseExplicitBiasConfig,)
+    cs.store(
+        name="base_explicit_bias_config_name",
+        group="explicit_bias",
+        node=BaseExplicitBiasConfig,
+    )
 
     # Feature extractor
-    cs.store(name="base_feature_extractor_config_name", group="feature_extractor", node=BaseFeatureExtractorConfig,)
-    
+    cs.store(
+        name="base_feature_extractor_config_name",
+        group="feature_extractor",
+        node=BaseFeatureExtractorConfig,
+    )
+
     # Trainer
     cs.store(name="base_train_config_name", group="train", node=BaseTrainConfig)
 
@@ -306,10 +358,16 @@ def store_main():
     cs.store(name="base_sampler_config_name", group="sampler", node=BaseSamplerConfig)
     cs.store(name="nuts_name", group="sampler", node=NutsConfig)
 
-    
-@hydra.main(version_base='1.1', config_name="config", config_path="conf")
+    # Machine
+    cs.store(name="karolina_name", group="machine", node=Machine)
+    cs.store(name="local_name", group="machine", node=Machine)
+    cs.store(name="dtu_cluster_name", group="machine", node=Machine)
+
+
+@hydra.main(version_base="1.1", config_name="config", config_path="conf")
 def main(cfg):
     print(OmegaConf.to_yaml(cfg))
+
 
 if __name__ == "__main__":
     store_main()

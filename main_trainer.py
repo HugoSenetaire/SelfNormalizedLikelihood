@@ -92,7 +92,19 @@ def main(cfg):
         cfg.train.max_steps = max_steps
     val_check_interval = cfg.train.val_check_interval
 
-    # Get Trainer
+    if cfg.machine is not None:
+        if cfg.machine.machine == "karolina":
+            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
+            logger_trainer = WandbLogger(
+                project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path
+            )
+        else:
+            print(f"Working on {cfg.machine.machine = }")
+            logger_trainer = WandbLogger(project="SelfNormalizedLikelihood")
+    else:
+        print("You have not specified a machine")
+        logger_trainer = True
+        # Get Trainer
     trainer = pl.Trainer(
         accelerator=accelerator,
         default_root_dir=cfg.train.save_dir,
@@ -102,7 +114,7 @@ def main(cfg):
         max_steps=cfg.train.max_steps,
         resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
-        logger=WandbLogger(project="SelfNormalizedLikelihood"),
+        logger=logger_trainer,
     )
 
     if not cfg.train.just_test:
