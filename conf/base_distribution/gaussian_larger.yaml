@@ -1,0 +1,8 @@
+defaults:
+  - base_distribution_config_name
+proposal_name : 'gaussian'
+train_base_dist: false
+mean : dataset
+std : dataset
+std_multiplier : 3.0 # After estimation, multiply the std by this value
+

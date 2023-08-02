@@ -9,5 +9,5 @@ defaults:
   - explicit_bias : no_explicit_bias
   - train: self_normalized_distribution
   - optim: adamw
-  - sampler: null
+  - sampler: nuts
 

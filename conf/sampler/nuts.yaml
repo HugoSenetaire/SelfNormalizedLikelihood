@@ -1,5 +1,5 @@
 defaults:
-  - base_sampler_config_name
+  - nuts_name
 sampler_name: 'nuts'
 num_chains: 10
 num_samples: 100

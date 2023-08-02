@@ -1,13 +1,14 @@
 defaults:
   - base_config
   - dataset: checkerboard
-  - base_distribution: no_base_distribution
-  - proposal: gaussian
+  - base_distribution: gaussian
+  - default_proposal: gaussian_more_noise
+  - proposal: adaptive_mixture
   - proposal_training : no_proposal_training
   - energy: fc_regression
   - feature_extractor : null
   - explicit_bias : no_explicit_bias
   - train: self_normalized_distribution
   - optim: adamw
-  - sampler: null
+  - sampler: nuts
 
