@@ -27,7 +27,7 @@ class NutsSampler():
 
         samples = []
         for x_init_i in x_init : # Some issues exists with pyro when multiprocessing, I am always using the same x
-            mcmc = MCMC(hmc_kernel, num_samples=num_samples*self.thinning, warmup_steps=self.warmup_steps, initial_parameters = {0:x_init_i.unsqueeze(0)}, num_chains=1)
+            mcmc = MCMC(hmc_kernel, num_samples=num_samples*self.thinning, warmup_steps=self.warmup_steps, initial_params = {0:x_init_i.unsqueeze(0)}, num_chains=1)
             mcmc.run()
             samples.append(mcmc.get_samples()[0].clone().detach().reshape(self.num_samples, self.thinning, 1, *self.input_size)[:,0]) # 0 is because I have defined initial parameters as 0
 
