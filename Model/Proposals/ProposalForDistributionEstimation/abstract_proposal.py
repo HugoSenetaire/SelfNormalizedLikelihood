@@ -83,10 +83,19 @@ class AbstractAdaptiveProposal(nn.Module):
         '''
         self.x = x
 
-    def adaptive_log_prob(self, x):
+
+    def get_data(self, dataset, nb_sample_for_init):
+        '''
+        Consider a subset of data for initialization
+        '''
+        index = np.random.choice(len(dataset), min(10000, len(dataset)))
+        data = torch.cat([dataset.__getitem__(i)['data'] for i in index]).reshape(-1, *self.input_size)
+        return data
+
+    def log_prob_adaptive(self, x):
         raise NotImplementedError
     
-    def adaptive_sample(self, nb_sample):
+    def sample_adaptive(self, nb_sample):
         raise NotImplementedError
 
     def log_prob(self, x):
@@ -96,7 +105,7 @@ class AbstractAdaptiveProposal(nn.Module):
         if self.x is None or not self.training:
             log_prob = self.default_proposal.log_prob(x)
         else :
-            log_prob = self.adaptive_log_prob(x).reshape(x.shape[0],1)
+            log_prob = self.log_prob_adaptive(x).reshape(x.shape[0],1)
         return log_prob
         
     
@@ -107,5 +116,5 @@ class AbstractAdaptiveProposal(nn.Module):
         if self.x is None or not self.training:
             samples = self.default_proposal.sample(nb_sample)
         else :
-            samples = self.adaptive_sample(nb_sample).reshape(nb_sample, *self.input_size).detach()
+            samples = self.sample_adaptive(nb_sample).reshape(nb_sample, *self.input_size).detach()
         return samples        
