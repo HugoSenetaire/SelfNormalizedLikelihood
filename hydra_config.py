@@ -125,6 +125,11 @@ class BaseProposalConfig:
     shift_min : Optional[float] = 0.0 # Used in UNIFORM proposal regression
     shift_max : Optional[float] = 0.0 # Used in UNIFORM proposal regression
 
+    real_nvp_num_scales : Optional[int] = 2 # Used in RealNVP proposal
+    real_nvp_mid_channels : Optional[int] = 64 # Used in RealNVP proposal
+    real_nvp_num_blocks : Optional[int] = 3 # Used in RealNVP proposal
+    real_nvp_preprocess : Optional[bool] = False # Used in RealNVP proposal
+    real_nvp_k : Optional[int] = 256 # Used in RealNVP proposal
     
 
 @dataclass
