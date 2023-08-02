@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
@@ -10,7 +9,7 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import seed_everything, get_accelerator, setup_callbacks
+from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -18,12 +17,12 @@ except:
     from lighting.pytorch.loggers import WandbLogger
 
 import logging
+import os
+from dataclasses import asdict
 from pprint import pformat
 
 import hydra
 from omegaconf import OmegaConf
-import os
-from dataclasses import asdict
 
 import helpers
 import hydra_config
@@ -38,8 +37,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-
-@hydra.main(version_base='1.1', config_path="conf", config_name="config_mnist")
+@hydra.main(version_base="1.1", config_path="conf", config_name="config")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
@@ -48,7 +46,6 @@ def main(cfg):
 
     if cfg.dataset.seed is not None:
         seed_everything(cfg.dataset.seed)
-
 
     # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)
@@ -64,7 +61,9 @@ def main(cfg):
 
     # name and save_dir will be in cfg
 
-    ebm = get_model(cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader)
+    ebm = get_model(
+        cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader
+    )
 
     algo = dic_trainer[cfg.train.trainer_name](
         ebm=ebm,
@@ -103,6 +102,7 @@ def main(cfg):
         max_steps=cfg.train.max_steps,
         resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
+        logger=WandbLogger(project="SelfNormalizedLikelihood"),
     )
 
     if not cfg.train.just_test:
