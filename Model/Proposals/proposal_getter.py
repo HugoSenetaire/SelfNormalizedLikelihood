@@ -43,7 +43,7 @@ def get_base_dist(cfg, proposal, input_size, dataset) :
     if 'adaptive' in cfg.base_distribution.proposal_name :
         raise ValueError('Adaptive should only be used for proposal')
 
-    base_dist = base_dist(input_size, dataset, cfg)
+    base_dist = base_dist(input_size, dataset, cfg.base_distribution)
     return base_dist
 
 
@@ -57,7 +57,7 @@ def get_proposal(cfg, input_size, dataset, ):
     proposal = dic_proposals[cfg.proposal.proposal_name]
     if 'adaptive' in cfg.proposal.proposal_name :
         assert cfg.default_proposal is not None, 'You need to specify a default proposal for the adaptive proposal'
-        assert not cfg.proposal.train_proposal, 'You cannot train the proposal if it is adaptive'
+        assert not cfg.proposal_training.train_proposal, 'You cannot train the proposal if it is adaptive'
         # aux_args_dict = copy.deepcopy(args_dict)
         default_proposal = dic_proposals[cfg.default_proposal.proposal_name](input_size, dataset, cfg.default_proposal)
         return proposal(default_proposal = default_proposal, input_size = input_size, dataset = dataset, cfg = cfg.proposal)
