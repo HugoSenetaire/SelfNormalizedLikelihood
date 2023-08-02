@@ -117,6 +117,7 @@ class BaseProposalConfig:
 
     mean : Optional[str] = 'dataset' # Used in standard gaussian
     std : Optional[str] = 'dataset' # Used in standard gaussian
+    std_multiplier : Optional[float] = 1.0 # Used in standard gaussian, just multiply the std to get larger proposal
 
     K : Optional[int] = 4 # Used in MDN proposal regression
 
@@ -178,7 +179,7 @@ class BaseSamplerConfig:
 
 @dataclass
 class NutsConfig(BaseSamplerConfig):
-    input_size: Optional[int] = MISSING
+    sampler_name: Optional[str] = 'nuts'
     num_chains: int = MISSING
     num_samples: int = MISSING
     warmup_steps: int = MISSING

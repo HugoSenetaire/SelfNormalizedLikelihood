@@ -14,6 +14,7 @@ def get_GaussianMixtureAdaptiveProposal(default_proposal, input_size, dataset, c
                 input_size,
                 dataset,
                 cfg.nb_sample_estimate,
+                cfg.std_multiplier,
                 )
                                            
 
@@ -39,11 +40,11 @@ class GaussianMixtureAdaptiveProposal(AbstractAdaptiveProposal):
     log_prob_adaptive(x): compute the log probability of the proposal with the adaptive parameters.
     sample_adaptive(nb_sample): sample from the proposal with the adaptive parameters.
     '''
-    def __init__(self, default_proposal, input_size, dataset, nb_sample_estimate = 10000,) -> None:
+    def __init__(self, default_proposal, input_size, dataset, nb_sample_estimate = 10000, std_multiplier=1.0,) -> None:
         super().__init__(input_size=input_size, default_proposal=default_proposal)
         data = self.get_data(dataset, nb_sample_estimate)
         data += torch.randn_like(data) * 1e-2
-        self.std = nn.Parameter(data.std(0).reshape(input_size), requires_grad=False)
+        self.std = nn.Parameter(data.std(0).reshape(input_size) * std_multiplier, requires_grad=False)
         self.x = None
         
         

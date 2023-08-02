@@ -11,10 +11,11 @@ def get_Gaussian(input_size, dataset, cfg, ):
                             cfg.mean,
                             cfg.std,
                             cfg.nb_sample_estimate,
+                            cfg.std_multiplier,
                             )
 
 class Gaussian(AbstractProposal):
-    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', nb_sample_estimate = 10000, **kwargs) -> None:
+    def __init__(self, input_size, dataset, mean='dataset', std ='dataset', nb_sample_estimate = 10000, std_multiplier = 1, **kwargs) -> None:
         super().__init__(input_size=input_size)
         print("Init Standard Gaussian...")
         data = self.get_data(dataset, nb_sample_estimate)
@@ -25,7 +26,7 @@ class Gaussian(AbstractProposal):
             raise NotImplementedError
 
         if std == 'dataset' :
-            self.log_std = nn.parameter.Parameter(data.std(0).log(), requires_grad=False)
+            self.log_std = nn.parameter.Parameter((data.std(0) * std_multiplier).log(), requires_grad=False)
         else :
             raise NotImplementedError
         
