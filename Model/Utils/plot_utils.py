@@ -41,7 +41,8 @@ def plot_energy_2d(
 
     xx, yy = np.meshgrid(x, y)
     xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
-    xy = torch.from_numpy(xy).float()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    xy = torch.from_numpy(xy).float().to(device)
     if energy_type:
         z = (-energy_function(xy)).exp().detach().cpu().numpy()
     else:
