@@ -320,6 +320,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     )
                     plot_images(
                         self.example,
+                        algo=self,
                         save_dir=self.cfg.train.save_dir,
                         name="example",
                         transform_back=self.transform_back,
@@ -353,6 +354,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 os.makedirs(save_dir)
             plot_images(
                 self.example_proposal,
+                algo=self,
                 save_dir=save_dir,
                 name="proposal_samples",
                 transform_back=self.transform_back,
@@ -393,6 +395,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     os.makedirs(save_dir)
                 plot_images(
                     self.example_base_dist,
+                    algo=self,
                     save_dir=save_dir,
                     name="base_dist_samples",
                     transform_back=self.transform_back,
