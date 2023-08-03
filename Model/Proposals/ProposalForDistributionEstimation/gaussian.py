@@ -59,6 +59,5 @@ class Gaussian(AbstractProposal):
 
     def log_prob_simple(self, x):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
-        print(self.device, "DEVICE")
         x = x.to(self.device)
         return self.distribution.log_prob(x).flatten(1).sum(1)
