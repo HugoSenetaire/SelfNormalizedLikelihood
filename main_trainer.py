@@ -116,6 +116,7 @@ def main(cfg):
         resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
         logger=logger_trainer,
+        log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
     if not cfg.train.just_test:

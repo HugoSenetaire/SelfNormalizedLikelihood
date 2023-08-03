@@ -208,6 +208,7 @@ class BaseTrainConfig:
     save_energy_every: int = MISSING
     samples_every: int = MISSING
     sigma: Optional[float] = None
+    log_every_n_steps: int = MISSING
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
