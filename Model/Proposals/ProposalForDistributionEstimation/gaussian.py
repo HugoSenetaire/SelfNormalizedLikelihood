@@ -56,8 +56,8 @@ class Gaussian(AbstractProposal):
         return samples
 
     def log_prob_simple(self, x):
-        self.distribution = dist.Normal(self.mean, self.log_std.exp())
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.distribution = dist.Normal(self.mean, self.log_std.exp()).to(device)
         print(device, "DEVICE")
         x = x.to(device)
         return self.distribution.log_prob(x).flatten(1).sum(1)
