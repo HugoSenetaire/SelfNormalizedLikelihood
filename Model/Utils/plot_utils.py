@@ -303,6 +303,8 @@ def plot_images(
     init_samples=None,
     step="",
 ):
+    print(f"GOIN TO PLOT IN {save_dir = }")
+
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
@@ -323,6 +325,7 @@ def plot_images(
         grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
     )
     try:
+        print("HELLLOOOOOOOO")
         algo.logger.log_image(
             key="{}.png".format(
                 name,
