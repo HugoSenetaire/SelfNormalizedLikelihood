@@ -144,7 +144,7 @@ def main(cfg):
             plot_images(
                 images,
                 cfg.train.save_dir,
-                algo=None,
+                algo=algo,
                 transform_back=complete_dataset.transform_back,
                 name="samples_best",
                 step="",
