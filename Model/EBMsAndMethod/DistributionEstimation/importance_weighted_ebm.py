@@ -58,8 +58,9 @@ class ImportanceWeightedEBM(nn.Module):
         nb_sample_init_bias=1024,
     ):
         super(ImportanceWeightedEBM, self).__init__()
-        self.energy = energy
-        self.proposal = proposal
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.energy = energy.to(device)
+        self.proposal = proposal.to(device)
         self.nb_sample_init_bias = nb_sample_init_bias
         self.base_dist = base_dist
         self.explicit_bias = explicit_bias
