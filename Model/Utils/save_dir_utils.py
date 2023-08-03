@@ -1,7 +1,9 @@
-import torch
-import numpy as np
 import os
+
+import numpy as np
 import pytorch_lightning as pl
+import torch
+
 from .Callbacks import EMA
 
 
@@ -27,7 +29,9 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def get_accelerator(cfg,):
+def get_accelerator(
+    cfg,
+):
     nb_gpu = torch.cuda.device_count()
 
     if nb_gpu > 1 and cfg.train.multi_gpu != "ddp":
@@ -42,13 +46,15 @@ def get_accelerator(cfg,):
     else:
         accelerator = None
         devices = None
-    return nb_gpu, accelerator, devices
+    return nb_gpu, accelerator, strategy
 
 
-def setup_callbacks(cfg,):
-    '''
+def setup_callbacks(
+    cfg,
+):
+    """
     Setup all the callbacks for the training
-    '''
+    """
     checkpoint_callback_val = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.train.save_dir, "val_checkpoint"),
         save_top_k=2,
