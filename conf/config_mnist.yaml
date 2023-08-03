@@ -11,4 +11,5 @@ defaults:
   - train: self_normalized_distribution
   - optim: adamw
   - sampler: nuts
+  - machine: dtu_cluster
 
