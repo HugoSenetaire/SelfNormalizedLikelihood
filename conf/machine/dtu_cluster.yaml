@@ -1,4 +1,4 @@
 defaults:
   - dtu_cluster_name
-machine: "local"
+machine: "dtu_cluster"
 wandb_path: null

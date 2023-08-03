@@ -46,7 +46,7 @@ def get_accelerator(
     else:
         accelerator = None
         devices = None
-    return nb_gpu, accelerator, strategy
+    return nb_gpu, accelerator, devices, strategy
 
 
 def setup_callbacks(
