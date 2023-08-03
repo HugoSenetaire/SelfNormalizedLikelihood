@@ -588,6 +588,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
             return False
         torch.set_grad_enabled(True)  # Required for MCMC sampling
 
+        print(
+            f" {self.global_step - self.last_save_sample = }, {self.cfg.train.samples_every = }"
+        )
+
         if self.global_step - self.last_save_sample > self.cfg.train.samples_every:
             save_dir = self.cfg.train.save_dir
             save_dir = os.path.join(save_dir, "samples_energy")

@@ -304,7 +304,6 @@ def plot_images(
     step="",
 ):
     print(f"GOIN TO PLOT IN {save_dir = }")
-    print(f" {algo = }")
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
