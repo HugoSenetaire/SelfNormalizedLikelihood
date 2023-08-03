@@ -1,5 +1,8 @@
-from .abstract_trainer import AbstractDistributionEstimation
 import logging
+
+import torch
+
+from .abstract_trainer import AbstractDistributionEstimation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +20,10 @@ class ProposalTrainer(AbstractDistributionEstimation):
     """
 
     def __init__(
-        self, ebm, cfg, complete_dataset=None,
+        self,
+        ebm,
+        cfg,
+        complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
@@ -29,7 +35,10 @@ class ProposalTrainer(AbstractDistributionEstimation):
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
-        x = batch["data"]
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        x = batch["data"].to(device)
+
         log_prob_proposal_data = self.ebm.proposal.log_prob(
             x,
         )
