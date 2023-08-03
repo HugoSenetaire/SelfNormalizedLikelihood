@@ -62,8 +62,8 @@ class ImportanceWeightedEBM(nn.Module):
         self.energy = energy.to(device)
         self.proposal = proposal.to(device)
         self.nb_sample_init_bias = nb_sample_init_bias
-        self.base_dist = base_dist
-        self.explicit_bias = explicit_bias
+        self.base_dist = base_dist.to(device)
+        self.explicit_bias = explicit_bias.to(device)
 
         # If we use explicit bias, set it to a first estimation of the normalization constant.
         if hasattr(self.explicit_bias, "bias"):
@@ -71,7 +71,7 @@ class ImportanceWeightedEBM(nn.Module):
                 torch.zeros(
                     1,
                     dtype=torch.float32,
-                ),
+                ).to(device),
                 nb_sample=self.nb_sample_init_bias,
             )
             self.explicit_bias.bias.data = log_z_estimate
