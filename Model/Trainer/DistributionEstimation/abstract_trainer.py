@@ -583,6 +583,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         Plot the samples from the EBM distribution using an MCMC sampler.
         """
+        print("PLOTTING SAMPLES")
         if self.sampler is None:
             return False
         torch.set_grad_enabled(True)  # Required for MCMC sampling
@@ -606,7 +607,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
             elif self.input_type == "image":
                 print("Plotting images")
-                print(f"algo here is {algo = }")
+                print(f"algo here is {self = }")
                 plot_images(
                     algo=self,
                     save_dir=save_dir,

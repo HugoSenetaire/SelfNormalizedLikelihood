@@ -126,7 +126,6 @@ def main(cfg):
         )
 
     trainer.test(algo, dataloaders=test_loader)
-    print(f"{algo.sampler = }")
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
             print(f"Prod = 2")
