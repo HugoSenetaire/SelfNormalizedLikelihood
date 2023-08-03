@@ -126,8 +126,10 @@ def main(cfg):
         )
 
     trainer.test(algo, dataloaders=test_loader)
+    print(f"{algo.sampler = }")
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
+            print(f"Prod = 2")
             samples = algo.samples_mcmc()[0].flatten(1)
             plot_energy_2d(
                 algo=algo,
@@ -140,6 +142,7 @@ def main(cfg):
                 ],
             )
         else:
+            print(f"IMAGES!")
             images = algo.samples_mcmc()[0]
             plot_images(
                 images,
