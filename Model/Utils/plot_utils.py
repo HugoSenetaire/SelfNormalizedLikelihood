@@ -325,7 +325,6 @@ def plot_images(
         grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
     )
     try:
-        print("HELLLOOOOOOOO")
         algo.logger.log_image(
             key="{}.png".format(
                 name,
@@ -333,6 +332,7 @@ def plot_images(
             images=[grid],
         )
     except AttributeError as e:
+        print(f"{algo = }")
         print(
             e,
         )

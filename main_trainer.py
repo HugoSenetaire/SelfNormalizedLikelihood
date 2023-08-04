@@ -144,8 +144,8 @@ def main(cfg):
             print(f"IMAGES!")
             images = algo.samples_mcmc()[0]
             plot_images(
-                images,
-                cfg.train.save_dir,
+                images=images,
+                save_dir=cfg.train.save_dir,
                 algo=algo,
                 transform_back=complete_dataset.transform_back,
                 name="samples_best",

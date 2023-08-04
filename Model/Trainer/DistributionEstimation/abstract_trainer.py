@@ -319,7 +319,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                         dim=0,
                     )
                     plot_images(
-                        self.example,
+                        images=self.example,
                         algo=self,
                         save_dir=self.cfg.train.save_dir,
                         name="example",
@@ -353,7 +353,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             plot_images(
-                self.example_proposal,
+                images=self.example_proposal,
                 algo=self,
                 save_dir=save_dir,
                 name="proposal_samples",
@@ -394,7 +394,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
                 plot_images(
-                    self.example_base_dist,
+                    images=self.example_base_dist,
                     algo=self,
                     save_dir=save_dir,
                     name="base_dist_samples",
@@ -611,7 +611,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
             elif self.input_type == "image":
                 print("Plotting images")
-                print(f"algo here is {self = }")
                 plot_images(
                     algo=self,
                     save_dir=save_dir,
