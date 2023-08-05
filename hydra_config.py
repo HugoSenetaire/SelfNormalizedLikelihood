@@ -232,6 +232,7 @@ class BaseTrainConfig:
     pg_control: Optional[float] = 0.1
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
+    save_locally: Optional[bool] = True
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:

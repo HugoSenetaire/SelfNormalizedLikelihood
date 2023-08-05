@@ -66,8 +66,9 @@ def plot_energy_2d(
             axs[i + 1].set_xlim(min_x, max_x)
             axs[i + 1].axis("off")
     fig.colorbar(axs[0].contourf(x, y, z, 100), cax=axs[-1])
-    plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
-    plt.savefig(os.path.join(save_dir, "{}_{}.pdf".format(name, step)))
+    if algo.cfg.train.save_locally:
+        plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+        plt.savefig(os.path.join(save_dir, "{}_{}.pdf".format(name, step)))
     try:
         algo.logger.log_image(
             key="{}.png".format(
@@ -169,7 +170,8 @@ def plot_energy_1d_1d_regression(
         axs[i + 1].scatter(s_x.flatten(), s_y.flatten(), c="r", alpha=0.1)
         axs[i + 1].set_title(s_title)
     fig.colorbar(axs[0].contourf(x, y, z, 100), cax=axs[-1])
-    plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+    if algo.cfg.train.save_locally:
+        plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try:
         algo.logger.log_image(
             key="{}.png".format(
@@ -278,8 +280,8 @@ def plot_energy_image_1d_regression(
                 multialignment="center",
             )
             axs[k, l + 2].set_title(title_sample)
-
-    plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+    if algo.cfg.train.save_locally:
+        plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try:
         algo.logger.log_image(
             key="{}.png".format(
@@ -321,9 +323,10 @@ def plot_images(
     grid = torchvision.utils.make_grid(
         images,
     )
-    # torchvision.utils.save_image(
-    #     grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
-    # )
+    if algo.cfg.train.save_locally:
+        torchvision.utils.save_image(
+            grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
+        )
     try:
         algo.logger.log_image(
             key="{}.png".format(
