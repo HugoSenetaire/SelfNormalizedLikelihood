@@ -44,7 +44,7 @@ def get_accelerator(
         accelerator = "gpu"
         devices = [k for k in range(nb_gpu)]
     else:
-        accelerator = None
+        accelerator = "cpu"
         devices = None
     return nb_gpu, accelerator, devices, strategy
 

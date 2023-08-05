@@ -110,7 +110,7 @@ def main(cfg):
         default_root_dir=cfg.train.save_dir,
         callbacks=checkpoints,
         strategy=strategy,
-        devices=nb_gpu,
+        devices=devices,
         precision=16,
         max_steps=cfg.train.max_steps,
         resume_from_checkpoint=ckpt_path,
