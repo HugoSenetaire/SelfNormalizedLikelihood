@@ -113,19 +113,23 @@ def main(cfg):
         devices=devices,
         precision=16,
         max_steps=cfg.train.max_steps,
-        resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
         logger=logger_trainer,
         log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
     if not cfg.train.just_test:
-        trainer.fit(algo, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        trainer.fit(
+            algo,
+            ckpt_path=ckpt_path,
+            train_dataloaders=train_loader,
+            val_dataloaders=val_loader,
+        )
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
         )
 
-    trainer.test(algo, dataloaders=test_loader)
+    trainer.test(algo, ckpt_path=ckpt_path, dataloaders=test_loader)
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
             print(f"Prod = 2")

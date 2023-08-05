@@ -98,6 +98,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
         self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
 
+        self.training_steps_outputs = []
+        self.validation_step_outputs = []
+        self.test_step_outputs = []
+
         if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
         elif len(cfg.dataset.input_size) == 1:
@@ -179,6 +183,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         # Just in case it's an adaptive proposal that requires x
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(None)
+        self.ebm.eval()
 
         # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
         if (
@@ -197,39 +202,68 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
         for key in dic_output:
             self.log(f"train_{key}_mean", dic_output[key].mean().item())
+        self.ebm.train()
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, type="val"):
         """
         Validation step, just returns the logs from calculating the energy of the EBM.
         """
         x = batch["data"]
         energy_batch, dic_output = self.ebm.calculate_energy(x)
+        self.update_dic_output(dic_output, type=type)
+
         return dic_output
 
     def test_step(self, batch, batch_idx):
         """
         The test step is the same as the validation step.
         """
-        return self.validation_step(batch, batch_idx)
+        return self.validation_step(batch, batch_idx, type="test")
 
-    def validation_epoch_end(self, outputs):
+    def update_dic_output(
+        self,
+        outputs,
+        type="train",
+    ):
+        """
+        Update the dic output after a step
+        """
+        if type == "train":
+            self.training_steps_outputs.append(outputs)
+        elif type == "val":
+            self.validation_step_outputs.append(outputs)
+        elif type == "test":
+            self.test_step_outputs.append(outputs)
+        else:
+            raise NotImplementedError
+
+        # for key in outputs:
+        #     if key not in dic:
+        #         dic[key] = []
+        #     dic[key].append(outputs[key])
+
+    def on_validation_epoch_end(
+        self,
+    ):
         """
         Gather the energy from the batches in the validation step.
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         Visualize proposal, base_dist, energy and samples if number of step is sufficient.
         """
-        self.update_dic_logger(outputs, name="val_")
+        outputs = self.validation_step_outputs
+
+        self.update_dic_logger(outputs, name="val")
         self.proposal_visualization()
         self.base_dist_visualization()
         self.plot_energy()
         self.plot_samples()
 
-    def test_epoch_end(self, outputs):
+    def on_test_epoch_end(self, outputs):
         """
         Gather the energy from the batches in the test step.
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         """
-        self.update_dic_logger(outputs, name="test_")
+        self.update_dic_logger(outputs, name="test")
 
     def resample_base_dist(
         self,

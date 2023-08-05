@@ -39,13 +39,13 @@ def get_accelerator(
     if nb_gpu > 1 and cfg.train.multi_gpu == "ddp":
         strategy = "ddp"
     else:
-        strategy = None
+        strategy = "auto"
     if nb_gpu > 0:
         accelerator = "gpu"
         devices = [k for k in range(nb_gpu)]
     else:
         accelerator = "cpu"
-        devices = None
+        devices = "auto"
     return nb_gpu, accelerator, devices, strategy
 
 
