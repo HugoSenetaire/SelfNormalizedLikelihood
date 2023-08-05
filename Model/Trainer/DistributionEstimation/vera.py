@@ -1,5 +1,3 @@
-import torch
-
 from ...Utils import get_optimizer, get_scheduler
 from .abstract_trainer import AbstractDistributionEstimation
 
@@ -20,8 +18,8 @@ class VERA(AbstractDistributionEstimation):
             cfg=cfg,
             complete_dataset=complete_dataset,
         )
-        self.pg_control = cfg.pg_control
-        self.entropy_weight = cfg.entropy_weight
+        self.pg_control = cfg.train.pg_control
+        self.entropy_weight = cfg.train.entropy_weight
         assert (
             self.ebm.proposal != self.ebm.base_dist
         ), "The proposal and the base distribution should be different"
@@ -48,11 +46,11 @@ class VERA(AbstractDistributionEstimation):
         opt_list[1] = proposal_opt
         # if proposal_sch is not None:
         # sch_list = [self.scheduler, proposal_sch]
-        return opt_list, None
+        return opt_list
 
     def training_step(self, batch, batch_idx):
         # Get parameters
-        ebm_opt, proposal_opt, meta_sigma_opt = self.optimizers_perso()
+        ebm_opt, proposal_opt = self.optimizers_perso()
 
         x = batch["data"]
         x_gen, h_gen = self.ebm.proposal.sample_vera(self.num_samples_train)
@@ -94,7 +92,7 @@ class VERA(AbstractDistributionEstimation):
 
         logq_obj = -energy_gen.mean() + self.entropy_weight * entropy_obj
 
-        proposal_loss = -logq_obj
+        proposal_loss = logq_obj
         dic_output["proposal_loss"] = proposal_loss
 
         proposal_opt.zero_grad()

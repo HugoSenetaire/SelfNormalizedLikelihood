@@ -1,6 +1,6 @@
 defaults:
   - base_train_config_name
-trainer_name: 'self_normalized'
+trainer_name: 'vera'
 max_steps: null
 max_epochs: 100
 output_folder: './Results'
@@ -14,3 +14,4 @@ multi_gpu: single
 val_check_interval: null
 save_energy_every: 100
 samples_every: 2000
+log_every_n_steps: 1
