@@ -1,15 +1,14 @@
 defaults:
   - base_config
-  - dataset: mnist
-  - base_distribution: proposal
+  - dataset: mnist_paddedto32
+  - base_distribution: gaussian
   - default_proposal: gaussian # Only used when proposal is adaptive
-  - proposal: real_nvp
-  - proposal_training : log_prob_kl
-  - energy: conv_distribution
+  - proposal: vera
+  - proposal_training : log_prob
+  - energy: dc_gan_distribution
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution
   - optim: adamw
   - sampler: nuts
-  - machine: dtu_cluster
 

@@ -1,0 +1,1 @@
+from .network_for_proposal_getter import get_network_for_proposal

@@ -9,5 +9,5 @@ defaults:
   - explicit_bias : 1_layer_fc
   - train: self_normalized_regression
   - optim: adamw
-  - sampler: null
+  - sampler: nuts
 

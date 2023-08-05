@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
@@ -10,7 +9,7 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import seed_everything, get_accelerator, setup_callbacks
+from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -18,12 +17,12 @@ except:
     from lighting.pytorch.loggers import WandbLogger
 
 import logging
+import os
+from dataclasses import asdict
 from pprint import pformat
 
 import hydra
 from omegaconf import OmegaConf
-import os
-from dataclasses import asdict
 
 import helpers
 import hydra_config
@@ -38,8 +37,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-
-@hydra.main(version_base='1.1', config_path="conf", config_name="config_mnist")
+@hydra.main(version_base="1.1", config_path="conf", config_name="config_mnist_vera")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
@@ -48,7 +46,6 @@ def main(cfg):
 
     if cfg.dataset.seed is not None:
         seed_everything(cfg.dataset.seed)
-
 
     # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)
@@ -64,7 +61,9 @@ def main(cfg):
 
     # name and save_dir will be in cfg
 
-    ebm = get_model(cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader)
+    ebm = get_model(
+        cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader
+    )
 
     algo = dic_trainer[cfg.train.trainer_name](
         ebm=ebm,
@@ -72,7 +71,7 @@ def main(cfg):
         complete_dataset=complete_dataset,
     )
 
-    nb_gpu, accelerator, strategy = get_accelerator(cfg)
+    nb_gpu, accelerator, devices, strategy = get_accelerator(cfg)
 
     if cfg.train.load_from_checkpoint or cfg.train.just_test:
         ckpt_dir = os.path.join(cfg.train.save_dir, "val_checkpoint")
@@ -93,16 +92,31 @@ def main(cfg):
         cfg.train.max_steps = max_steps
     val_check_interval = cfg.train.val_check_interval
 
-    # Get Trainer
+    if cfg.machine is not None:
+        if cfg.machine.machine == "karolina":
+            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
+            logger_trainer = WandbLogger(
+                project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path
+            )
+        else:
+            print(f"Working on {cfg.machine.machine = }")
+            logger_trainer = WandbLogger(project="SelfNormalizedLikelihood")
+    else:
+        print("You have not specified a machine")
+        logger_trainer = True
+        # Get Trainer
     trainer = pl.Trainer(
         accelerator=accelerator,
         default_root_dir=cfg.train.save_dir,
         callbacks=checkpoints,
         strategy=strategy,
+        devices=devices,
         precision=16,
         max_steps=cfg.train.max_steps,
         resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
+        logger=logger_trainer,
+        log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
     if not cfg.train.just_test:
@@ -114,6 +128,7 @@ def main(cfg):
     trainer.test(algo, dataloaders=test_loader)
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
+            print(f"Prod = 2")
             samples = algo.samples_mcmc()[0].flatten(1)
             plot_energy_2d(
                 algo=algo,
@@ -126,11 +141,12 @@ def main(cfg):
                 ],
             )
         else:
+            print(f"IMAGES!")
             images = algo.samples_mcmc()[0]
             plot_images(
-                images,
-                cfg.train.save_dir,
-                algo=None,
+                images=images,
+                save_dir=cfg.train.save_dir,
+                algo=algo,
                 transform_back=complete_dataset.transform_back,
                 name="samples_best",
                 step="",

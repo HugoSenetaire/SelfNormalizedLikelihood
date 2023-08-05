@@ -13,5 +13,4 @@ save_dir: null
 multi_gpu: single
 val_check_interval: null
 save_energy_every: 100
-samples_every: 50
-log_every_n_steps: 47
+samples_every: 2000

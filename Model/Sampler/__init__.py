@@ -1,5 +1,6 @@
 import logging
 
+from .hmc_grathwohl import *
 from .nuts import NutsSampler
 
 logging.basicConfig(
