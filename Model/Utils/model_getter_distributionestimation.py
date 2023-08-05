@@ -3,7 +3,11 @@ import numpy as np
 from ..EBMsAndMethod import EBMRegression, ImportanceWeightedEBM
 from ..Energy import get_energy, get_explicit_bias
 from ..Proposals import get_base_dist, get_proposal
-from .init_proposals import init_energy_to_gaussian, init_proposal_to_data
+from .init_proposals import (
+    init_energy_to_gaussian,
+    init_energy_to_proposal,
+    init_proposal_to_data,
+)
 
 
 def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
@@ -46,19 +50,25 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
     if base_dist is None and cfg.energy.ebm_pretraining is None:
         print("Careful, no base_dist given, the energy might not be well initialized")
 
-    if cfg.energy.ebm_pretraining == "gaussian":
-        print("Init energy to standard gaussian")
-        energy = init_energy_to_gaussian(
-            energy, input_size, complete_dataset.dataset_train, cfg
-        )
-        print("Init energy to standard gaussian... end")
-
     if cfg.proposal_training.proposal_pretraining == "data":
         print("Init proposal")
         proposal = init_proposal_to_data(
             proposal=proposal, input_size=input_size, dataloader=loader_train, cfg=cfg
         )
         print("Init proposal... end")
+
+    if cfg.energy.ebm_pretraining == "gaussian":
+        print("Init energy to standard gaussian")
+        energy = init_energy_to_gaussian(
+            energy, input_size, complete_dataset.dataset_train, cfg
+        )
+        print("Init energy to standard gaussian... end")
+    elif cfg.energy.ebm_pretraining == "proposal":
+        print("Init energy to proposal")
+        energy = init_energy_to_proposal(
+            energy, proposal, input_size, complete_dataset.dataset_train, cfg
+        )
+        print("Init energy to proposal... end")
 
     explicit_bias = get_explicit_bias(cfg)
 

@@ -26,7 +26,7 @@ def init_energy_to_gaussian(energy, input_size, dataset, cfg):
     )
 
     dist = Normal(data.mean(0), data.std(0))
-    ranges = tqdm.tqdm(range(10000))
+    ranges = tqdm.tqdm(range(2000))
     for k in ranges:
         x = dist.sample((1000,)).to(device)
         target_energy = -dist.log_prob(x).reshape(1000, -1).sum(dim=1).to(device)
@@ -45,16 +45,35 @@ def init_energy_to_gaussian(energy, input_size, dataset, cfg):
             f"Loss : {loss.item()} Norm of the energy : {current_energy.mean().item()} Norm of the target energy : {target_energy.mean().item()}"
         )
         optimizer.step()
-        # time.sleep(1)
-    x = dist.sample((10000,))
-    log_prob = dist.log_prob(x).sum(dim=1)
-    norm = (-energy(x).flatten() - log_prob).exp().mean()
-    print("=====================================")
-    print(f"Norm of the energy : {norm}")
-    print("=====================================")
     energy = energy.to(torch.device("cpu"))
 
     return energy
+
+
+def init_energy_to_proposal(energy, proposal, input_size, dataset, cfg):
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    energy = energy.to(device)
+    proposal = proposal.to(device)
+    optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
+
+    for k in tqdm.tqdm(range(1000)):
+        x = proposal.sample(1024).to(device)
+        target_energy = -proposal.log_prob(x).reshape(1024, -1).sum(dim=1).to(device)
+        # target_energy =  0.5 * (x**2).flatten(1).sum(dim=1)
+        current_energy = (
+            energy(x)
+            .reshape(
+                1024,
+            )
+            .to(device)
+        )
+        loss = ((current_energy - target_energy) ** 2).mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
 
 def init_energy_to_gaussian_regression(
