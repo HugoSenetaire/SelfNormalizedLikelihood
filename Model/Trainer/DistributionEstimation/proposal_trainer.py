@@ -44,12 +44,11 @@ class ProposalTrainer(AbstractDistributionEstimation):
         )
         self.log("train_proposal_log_likelihood", log_prob_proposal_data.mean())
         loss_proposal = -log_prob_proposal_data.mean()
-        self.manual_backward(
-            (loss_proposal), inputs=list(self.ebm.proposal.parameters())
-        )
+        proposal_opt.zero_grad()
+        self.manual_backward(loss_proposal, inputs=list(self.ebm.proposal.parameters()))
         self.log("train_loss", loss_proposal)
+
         proposal_opt.step()
         # Update the parameters of the ebm
-        ebm_opt.step()
 
         return loss_proposal.mean()
