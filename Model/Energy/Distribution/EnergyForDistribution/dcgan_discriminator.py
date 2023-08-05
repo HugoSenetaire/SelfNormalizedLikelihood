@@ -16,7 +16,6 @@ def get_BNDC_GAN_Discriminator(input_size, cfg):
         in_channels=input_size[0],
         ngf=cfg.ngf,
         nout=cfg.nout,
-        img_size=input_size[1],
     )
 
 
@@ -60,15 +59,15 @@ def DCGANDiscriminator(in_channels=3, ngf=64, nout=1, img_size=32, weight_norm=F
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ngf) x 16 x 16
             nn.Conv2d(ngf, 2 * ngf, 4, 2, 1),
-            # nn.BatchNorm2d(ngf * 2),
+            nn.BatchNorm2d(ngf * 2),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ngf*2) x 8 x 8
             nn.Conv2d(2 * ngf, 4 * ngf, 4, 2, 1),
-            # nn.BatchNorm2d(ngf * 4),
+            nn.BatchNorm2d(ngf * 4),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ngf*4) x 4 x 4
             nn.Conv2d(4 * ngf, 8 * ngf, 4, 2, 1),
-            # nn.BatchNorm2d(ngf * 8),
+            nn.BatchNorm2d(ngf * 8),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ngf*8) x 2 x 2
             nn.Conv2d(8 * ngf, nout, final_kernel, 1, 0, bias=False),

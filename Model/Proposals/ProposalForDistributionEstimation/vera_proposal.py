@@ -58,7 +58,10 @@ class VERAHMCGenerator(AbstractProposal):
         return self.sample_vera(nb_sample)[0]
 
     def log_prob_simple(self, x):
-        return self.logq_joint(x, self.sample_vera(x.shape[0], return_mu=True)[1])
+        return self.logq_joint(
+            x,
+            self.sample_vera(x.shape[0], return_mu=True)[1],
+        )
 
     def sample_vera(self, n, requires_grad=False, return_mu=False, return_both=False):
         """sample x, h ~ q(x, h)"""

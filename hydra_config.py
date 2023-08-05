@@ -156,6 +156,7 @@ class BaseProposalConfig:
     # If data in [0,1], sigmoid, if data in [-1,1], tanh, else None
     ngf: Optional[int] = 64  # Number of channels after the first conv of DCGAN
     feats: Optional[int] = 128  # Features for the Resnet
+    h_dim: Optional[int] = 128  # Hidden dimension for the MLP
 
 
 @dataclass
@@ -178,6 +179,7 @@ class BaseProposalTrainingConfig:
     train_proposal: bool = MISSING
     proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
+    clip_grad_norm: Optional[Union[float, None]] = None
 
     def __post_init__(self):
         if self.train_proposal:
@@ -210,6 +212,7 @@ class NutsConfig(BaseSamplerConfig):
     num_samples: int = MISSING
     warmup_steps: int = MISSING
     thinning: int = MISSING
+    multiprocess: Optional[bool] = False
 
 
 @dataclass
@@ -232,7 +235,7 @@ class BaseTrainConfig:
     pg_control: Optional[float] = 0.1
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
-    save_locally: Optional[bool] = True
+    save_locally: Optional[bool] = False
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -267,7 +270,7 @@ class Machine:
     wandb_path: Optional[str] = MISSING
 
     def __post_init__(self):
-        if self.machine == "karolina":
+        if self.machine == "karolina" or self.machine == "dtu_cluser":
             self.wandb_path = pathlib.Path(
                 pathlib.Path.home().parent.parent, self.wandb_path
             )
