@@ -71,7 +71,7 @@ def main(cfg):
         complete_dataset=complete_dataset,
     )
 
-    nb_gpu, accelerator, strategy = get_accelerator(cfg)
+    nb_gpu, accelerator, devices, strategy = get_accelerator(cfg)
 
     if cfg.train.load_from_checkpoint or cfg.train.just_test:
         ckpt_dir = os.path.join(cfg.train.save_dir, "val_checkpoint")
@@ -92,16 +92,31 @@ def main(cfg):
         cfg.train.max_steps = max_steps
     val_check_interval = cfg.train.val_check_interval
 
-    # Get Trainer
+    if cfg.machine is not None:
+        if cfg.machine.machine == "karolina":
+            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
+            logger_trainer = WandbLogger(
+                project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path
+            )
+        else:
+            print(f"Working on {cfg.machine.machine = }")
+            logger_trainer = WandbLogger(project="SelfNormalizedLikelihood")
+    else:
+        print("You have not specified a machine")
+        logger_trainer = True
+        # Get Trainer
     trainer = pl.Trainer(
         accelerator=accelerator,
         default_root_dir=cfg.train.save_dir,
         callbacks=checkpoints,
         strategy=strategy,
+        devices=nb_gpu,
         precision=16,
         max_steps=cfg.train.max_steps,
         resume_from_checkpoint=ckpt_path,
         val_check_interval=val_check_interval,
+        logger=logger_trainer,
+        log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
     if not cfg.train.just_test:
@@ -113,6 +128,7 @@ def main(cfg):
     trainer.test(algo, dataloaders=test_loader)
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
+            print(f"Prod = 2")
             samples = algo.samples_mcmc()[0].flatten(1)
             plot_energy_2d(
                 algo=algo,
@@ -125,11 +141,12 @@ def main(cfg):
                 ],
             )
         else:
+            print(f"IMAGES!")
             images = algo.samples_mcmc()[0]
             plot_images(
-                images,
-                cfg.train.save_dir,
-                algo=None,
+                images=images,
+                save_dir=cfg.train.save_dir,
+                algo=algo,
                 transform_back=complete_dataset.transform_back,
                 name="samples_best",
                 step="",

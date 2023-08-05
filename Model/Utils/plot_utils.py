@@ -41,7 +41,8 @@ def plot_energy_2d(
 
     xx, yy = np.meshgrid(x, y)
     xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
-    xy = torch.from_numpy(xy).float()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    xy = torch.from_numpy(xy).float().to(device)
     if energy_type:
         z = (-energy_function(xy)).exp().detach().cpu().numpy()
     else:
@@ -57,7 +58,7 @@ def plot_energy_2d(
 
     for i, (s, s_title) in enumerate(zip(samples, samples_title)):
         if s is not None:
-            current_s = s[:1000].detach()
+            current_s = s[:1000].cpu().detach()
             axs[i + 1].contourf(x, y, z, 100)
             axs[i + 1].scatter(current_s[:, 0], current_s[:, 1], c="r", alpha=0.1)
             axs[i + 1].set_title(s_title)
@@ -302,6 +303,8 @@ def plot_images(
     init_samples=None,
     step="",
 ):
+    print(f"GOIN TO PLOT IN {save_dir = }")
+
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     if transform_back is not None:
@@ -318,9 +321,9 @@ def plot_images(
     grid = torchvision.utils.make_grid(
         images,
     )
-    torchvision.utils.save_image(
-        grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
-    )
+    # torchvision.utils.save_image(
+    #     grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
+    # )
     try:
         algo.logger.log_image(
             key="{}.png".format(
@@ -329,6 +332,7 @@ def plot_images(
             images=[grid],
         )
     except AttributeError as e:
+        print(f"{algo = }")
         print(
             e,
         )

@@ -1,5 +1,6 @@
 import logging
 import os
+import pathlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -230,6 +231,7 @@ class BaseTrainConfig:
     sigma: Optional[float] = None
     pg_control: Optional[float] = 0.1
     entropy_weight: Optional[float] = 0.0001
+    log_every_n_steps: int = MISSING
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -259,6 +261,20 @@ class BaseTrainConfig:
 
 
 @dataclass
+class Machine:
+    machine: str = MISSING
+    wandb_path: Optional[str] = MISSING
+
+    def __post_init__(self):
+        if self.machine == "karolina":
+            self.wandb_path = pathlib.Path(
+                pathlib.Path.home().parent.parent, self.wandb_path
+            )
+        else:
+            self.wandb_path = None
+
+
+@dataclass
 class Config:
     base_distribution: BaseBaseDistributionConfig = MISSING
     dataset: BaseDatasetConfig = MISSING
@@ -272,6 +288,7 @@ class Config:
     explicit_bias: BaseExplicitBiasConfig = MISSING
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler: Optional[Union[BaseSchedulerConfig, None]] = None
+    machine: Optional[Machine] = None
 
     # def _complete_dataset(self):
     #     self.dataset.seed = self.train.seed
@@ -364,6 +381,11 @@ def store_main():
     # Samplers
     cs.store(name="base_sampler_config_name", group="sampler", node=BaseSamplerConfig)
     cs.store(name="nuts_name", group="sampler", node=NutsConfig)
+
+    # Machine
+    cs.store(name="karolina_name", group="machine", node=Machine)
+    cs.store(name="local_name", group="machine", node=Machine)
+    cs.store(name="dtu_cluster_name", group="machine", node=Machine)
 
 
 @hydra.main(version_base="1.1", config_name="config", config_path="conf")

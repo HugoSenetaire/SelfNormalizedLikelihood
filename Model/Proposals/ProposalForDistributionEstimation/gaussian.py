@@ -35,6 +35,8 @@ class Gaussian(AbstractProposal):
         super().__init__(input_size=input_size)
         print("Init Standard Gaussian...")
         data = self.get_data(dataset, nb_sample_estimate)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        data = data.to(self.device)
 
         if mean == "dataset":
             self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=False)
@@ -57,4 +59,5 @@ class Gaussian(AbstractProposal):
 
     def log_prob_simple(self, x):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
+        x = x.to(self.device)
         return self.distribution.log_prob(x).flatten(1).sum(1)

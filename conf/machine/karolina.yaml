@@ -1,0 +1,4 @@
+defaults:
+  - karolina_name
+machine: "karolina"
+wandb_path: "scratch/project/dd-23-57/wandb_log_SNL"
