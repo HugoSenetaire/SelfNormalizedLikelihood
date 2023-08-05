@@ -18,12 +18,13 @@ def init_energy_to_gaussian(energy, input_size, dataset, cfg):
     energy = energy.to(device)
     optimizer = torch.optim.Adam(energy.parameters(), lr=1e-3)
 
+    index = np.random.choice(len(dataset), min(10000, len(dataset)))
     data = (
-        torch.cat([dataset[i][0] for i in range(len(dataset))])
-        .reshape(-1, *dataset[0][0].shape)
-        .flatten(1)
+        torch.cat([dataset.__getitem__(i)["data"] for i in index])
+        .reshape(-1, *input_size)
         .to(device)
     )
+
     dist = Normal(data.mean(0), data.std(0))
     ranges = tqdm.tqdm(range(10000))
     for k in ranges:
