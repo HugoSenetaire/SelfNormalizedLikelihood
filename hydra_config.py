@@ -139,6 +139,7 @@ class BaseProposalConfig:
     real_nvp_num_blocks: Optional[int] = 3  # Used in RealNVP proposal
     real_nvp_preprocess: Optional[bool] = False  # Used in RealNVP proposal
     real_nvp_k: Optional[int] = 256  # Used in RealNVP proposal
+    epochs: Optional[int] = 10  # Used in RealNVP proposal
 
     network_proposal_name: Optional[str] = "DCGAN"  # Used in network proposal
     noise_dim: Optional[int] = 2  # Used in vera proposal

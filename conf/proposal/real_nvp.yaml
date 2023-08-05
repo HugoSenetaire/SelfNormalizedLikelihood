@@ -6,3 +6,4 @@ real_nvp_mid_channels : 8
 real_nvp_num_blocks : 4
 real_nvp_preprocess : false
 real_nvp_k : 256
+epochs: 10
