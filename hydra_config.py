@@ -280,7 +280,8 @@ class Config:
     base_distribution: BaseBaseDistributionConfig = MISSING
     dataset: BaseDatasetConfig = MISSING
     energy: BaseEnergyConfig = MISSING
-    optim: BaseOptimConfig = MISSING
+    optim_energy: BaseOptimConfig = MISSING
+    optim_proposal: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
     proposal: BaseProposalConfig = MISSING
     default_proposal: Optional[Union[BaseProposalConfig, None]] = None
@@ -288,7 +289,8 @@ class Config:
     feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
-    scheduler: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_energy: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
     machine: Optional[Machine] = None
 
     # def _complete_dataset(self):
@@ -321,8 +323,12 @@ def store_main():
     )
 
     # Optimizers
-    cs.store(name="base_optim_config_name", group="optim", node=BaseOptimConfig)
-    cs.store(name="adamw_name", group="optim", node=AdamwConfig)
+    cs.store(name="base_optim_config_name", group="optim_energy", node=BaseOptimConfig)
+    cs.store(name="adamw_name", group="optim_energy", node=AdamwConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
+    )
+    cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
 
     # Scheduler
     cs.store(

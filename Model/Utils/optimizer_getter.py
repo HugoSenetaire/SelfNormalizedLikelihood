@@ -7,23 +7,27 @@ import torch
 def _get_adamw(cfg, list_parameters_gen):
     optim = torch.optim.AdamW(
         itertools.chain(*list_parameters_gen),
-        lr=cfg.optim.lr,
-        betas=(cfg.optim.b1, cfg.optim.b2),
-        eps=cfg.optim.eps,
-        weight_decay=cfg.optim.weight_decay,
+        lr=cfg.lr,
+        betas=(cfg.b1, cfg.b2),
+        eps=cfg.eps,
+        weight_decay=cfg.weight_decay,
     )
     return optim
 
 
 def get_optimizer(cfg, list_parameters_gen):
-    if cfg.optim.optimizer == "adamw":
+    if cfg.optimizer == "adamw":
         return _get_adamw(cfg, list_parameters_gen)
     else:
         raise ValueError("Optimizer name not valid")
 
 
 def get_scheduler(cfg, optim):
-    if cfg.scheduler is None or cfg.scheduler.scheduler_name is None or cfg.scheduler.scheduler_name == "no_scheduler":
+    if (
+        cfg is None
+        or cfg.scheduler_name is None
+        or cfg.scheduler_name == "no_scheduler"
+    ):
         return None
 
 

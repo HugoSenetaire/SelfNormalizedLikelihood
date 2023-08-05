@@ -470,8 +470,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 if name != "proposal"
             ]
         # parameters_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer(cfg=self.cfg, list_parameters_gen=parameters_ebm)
-        ebm_sch = get_scheduler(cfg=self.cfg, optim=ebm_opt)
+        ebm_opt = get_optimizer(
+            cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm
+        )
+        ebm_sch = get_scheduler(cfg=self.cfg.scheduler_energy, optim=ebm_opt)
 
         if (
             not self.cfg.proposal_training.train_proposal
@@ -486,9 +488,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 else []
             )
             proposal_opt = get_optimizer(
-                cfg=self.cfg, list_parameters_gen=parameters_proposal
+                cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal
             )
-            proposal_sch = get_scheduler(cfg=self.cfg, optim=proposal_opt)
+            proposal_sch = get_scheduler(
+                cfg=self.cfg.scheduler_proposal, optim=proposal_opt
+            )
 
         opt_list = [ebm_opt]
         if proposal_opt is not None:

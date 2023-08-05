@@ -9,7 +9,8 @@ defaults:
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution
-  - optim: adamw
+  - optim_energy: adamw
+  - optim_proposal: adamw
   - sampler: nuts
   - machine: dtu_cluster
 

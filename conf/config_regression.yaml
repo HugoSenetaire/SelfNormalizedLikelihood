@@ -8,6 +8,7 @@ defaults:
   - feature_extractor : toy_feature_extractor
   - explicit_bias : 1_layer_fc
   - train: self_normalized_regression
-  - optim: adamw
+  - optim_energy: adamw
+  - optim_proposal: adamw
   - sampler: nuts
 
