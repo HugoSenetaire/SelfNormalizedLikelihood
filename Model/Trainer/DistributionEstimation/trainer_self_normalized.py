@@ -36,6 +36,8 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
+        ebm_opt.zero_grad()
+        proposal_opt.zero_grad()
 
         x = batch["data"]
         if self.pg_control > 0:
@@ -65,25 +67,25 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train_loss_grad_energy", loss_grad_energy)
         # self.log("train_loss_grad_estimate_z", loss_grad_estimate_z)
 
-        # Backward ebmxx
-        ebm_opt.zero_grad()
+        # Backward ebm
         self.manual_backward(
             loss_total,
-            retain_graph=True,
         )
+        ebm_opt.step()
+        ebm_opt.zero_grad()
+        proposal_opt.zero_grad()
 
-        # torch.nn.utils.clip_grad_norm_(self.ebm.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(self.ebm.parameters(), 1.0)
 
         # Update the parameters of the proposal
         self._proposal_step(
             x=x,
-            estimate_log_z=estimate_log_z,
+            estimate_log_z=None,
             proposal_opt=proposal_opt,
             dic_output=dic_output,
         )
 
         # Update the parameters of the ebm
-        ebm_opt.step()
         dic_output.update(dic)
 
         self.post_train_step_handler(
