@@ -137,7 +137,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         return current_energy, dic_output
 
-    def estimate_log_z(self, x, nb_sample=1000):
+    def estimate_log_z(self, x, nb_sample=1000, detach_sample=True):
         """
         Estimate the log-normalization of the ebm using the proposal.
 
@@ -164,6 +164,8 @@ class ImportanceWeightedEBM(nn.Module):
         x = x.to(device)
 
         samples_proposal = self.sample(nb_sample).to(x.device, x.dtype)
+        if detach_sample:
+            samples_proposal = samples_proposal.detach()
 
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal = (
