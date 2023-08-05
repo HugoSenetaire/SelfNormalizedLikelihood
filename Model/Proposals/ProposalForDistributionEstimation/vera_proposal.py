@@ -176,7 +176,11 @@ class VERAGenerator(VERAHMCGenerator):
         log_q = log_q.view(num_samples_posterior, x.shape[0])
         w = (log_q - inf_dist.log_prob(h_given_x).sum(2)).softmax(dim=0)
         fvals = (x.unsqueeze(0) - mean_output) / (self.logsigma.exp() ** 2)
-        w = w.reshape(num_samples_posterior, x.shape[0], *list(np.ones(len(x.shape))))
+        w = w.reshape(
+            num_samples_posterior,
+            x.shape[0],
+            *list(np.ones(len(x.shape[1:]), dtype=int))
+        )
         weighted_fvals = (fvals * w).sum(0).detach()
         c = weighted_fvals
         mgn = c.norm(2, 1).mean()
