@@ -12,5 +12,5 @@ defaults:
   - optim_energy: adamw
   - optim_proposal: adamw
   - sampler: nuts
-  - machine: karolina
+  - machine: dtu_cluster
 

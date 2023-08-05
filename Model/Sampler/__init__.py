@@ -23,4 +23,5 @@ def get_sampler(cfg):
             num_samples=cfg.sampler.num_samples,
             warmup_steps=cfg.sampler.warmup_steps,
             thinning=cfg.sampler.thinning,
+            multiprocess=cfg.sampler.multiprocess,
         )

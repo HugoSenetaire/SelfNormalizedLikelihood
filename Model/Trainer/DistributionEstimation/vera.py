@@ -20,7 +20,6 @@ class VERA(AbstractDistributionEstimation):
             cfg=cfg,
             complete_dataset=complete_dataset,
         )
-        self.pg_control = cfg.train.pg_control
         self.entropy_weight = cfg.train.entropy_weight
         assert (
             self.ebm.proposal != self.ebm.base_dist
@@ -64,15 +63,17 @@ class VERA(AbstractDistributionEstimation):
         for key in dic_output_gen.keys():
             dic_output[key + "_egen"] = dic_output_gen[key]
         dic_output.update(dic_output_gen)
-        loss_energy = energy_data.mean() - energy_gen.mean()
+        log_p_data = -energy_data.mean()
+        log_p_gen = -energy_gen.mean()
+        log_p_obj = log_p_data - log_p_gen
 
         grad_e_data = (
-            torch.autograd.grad(-energy_data.sum(), x, create_graph=True)[0]
+            torch.autograd.grad(log_p_data.sum(), x, create_graph=True)[0]
             .flatten(start_dim=1)
             .norm(2, 1)
         )
 
-        loss_total = loss_energy + self.pg_control * (grad_e_data**2.0 / 2.0).mean()
+        loss_total = -log_p_obj + self.pg_control * (grad_e_data**2.0 / 2.0).mean()
         self.log("train_loss", loss_total)
 
         # Backward ebm
@@ -94,7 +95,7 @@ class VERA(AbstractDistributionEstimation):
 
         logq_obj = -energy_gen.mean() + self.entropy_weight * entropy_obj
 
-        proposal_loss = logq_obj
+        proposal_loss = -logq_obj
         dic_output["proposal_loss"] = proposal_loss
 
         proposal_opt.zero_grad()

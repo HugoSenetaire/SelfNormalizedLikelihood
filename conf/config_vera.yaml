@@ -1,11 +1,11 @@
 defaults:
   - base_config
-  - dataset: mnist_paddedto32
+  - dataset: checkerboard
   - base_distribution: gaussian_larger
   - default_proposal: gaussian # Only used when proposal is adaptive
-  - proposal: vera
+  - proposal: vera_small
   - proposal_training : log_prob
-  - energy: dc_gan_distribution
+  - energy: fc_distribution
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: vera_distribution

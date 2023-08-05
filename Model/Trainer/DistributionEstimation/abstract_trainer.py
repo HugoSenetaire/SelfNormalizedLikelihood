@@ -97,6 +97,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.num_samples_train = cfg.proposal_training.num_sample_proposal
         self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
         self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
+        self.pg_control = cfg.train.pg_control
 
         self.training_steps_outputs = []
         self.validation_step_outputs = []
@@ -165,6 +166,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
             self.manual_backward(
                 (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
             )
+            if self.cfg.proposal_training.clip_grad_norm is not None:
+                torch.nn.utils.clip_grad_norm_(
+                    parameters=self.ebm.proposal.parameters(),
+                    max_norm=self.cfg.proposal_training.clip_grad_norm,
+                )
             proposal_opt.step()
 
     def post_train_step_handler(self, x, dic_output):
@@ -257,13 +263,18 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.base_dist_visualization()
         self.plot_energy()
         self.plot_samples()
+        self.validation_step_outputs = []
 
-    def on_test_epoch_end(self, outputs):
+    def on_test_epoch_end(
+        self,
+    ):
         """
         Gather the energy from the batches in the test step.
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         """
+        outputs = self.test_step_outputs
         self.update_dic_logger(outputs, name="test")
+        self.test_step_outputs = []
 
     def resample_base_dist(
         self,
@@ -561,6 +572,20 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
         for key in dic_output:
             self.log(key, dic_output[key])
+
+    def gradient_control_l2(self, x, loss_energy):
+        """
+        Add a gradient control term to the loss.
+        """
+        if self.pg_control == 0:
+            return 0
+        else:
+            grad_e_data = (
+                torch.autograd.grad(-loss_energy.sum(), x, create_graph=True)[0]
+                .flatten(start_dim=1)
+                .norm(2, 1)
+            )
+            return self.pg_control * (grad_e_data**2.0 / 2.0).mean()
 
     def plot_energy(
         self,
