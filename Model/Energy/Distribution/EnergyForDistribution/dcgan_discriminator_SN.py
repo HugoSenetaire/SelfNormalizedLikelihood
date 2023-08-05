@@ -2,13 +2,12 @@ import torch.nn as nn
 from torch.nn.utils.parametrizations import spectral_norm
 
 
-def get_DC_GAN_Discriminator(input_size, cfg):
-    return DCGANDiscriminator(
+def get_DC_GAN_DiscriminatorSN(input_size, cfg):
+    return DCGANDiscriminatorSN(
         in_channels=input_size[0],
         ngf=cfg.ngf,
         nout=cfg.nout,
         img_size=input_size[1],
-        weight_norm=cfg.weight_norm,
     )
 
 
@@ -21,7 +20,7 @@ def get_BNDC_GAN_Discriminator(input_size, cfg):
     )
 
 
-def DCGANDiscriminator(in_channels=3, ngf=64, nout=1, img_size=32, weight_norm=False):
+def DCGANDiscriminatorSN(in_channels=3, ngf=64, nout=1, img_size=32):
     """
     DCGAN Discriminator.
     """
@@ -31,50 +30,26 @@ def DCGANDiscriminator(in_channels=3, ngf=64, nout=1, img_size=32, weight_norm=F
         final_kernel = 4
     else:
         raise ValueError
-    if weight_norm:
-        return nn.Sequential(
-            # input is (nc) x 32 x 32
-            nn.utils.weight_norm(nn.Conv2d(in_channels, ngf, 4, 2, 1)),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf) x 16 x 16
-            nn.utils.weight_norm(nn.Conv2d(ngf, 2 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*2) x 8 x 8
-            nn.utils.weight_norm(nn.Conv2d(2 * ngf, 4 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*4) x 4 x 4
-            nn.utils.weight_norm(nn.Conv2d(4 * ngf, 8 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*8) x 2 x 2
-            nn.utils.weight_norm(
-                nn.Conv2d(8 * ngf, nout, final_kernel, 1, 0, bias=False)
-            ),
-            nn.Flatten(start_dim=1),
-        )
-    else:
-        return nn.Sequential(
-            # input is (nc) x 32 x 32
-            spectral_norm(nn.Conv2d(in_channels, ngf, 4, 2, 1)),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf) x 16 x 16
-            spectral_norm(nn.Conv2d(ngf, 2 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*2) x 8 x 8
-            spectral_norm(nn.Conv2d(2 * ngf, 4 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*4) x 4 x 4
-            spectral_norm(nn.Conv2d(4 * ngf, 8 * ngf, 4, 2, 1)),
-            # nn.BatchNorm2d(ngf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ngf*8) x 2 x 2
-            spectral_norm(nn.Conv2d(8 * ngf, nout, final_kernel, 1, 0, bias=False)),
-            nn.Flatten(start_dim=1),
-        )
+    return nn.Sequential(
+        # input is (nc) x 32 x 32
+        spectral_norm(nn.Conv2d(in_channels, ngf, 4, 2, 1)),
+        nn.LeakyReLU(0.2, inplace=True),
+        # state size. (ngf) x 16 x 16
+        spectral_norm(nn.Conv2d(ngf, 2 * ngf, 4, 2, 1)),
+        # nn.BatchNorm2d(ngf * 2),
+        nn.LeakyReLU(0.2, inplace=True),
+        # state size. (ngf*2) x 8 x 8
+        spectral_norm(nn.Conv2d(2 * ngf, 4 * ngf, 4, 2, 1)),
+        # nn.BatchNorm2d(ngf * 4),
+        nn.LeakyReLU(0.2, inplace=True),
+        # state size. (ngf*4) x 4 x 4
+        spectral_norm(nn.Conv2d(4 * ngf, 8 * ngf, 4, 2, 1)),
+        # nn.BatchNorm2d(ngf * 8),
+        nn.LeakyReLU(0.2, inplace=True),
+        # state size. (ngf*8) x 2 x 2
+        spectral_norm(nn.Conv2d(8 * ngf, nout, final_kernel, 1, 0, bias=False)),
+        nn.Flatten(start_dim=1),
+    )
 
 
 def BNDCGANDiscriminator(in_channels=3, ngf=64, nout=1):

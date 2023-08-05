@@ -2,6 +2,7 @@ from .EnergyForDistribution import (
     get_BNDC_GAN_Discriminator,
     get_ConvEnergy,
     get_DC_GAN_Discriminator,
+    get_DC_GAN_DiscriminatorSN,
     get_EnergyCategoricalDistrib,
     get_EnergyIsing,
     get_EnergyPoissonDistribution,
@@ -18,6 +19,7 @@ dic_energy = {
     "poisson": get_EnergyPoissonDistribution,
     "ising": get_EnergyIsing,
     "dc_gan": get_DC_GAN_Discriminator,
+    "dc_gan_sn": get_DC_GAN_DiscriminatorSN,
     "resnet": get_ResNetDiscriminator,
     "bndc_gan": get_BNDC_GAN_Discriminator,
 }
