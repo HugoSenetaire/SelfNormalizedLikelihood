@@ -54,7 +54,7 @@ class VERA(AbstractDistributionEstimation):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
 
-        x = batch["data"]
+        x = batch["data"].requires_grad_()
         x_gen, h_gen = self.ebm.proposal.sample_vera(self.num_samples_train)
         x_gen_detach = x_gen.detach()
 
