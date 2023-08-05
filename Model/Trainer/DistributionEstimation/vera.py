@@ -1,3 +1,5 @@
+import torch
+
 from ...Utils import get_optimizer, get_scheduler
 from .abstract_trainer import AbstractDistributionEstimation
 
