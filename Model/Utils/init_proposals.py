@@ -74,6 +74,7 @@ def init_energy_to_proposal(energy, proposal, input_size, dataset, cfg):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+    return energy
 
 
 def init_energy_to_gaussian_regression(
