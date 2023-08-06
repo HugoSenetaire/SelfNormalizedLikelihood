@@ -42,8 +42,8 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         x_gen = self.ebm.proposal.sample(self.num_samples_train).detach()
         energy_samples, dic_output = self.ebm.calculate_energy(x_gen)
         proposal_log_prob = self.ebm.proposal.log_prob(x_gen)
-        loss_energy = (energy_samples + proposal_log_prob).pow(2).mean()
-        return loss_energy
+        # loss_energy = (energy_samples + proposal_log_prob).pow(2).mean()
+        return energy_samples, proposal_log_prob
 
     def training_step(self, batch, batch_idx):
         # Get parameters
@@ -99,7 +99,14 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen
         )
 
-        loss_regul_control = self.cfg.optim_energy.coef_regul * self.regul_loss()
+        energy_samples, proposal_log_prob = self.regul_loss()
+        self.log("train/loss_regul_energy_samples_mean", energy_samples.mean())
+        self.log("train/loss_regul_proposal_log_prob_mean", proposal_log_prob.mean())
+
+        loss_regul_control = (
+            self.cfg.optim_energy.coef_regul
+            * (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
+        )
 
         loss_total = (
             loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control
@@ -111,11 +118,14 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
         self.log("train/loss_regul_control", loss_regul_control)
-        self.log("train/noise_annealing", calculate_current_noise_annealing(
+        self.log(
+            "train/noise_annealing",
+            calculate_current_noise_annealing(
                 self.global_step,
                 self.cfg.train.noise_annealing_init,
                 self.cfg.train.noise_annealing_gamma,
-            ))
+            ),
+        )
 
         # Backward ebm
         self.manual_backward(
