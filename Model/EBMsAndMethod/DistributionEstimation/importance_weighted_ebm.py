@@ -144,6 +144,7 @@ class ImportanceWeightedEBM(nn.Module):
         detach_sample=True,
         requires_grad=False,
         return_samples=False,
+        noise_annealing=0.0,
     ):
         """
         Estimate the log-normalization of the ebm using the proposal.
@@ -176,21 +177,31 @@ class ImportanceWeightedEBM(nn.Module):
         if requires_grad:
             samples_proposal.requires_grad = True
 
+        if noise_annealing > 1e-4:
+            epsilon = torch.rand_like(samples_proposal)
+            noise_to_add = epsilon * noise_annealing
+            log_prob_noise = torch.distributions.Normal(0,1).log_prob(epsilon).reshape((samples_proposal.shape[0],-1))
+            samples_proposal_noisy = samples_proposal + noise_to_add
+        else:
+            samples_proposal_noisy = samples_proposal
+
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal = (
-            self.energy(samples_proposal)
+            self.energy(samples_proposal_noisy)
             .view(samples_proposal.size(0), -1)
             .sum(1)
             .unsqueeze(1)
         )
         if self.explicit_bias:
             f_theta_proposal = self.explicit_bias(f_theta_proposal)
-        dic_output["z_estimation/f_theta_on_gen"] = f_theta_proposal  # Store the energy without the base distribution
+        dic_output[
+            "z_estimation/f_theta_on_gen"
+        ] = f_theta_proposal  # Store the energy without the base distribution
 
         # Add the base distribution and proposal contributions to the energy if they are different
-        if self.base_dist != self.proposal:
+        if self.base_dist != self.proposal or noise_annealing > 1e-4:
             base_dist_log_prob = (
-                self.base_dist.log_prob(samples_proposal)
+                self.base_dist.log_prob(samples_proposal_noisy)
                 .view(samples_proposal.size(0), -1)
                 .sum(1)
                 .unsqueeze(1)
@@ -201,7 +212,7 @@ class ImportanceWeightedEBM(nn.Module):
                 .sum(1)
                 .unsqueeze(1)
             )
-            aux_prob = base_dist_log_prob - samples_proposal_log_prob
+            aux_prob = base_dist_log_prob - samples_proposal_log_prob - log_prob_noise
             log_z_estimate = (-f_theta_proposal + aux_prob).flatten()
 
             dic_output.update(
@@ -224,7 +235,7 @@ class ImportanceWeightedEBM(nn.Module):
         dic_output["z_estimation/log_z"] = log_z_estimate
         dic_output["z_estimation/ESS_estimate"] = ESS_estimate
         if return_samples:
-            return log_z_estimate, dic_output, samples_proposal
+            return log_z_estimate, dic_output, samples_proposal, samples_proposal_noisy
         return log_z_estimate, dic_output
 
     def forward(self, x):

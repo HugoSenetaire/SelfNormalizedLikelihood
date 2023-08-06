@@ -1,5 +1,6 @@
 import torch
 
+from ...Utils.noise_annealing import calculate_current_noise_annealing
 from .abstract_trainer import AbstractDistributionEstimation
 
 
@@ -36,10 +37,15 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
+
+        x = batch["data"]
+        if self.cfg.train.bias_training_iter > 0:
+            self.train_bias(x, ebm_opt, self.cfg.train.bias_training_iter)
+
         ebm_opt.zero_grad()
         if proposal_opt is not None:
             proposal_opt.zero_grad()
-        self.configure_gradient_flow('energy')
+        self.configure_gradient_flow("energy")
 
         x = batch["data"]
         x = x.requires_grad_()
@@ -53,16 +59,24 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             detach_sample=True,
             requires_grad=True,
             return_samples=True,
+            noise_annealing=calculate_current_noise_annealing(
+                self.global_step,
+                self.cfg.train.noise_annealing_init,
+                self.cfg.train.noise_annealing_gamma,
+            ),
         )
         # self.ebm.apply(set_bn_to_train)
 
         energy_samples, dic_output = self.ebm.calculate_energy(x)
 
         estimate_log_z = estimate_log_z.mean()
-        if (self.cfg.train.start_with_IS_until is not None and self.global_step < self.cfg.train.start_with_IS_until):
+        if (
+            self.cfg.train.start_with_IS_until is not None
+            and self.global_step < self.cfg.train.start_with_IS_until
+        ):
             loss_estimate_z = estimate_log_z
         else:
-            loss_estimate_z = estimate_log_z.exp()
+            loss_estimate_z = estimate_log_z.exp() - 1
 
         loss_energy = energy_samples.mean()
         loss_total = loss_energy + loss_estimate_z
