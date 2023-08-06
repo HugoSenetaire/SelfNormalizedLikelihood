@@ -105,6 +105,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/loss_estimate_z", loss_estimate_z)
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
+        self.log("train/loss_regul_control", loss_regul_control)
 
         # Backward ebm
         self.manual_backward(
