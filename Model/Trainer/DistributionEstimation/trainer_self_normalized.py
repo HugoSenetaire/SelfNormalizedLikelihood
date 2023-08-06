@@ -87,7 +87,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             loss_estimate_z = estimate_log_z.exp() - 1
 
         loss_energy = energy_samples.mean()
-        loss_total = loss_energy + loss_estimate_z + self.cfg.optim_energy.coef_regul * self.regul_loss()
+        loss_total = loss_energy + loss_estimate_z 
 
         loss_grad_energy = self.gradient_control_l2(
             x, loss_energy, self.cfg.optim_energy.pg_control_data
@@ -95,7 +95,10 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         loss_grad_estimate_z = self.gradient_control_l2(
             x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen
         )
-        loss_total = loss_total + loss_grad_energy + loss_grad_estimate_z
+
+        loss_regul_control = self.cfg.optim_energy.coef_regul * self.regul_loss()
+
+        loss_total = loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
