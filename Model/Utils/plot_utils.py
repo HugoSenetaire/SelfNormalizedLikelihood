@@ -325,10 +325,13 @@ def plot_images(
     grid = torchvision.utils.make_grid(
         images,
     )
+    grid[0, 0, 0] = torch.zeros_like(grid[0, 0, 0])
+    grid[0, 0, 1] = torch.ones_like(grid[0, 0, 1])
     if algo.cfg.train.save_locally:
         torchvision.utils.save_image(
             grid, os.path.join(save_dir, "{}_{}.png".format(name, step))
         )
+
     try:
         algo.logger.log_image(
             key="{}.png".format(
