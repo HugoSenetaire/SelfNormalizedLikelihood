@@ -495,46 +495,26 @@ class AbstractDistributionEstimation(pl.LightningModule):
             opt_list (list): The list of optimizers
             sch_list (list): The list of schedulers
         """
-        parameters_ebm = [
-            self.ebm.energy.parameters(),
-            self.ebm.base_dist.parameters(),
-        ]
-        if (
-            self.cfg.proposal_training.train_proposal
-            and self.ebm.proposal == self.ebm.base_dist
-        ):
+        parameters_ebm = [self.ebm.energy.parameters(), self.ebm.base_dist.parameters(),]
+        if (self.cfg.proposal_training.train_proposal and self.ebm.proposal == self.ebm.base_dist):
             # In case the base dist is equal to the proposal, I can't train both of them with the same loss
             # If I want to train the proposal it takes priority over the base distribution
-
             print("Proposal takes priority here")
         else:
             parameters_ebm.append(self.ebm.base_dist.parameters())
 
         # parameters_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer(
-            cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm
-        )
+        ebm_opt = get_optimizer(cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm)
         ebm_sch = get_scheduler(cfg=self.cfg.scheduler_energy, optim=ebm_opt)
         opt_list = [ebm_opt]
 
-        if (
-            not self.cfg.proposal_training.train_proposal
-            and self.ebm.proposal == self.ebm.base_dist
-        ):
+        if (not self.cfg.proposal_training.train_proposal and self.ebm.proposal == self.ebm.base_dist):
             proposal_opt = None
             proposal_sch = None
         else:
-            parameters_proposal = (
-                [self.ebm.proposal.parameters()]
-                if self.ebm.proposal is not None
-                else []
-            )
-            proposal_opt = get_optimizer(
-                cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal
-            )
-            proposal_sch = get_scheduler(
-                cfg=self.cfg.scheduler_proposal, optim=proposal_opt
-            )
+            parameters_proposal = ([self.ebm.proposal.parameters()] if self.ebm.proposal is not None else [])
+            proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal)
+            proposal_sch = get_scheduler(cfg=self.cfg.scheduler_proposal, optim=proposal_opt)
 
         if proposal_opt is not None:
             opt_list.append(proposal_opt)
