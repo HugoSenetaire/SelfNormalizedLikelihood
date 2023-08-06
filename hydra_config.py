@@ -185,7 +185,7 @@ class BaseProposalTrainingConfig:
     train_proposal: bool = MISSING
     proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
-    extra_noise_proposal: Optional[float] = 0.1
+    extra_noise_proposal: Optional[float] = 0.0
 
     def __post_init__(self):
         if self.train_proposal:
