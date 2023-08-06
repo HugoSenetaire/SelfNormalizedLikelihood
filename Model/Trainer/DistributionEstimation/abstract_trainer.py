@@ -161,7 +161,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
         if self.train_proposal:
             self.configure_gradient_flow("proposal")
             proposal_opt.zero_grad()
-            self.stupid_test(x, suffix="proposal_training_before")
             if estimate_log_z is None:
                 estimate_log_z, dic = self.ebm.estimate_log_z(
                     x,
@@ -201,7 +200,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     max_norm=self.cfg.optim_proposal.clip_grad_norm,
                 )
             proposal_opt.step()
-            self.stupid_test(x, suffix="proposal_training_after")
 
 
             return proposal_loss.mean(), dic
