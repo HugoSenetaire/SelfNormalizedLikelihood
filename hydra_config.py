@@ -263,6 +263,8 @@ class BaseTrainConfig:
     log_every_n_steps: int = MISSING
     save_locally: Optional[bool] = False
     start_with_IS_until: Optional[Union[None, int]] = None
+    bias_training_iter: Optional[int] = 10
+    lr_bias: Optional[float] = 1e-3
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:

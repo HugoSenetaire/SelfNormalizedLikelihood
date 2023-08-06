@@ -202,6 +202,36 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
             return proposal_loss.mean(), dic
 
+    def train_bias(
+        self,
+        x,
+        ebm_opt,
+        nb_iteration,
+    ):
+        self.fix_base_dist()
+        self.fix_energy()
+        self.fix_proposal()
+        for param in self.ebm.explicit_bias.parameters():
+            param.requires_grad = True
+        for i in range(nb_iteration):
+            # self.configure_gradient_flow("bias")
+            ebm_opt.zero_grad()
+            loss_estimate_z, _ = self.ebm.estimate_log_z(x, self.num_samples_train)
+            loss_estimate_z = loss_estimate_z.exp() - 1
+            if torch.isnan(loss_estimate_z) or torch.isinf(loss_estimate_z):
+                logger.info("Loss estimate z is nan or inf")
+                break
+            self.manual_backward(loss_estimate_z.mean())
+            # for param_group in ebm_opt.param_groups:
+            # param_group['lr']
+            for param in self.ebm.explicit_bias.parameters():
+                param.data = param.data + self.cfg.train.lr_bias * param
+            self.log(f"train_bias/loss_estimate_z_{i}", loss_estimate_z.mean())
+            self.log(
+                f"train_bias/bias_value{i}",
+                self.ebm.explicit_bias.bias.cpu().detach(),
+            )
+
     def post_train_step_handler(self, x, dic_output):
         """
         Function called at the end of a train_step.
