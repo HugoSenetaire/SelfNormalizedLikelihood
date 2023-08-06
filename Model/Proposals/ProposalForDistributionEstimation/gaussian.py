@@ -39,13 +39,13 @@ class Gaussian(AbstractProposal):
         data = data.to(self.device)
 
         if mean == "dataset":
-            self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=False)
+            self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=True)
         else:
             raise NotImplementedError
 
         if std == "dataset":
             self.log_std = nn.parameter.Parameter(
-                (data.std(0) * std_multiplier).log(), requires_grad=False
+                (data.std(0) * std_multiplier).log(), requires_grad=True
             )
         else:
             raise NotImplementedError

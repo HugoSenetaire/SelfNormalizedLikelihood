@@ -37,18 +37,22 @@ class ProposalTrainer(AbstractDistributionEstimation):
         ebm_opt, proposal_opt = self.optimizers_perso()
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        dic_output = {}
         x = batch["data"].to(device)
 
-        log_prob_proposal_data = self.ebm.proposal.log_prob(
-            x,
+        proposal_loss, dic = self._proposal_step(
+            x=x,
+            estimate_log_z=None,
+            proposal_opt=proposal_opt,
+            dic_output=dic_output,
         )
-        self.log("train_proposal_log_likelihood", log_prob_proposal_data.mean())
-        loss_proposal = -log_prob_proposal_data.mean()
-        proposal_opt.zero_grad()
-        self.manual_backward(loss_proposal, inputs=list(self.ebm.proposal.parameters()))
-        self.log("train_loss", loss_proposal)
+        self.log('train/loss_total', proposal_loss)
 
-        proposal_opt.step()
-        # Update the parameters of the ebm
 
-        return loss_proposal.mean()
+        self.post_train_step_handler(
+            x,
+            dic_output,
+        )
+
+
+        return dic_output

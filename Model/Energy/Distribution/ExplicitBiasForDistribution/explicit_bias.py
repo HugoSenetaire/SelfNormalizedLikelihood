@@ -1,6 +1,5 @@
+import torch
 import torch.nn as nn
-import torch 
-
 
 
 class MockBias(nn.Module):
@@ -10,7 +9,7 @@ class MockBias(nn.Module):
     def __init__(self, input_size_x_feature=1, ):
         super().__init__()
         self.input_size_x_feature = input_size_x_feature
-        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=False)
+        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=True)
     
     def forward(self, x):
         return x

@@ -30,7 +30,7 @@ class NoiseGradationAdaptiveProposal(AbstractAdaptiveProposal):
         current_std = data.std(0)
         for k in range(self.nb_gradation):
             std_aux = std_aux + [current_std.clone() * self.ranges_std[k]]
-        self.std = nn.Parameter(torch.stack(std_aux), requires_grad=False)
+        self.std = nn.Parameter(torch.stack(std_aux), requires_grad=True)
         
 
         

@@ -58,12 +58,12 @@ def setup_callbacks(
     checkpoint_callback_val = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.train.save_dir, "val_checkpoint"),
         save_top_k=2,
-        monitor="val_loss",
+        monitor="val/loss_total",
     )
     checkpoint_callback_train = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.train.save_dir, "train_checkpoint"),
         save_top_k=2,
-        monitor="train_loss",
+        monitor="train/loss_total",
     )
     checkpoints = [checkpoint_callback_val, checkpoint_callback_train]
     if cfg.train.decay_ema is not None and cfg.train.decay_ema > 0:

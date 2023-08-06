@@ -1,6 +1,6 @@
 defaults:
   - base_train_config_name
-trainer_name: 'self_normalized'
+trainer_name: 'just_proposal'
 max_steps: null
 max_epochs: 100
 output_folder: './Results'

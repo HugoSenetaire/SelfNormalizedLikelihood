@@ -106,7 +106,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         # Get the energy of the samples without base distribution
         f_theta = self.energy(x)
-        dic_output["f_theta"] = f_theta
+        dic_output["f_theta_on_data"] = f_theta
         if (
             self.training
             and self.proposal is not None
@@ -129,15 +129,22 @@ class ImportanceWeightedEBM(nn.Module):
             base_dist_log_prob = (
                 self.base_dist.log_prob(x).view(x.size(0), -1).sum(1).unsqueeze(1)
             )
-            dic_output["base_dist_log_prob"] = base_dist_log_prob
+            dic_output["base_dist_loglikelihood_on_data"] = base_dist_log_prob
         else:
             base_dist_log_prob = torch.zeros_like(f_theta)
         current_energy = f_theta - base_dist_log_prob
-        dic_output["energy"] = current_energy
+        dic_output["energy_on_data"] = current_energy
 
         return current_energy, dic_output
 
-    def estimate_log_z(self, x, nb_sample=1000, detach_sample=True):
+    def estimate_log_z(
+        self,
+        x,
+        nb_sample=1000,
+        detach_sample=True,
+        requires_grad=False,
+        return_samples=False,
+    ):
         """
         Estimate the log-normalization of the ebm using the proposal.
 
@@ -166,6 +173,8 @@ class ImportanceWeightedEBM(nn.Module):
         samples_proposal = self.sample(nb_sample).to(x.device, x.dtype)
         if detach_sample:
             samples_proposal = samples_proposal.detach()
+        if requires_grad:
+            samples_proposal.requires_grad = True
 
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal = (
@@ -176,9 +185,7 @@ class ImportanceWeightedEBM(nn.Module):
         )
         if self.explicit_bias:
             f_theta_proposal = self.explicit_bias(f_theta_proposal)
-        dic_output[
-            "f_theta_proposal"
-        ] = f_theta_proposal  # Store the energy without the base distribution
+        dic_output["z_estimation/f_theta_on_gen"] = f_theta_proposal  # Store the energy without the base distribution
 
         # Add the base distribution and proposal contributions to the energy if they are different
         if self.base_dist != self.proposal:
@@ -199,9 +206,9 @@ class ImportanceWeightedEBM(nn.Module):
 
             dic_output.update(
                 {
-                    "base_dist_log_prob_proposal": base_dist_log_prob,
-                    "proposal_log_prob_proposal": samples_proposal_log_prob,
-                    "aux_prob_proposal": aux_prob,
+                    "z_estimation/base_dist_loglikelihood_on_sample_proposal": base_dist_log_prob,
+                    "z_estimation/proposal_loglikelihood_on_sample_proposal": samples_proposal_log_prob,
+                    "z_estimation/aux_prob_on_sample_proposal": aux_prob,
                 }
             )
         else:
@@ -214,8 +221,10 @@ class ImportanceWeightedEBM(nn.Module):
             torch.tensor(nb_sample, dtype=x.dtype, device=x.device)
         )
 
-        dic_output["log_z_estimate"] = log_z_estimate
-        dic_output["ESS_estimate"] = ESS_estimate
+        dic_output["z_estimation/log_z"] = log_z_estimate
+        dic_output["z_estimation/ESS_estimate"] = ESS_estimate
+        if return_samples:
+            return log_z_estimate, dic_output, samples_proposal
         return log_z_estimate, dic_output
 
     def forward(self, x):

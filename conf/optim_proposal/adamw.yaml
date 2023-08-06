@@ -1,7 +1,7 @@
 defaults:
   - adamw_name
 optimizer: "adamw"
-lr: 0.0001
+lr: 0.001
 b1: 0.0
 b2: 0.999
 eps: 1.0e-8

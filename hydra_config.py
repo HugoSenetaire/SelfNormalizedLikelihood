@@ -81,6 +81,9 @@ class BaseFeatureExtractorConfig:
 @dataclass
 class BaseOptimConfig:
     optimizer: str = MISSING
+    clip_grad_norm: Optional[float] = None
+    pg_control_data: Optional[float] = 0.0
+    pg_control_gen: Optional[float] = 0.0
 
 
 @dataclass
@@ -91,6 +94,8 @@ class AdamwConfig(BaseOptimConfig):
     b1: float = MISSING
     b2: float = MISSING
     eps: float = MISSING
+    pg_control_data: Optional[float] = 0.0
+    pg_control_gen: Optional[float] = 0.0
 
 
 @dataclass
@@ -180,7 +185,7 @@ class BaseProposalTrainingConfig:
     train_proposal: bool = MISSING
     proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
-    clip_grad_norm: Optional[Union[float, None]] = None
+    extra_noise_proposal: Optional[float] = 0.1
 
     def __post_init__(self):
         if self.train_proposal:
@@ -233,10 +238,10 @@ class BaseTrainConfig:
     save_energy_every: int = MISSING
     samples_every: int = MISSING
     sigma: Optional[float] = None
-    pg_control: Optional[float] = 0.1
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
     save_locally: Optional[bool] = False
+    start_with_IS_until: Optional[Union[None, int]] = None
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:

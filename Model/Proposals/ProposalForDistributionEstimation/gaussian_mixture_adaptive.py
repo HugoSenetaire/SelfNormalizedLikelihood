@@ -44,7 +44,7 @@ class GaussianMixtureAdaptiveProposal(AbstractAdaptiveProposal):
         super().__init__(input_size=input_size, default_proposal=default_proposal)
         data = self.get_data(dataset, nb_sample_estimate)
         data += torch.randn_like(data) * 1e-2
-        self.std = nn.Parameter(data.std(0).reshape(input_size) * std_multiplier, requires_grad=False)
+        self.std = nn.Parameter(data.std(0).reshape(input_size) * std_multiplier, requires_grad=True)
         self.x = None
         
         
