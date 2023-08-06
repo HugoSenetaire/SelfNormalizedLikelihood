@@ -183,6 +183,7 @@ class ImportanceWeightedEBM(nn.Module):
             log_prob_noise = torch.distributions.Normal(0,1).log_prob(epsilon).reshape((samples_proposal.shape[0],-1))
             samples_proposal_noisy = samples_proposal + noise_to_add
         else:
+            log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
             samples_proposal_noisy = samples_proposal
 
         # Get the energy of the samples_proposal without base distribution
@@ -197,7 +198,6 @@ class ImportanceWeightedEBM(nn.Module):
         dic_output[
             "z_estimation/f_theta_on_gen"
         ] = f_theta_proposal  # Store the energy without the base distribution
-
         # Add the base distribution and proposal contributions to the energy if they are different
         if self.base_dist != self.proposal or noise_annealing > 1e-4:
             base_dist_log_prob = (
