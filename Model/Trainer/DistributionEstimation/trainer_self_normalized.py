@@ -106,6 +106,11 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
         self.log("train/loss_regul_control", loss_regul_control)
+        self.log("train/noise_annealing", calculate_current_noise_annealing(
+                self.global_step,
+                self.cfg.train.noise_annealing_init,
+                self.cfg.train.noise_annealing_gamma,
+            ))
 
         # Backward ebm
         self.manual_backward(
