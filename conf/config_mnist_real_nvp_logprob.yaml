@@ -11,6 +11,8 @@ defaults:
   - train: self_normalized_distribution
   - optim_energy: adamw
   - optim_proposal: adamw
+  - scheduler_energy: cyclic_lr
+  - scheduler_proposal: cyclic_lr
   - sampler: nuts_mnist
   - machine: dtu_cluster
 
