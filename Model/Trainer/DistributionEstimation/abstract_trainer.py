@@ -141,7 +141,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
         watch(self.ebm.proposal, log="all", log_freq=self.cfg.train.log_every_n_steps)
         watch(self.ebm.base_dist, log="all", log_freq=self.cfg.train.log_every_n_steps)
 
-
     def training_step(self, batch, batch_idx):
         """
         The training step to be defined in inherited classes.
@@ -201,7 +200,6 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 )
             proposal_opt.step()
 
-
             return proposal_loss.mean(), dic
 
     def post_train_step_handler(self, x, dic_output):
@@ -218,6 +216,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
             dic_output (dict): The dictionary of outputs from the EBM
         """
         # Just in case it's an adaptive proposal that requires x
+        for scheduler in self.lr_schedulers():
+            # print(scheduler)
+            if scheduler is not None:
+                scheduler.step()
         with torch.no_grad():
             if hasattr(self.ebm.proposal, "set_x"):
                 self.ebm.proposal.set_x(None)
@@ -482,50 +484,62 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     step=self.global_step,
                 )
 
-    def fix_energy(self,):
+    def fix_energy(
+        self,
+    ):
         for param in self.ebm.energy.parameters():
             param.requires_grad = False
         for param in self.ebm.explicit_bias.parameters():
             param.requires_grad = False
 
-    def free_energy(self,):
+    def free_energy(
+        self,
+    ):
         for param in self.ebm.energy.parameters():
             param.requires_grad = True
         for param in self.ebm.explicit_bias.parameters():
             param.requires_grad = True
-    
-    def fix_proposal(self,):
+
+    def fix_proposal(
+        self,
+    ):
         for param in self.ebm.proposal.parameters():
             param.requires_grad = False
-    
-    def free_proposal(self,):
+
+    def free_proposal(
+        self,
+    ):
         for param in self.ebm.proposal.parameters():
             param.requires_grad = True
 
-    def fix_base_dist(self,):
+    def fix_base_dist(
+        self,
+    ):
         for param in self.ebm.base_dist.parameters():
             param.requires_grad = False
-    
-    def free_base_dist(self,):
+
+    def free_base_dist(
+        self,
+    ):
         for param in self.ebm.base_dist.parameters():
             param.requires_grad = True
 
-    def configure_gradient_flow(self, task = 'energy'):
-        if task == 'energy':
+    def configure_gradient_flow(self, task="energy"):
+        if task == "energy":
             self.free_energy()
-            if self.ebm.base_dist == self.ebm.proposal :
-                if self.train_base_dist :
+            if self.ebm.base_dist == self.ebm.proposal:
+                if self.train_base_dist:
                     self.free_base_dist()
-                else :
+                else:
                     self.fix_base_dist()
                     self.fix_proposal()
-            else :
+            else:
                 self.fix_proposal()
                 if self.train_base_dist:
                     self.free_base_dist()
-                else :
+                else:
                     self.fix_base_dist()
-        elif task == 'proposal':
+        elif task == "proposal":
             self.fix_base_dist()
             self.fix_energy()
             self.free_proposal()
@@ -544,8 +558,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
             opt_list (list): The list of optimizers
             sch_list (list): The list of schedulers
         """
-        parameters_ebm = [self.ebm.energy.parameters(), self.ebm.base_dist.parameters(),]
-        if (self.cfg.proposal_training.train_proposal and self.ebm.proposal == self.ebm.base_dist):
+        parameters_ebm = [
+            self.ebm.energy.parameters(),
+            self.ebm.base_dist.parameters(),
+        ]
+        if (
+            self.cfg.proposal_training.train_proposal
+            and self.ebm.proposal == self.ebm.base_dist
+        ):
             # In case the base dist is equal to the proposal, I can't train both of them with the same loss
             # If I want to train the proposal it takes priority over the base distribution
             print("Proposal takes priority here")
@@ -553,28 +573,44 @@ class AbstractDistributionEstimation(pl.LightningModule):
             parameters_ebm.append(self.ebm.base_dist.parameters())
 
         # parameters_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer(cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm)
+        ebm_opt = get_optimizer(
+            cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm
+        )
         ebm_sch = get_scheduler(cfg=self.cfg.scheduler_energy, optim=ebm_opt)
         opt_list = [ebm_opt]
+        sch_list = [ebm_sch]
 
-        if (not self.cfg.proposal_training.train_proposal and self.ebm.proposal == self.ebm.base_dist):
+        if (
+            not self.cfg.proposal_training.train_proposal
+            and self.ebm.proposal == self.ebm.base_dist
+        ):
             proposal_opt = None
             proposal_sch = None
         else:
-            parameters_proposal = ([self.ebm.proposal.parameters()] if self.ebm.proposal is not None else [])
-            proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal)
-            proposal_sch = get_scheduler(cfg=self.cfg.scheduler_proposal, optim=proposal_opt)
+            parameters_proposal = (
+                [self.ebm.proposal.parameters()]
+                if self.ebm.proposal is not None
+                else []
+            )
+            proposal_opt = get_optimizer(
+                cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal
+            )
+            proposal_sch = get_scheduler(
+                cfg=self.cfg.scheduler_proposal, optim=proposal_opt
+            )
 
         if proposal_opt is not None:
             opt_list.append(proposal_opt)
-        if ebm_sch is not None and proposal_sch is not None:
-            return opt_list, [ebm_sch, proposal_sch]
-        elif ebm_sch is not None:
-            return opt_list, ebm_sch
-        elif proposal_sch is not None:
-            return opt_list, proposal_sch
-        else:
-            return opt_list
+            sch_list.append(proposal_sch)
+        return opt_list, sch_list
+        # if ebm_sch is not None and proposal_sch is not None:
+        #     return opt_list, [ebm_sch, proposal_sch]
+        # elif ebm_sch is not None:
+        #     return opt_list, ebm_sch
+        # elif proposal_sch is not None:
+        #     return opt_list, proposal_sch
+        # else:
+        #     return opt_list
 
     def optimizers_perso(self):
         """

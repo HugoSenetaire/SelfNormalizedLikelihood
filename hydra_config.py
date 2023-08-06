@@ -102,6 +102,27 @@ class AdamwConfig(BaseOptimConfig):
 class BaseSchedulerConfig:
     scheduler_name: str = MISSING
 
+    step_size: Optional[int] = None
+    gamma: Optional[float] = None
+
+    base_lr: Optional[float] = None
+    max_lr: Optional[float] = None
+    step_size_up: Optional[int] = None
+    cycle_momentum: Optional[bool] = True
+
+    T_max: Optional[int] = None
+    eta_min: Optional[float] = None
+
+    mode: Optional[str] = "min"  # min, max
+    factor: Optional[float] = 0.1
+    patience: Optional[int] = 10
+    threshold: Optional[float] = 1e-4
+    threshold_mode: Optional[str] = "rel"  # rel, abs
+    cooldown: Optional[int] = 0
+    min_lr: Optional[float] = 0
+    eps: Optional[float] = 1e-8
+    verbose: Optional[bool] = False
+
 
 @dataclass
 class BaseProposalConfig:
@@ -341,9 +362,15 @@ def store_main():
 
     # Scheduler
     cs.store(
-        name="base_scheduler_config_name", group="scheduler", node=BaseSchedulerConfig
+        name="base_scheduler_config_name",
+        group="scheduler_energy",
+        node=BaseSchedulerConfig,
     )
-
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_proposal",
+        node=BaseSchedulerConfig,
+    )
     # Proposal training
     cs.store(
         name="base_proposal_training_config_name",

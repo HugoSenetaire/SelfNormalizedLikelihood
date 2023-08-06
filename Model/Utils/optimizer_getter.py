@@ -2,6 +2,7 @@ import itertools
 
 import dadaptation
 import torch
+import torch.optim.lr_scheduler as lr_scheduler
 
 
 def _get_adamw(cfg, list_parameters_gen):
@@ -29,6 +30,35 @@ def get_scheduler(cfg, optim):
         or cfg.scheduler_name == "no_scheduler"
     ):
         return None
+    elif cfg.scheduler_name == "step_lr":
+        return lr_scheduler.StepLR(optim, step_size=cfg.step_size, gamma=cfg.gamma)
+    elif cfg.scheduler_name == "cyclic_lr":
+        return lr_scheduler.CyclicLR(
+            optim,
+            base_lr=cfg.base_lr,
+            max_lr=cfg.max_lr,
+            step_size_up=cfg.step_size_up,
+            cycle_momentum=False,
+        )
+    elif cfg.scheduler_name == "cosine_lr":
+        return lr_scheduler.CosineAnnealingLR(
+            optim, T_max=cfg.T_max, eta_min=cfg.eta_min
+        )
+    elif cfg.scheduler_name == "reduce_lr_on_plateau":
+        return lr_scheduler.ReduceLROnPlateau(
+            optim,
+            mode=cfg.mode,
+            factor=cfg.factor,
+            patience=cfg.patience,
+            threshold=cfg.threshold,
+            threshold_mode=cfg.threshold_mode,
+            cooldown=cfg.cooldown,
+            min_lr=cfg.min_lr,
+            eps=cfg.eps,
+            verbose=cfg.verbose,
+        )
+    else:
+        raise ValueError("Scheduler name not valid")
 
 
 # def get_optimizer(args_dict, list_parameters_gen):

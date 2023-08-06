@@ -70,4 +70,6 @@ def setup_callbacks(
         ema_callback = EMA(decay=cfg.train.decay_ema)
         checkpoints.append(ema_callback)
 
+    checkpoints.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
+
     return checkpoint_callback_val, checkpoints
