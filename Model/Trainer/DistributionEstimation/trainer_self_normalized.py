@@ -34,6 +34,14 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             complete_dataset=complete_dataset,
         )
 
+    def regul_loss(self,):
+        if self.cfg.optim_energy.coef_regul <0.0:
+            return 0
+        x_gen = self.ebm.proposal.sample(self.num_samples_train).detach()
+        energy_samples, dic_output = self.ebm.calculate_energy(x_gen)
+        proposal_log_prob = self.ebm.proposal.log_prob(x_gen)
+        loss_energy = (energy_samples + proposal_log_prob).pow(2).mean()
+        return loss_energy
     def training_step(self, batch, batch_idx):
         # Get parameters
         ebm_opt, proposal_opt = self.optimizers_perso()
@@ -53,7 +61,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             self.ebm.proposal.set_x(x)
 
         # self.ebm.apply(set_bn_to_eval)
-        estimate_log_z, dic, x_gen = self.ebm.estimate_log_z(
+        estimate_log_z, dic, x_gen, x_gen_noisy = self.ebm.estimate_log_z(
             x,
             self.num_samples_train,
             detach_sample=True,
@@ -79,7 +87,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             loss_estimate_z = estimate_log_z.exp() - 1
 
         loss_energy = energy_samples.mean()
-        loss_total = loss_energy + loss_estimate_z
+        loss_total = loss_energy + loss_estimate_z + self.cfg.optim_energy.coef_regul * self.regul_loss()
 
         loss_grad_energy = self.gradient_control_l2(
             x, loss_energy, self.cfg.optim_energy.pg_control_data

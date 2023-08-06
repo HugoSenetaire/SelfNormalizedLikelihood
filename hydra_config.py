@@ -96,6 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
+    coef_regul : Optional[float] = 1.0
 
 
 @dataclass
