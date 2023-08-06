@@ -219,28 +219,29 @@ class AbstractDistributionEstimation(pl.LightningModule):
             dic_output (dict): The dictionary of outputs from the EBM
         """
         # Just in case it's an adaptive proposal that requires x
-        if hasattr(self.ebm.proposal, "set_x"):
-            self.ebm.proposal.set_x(None)
-        self.ebm.eval()
+        with torch.no_grad():
+            if hasattr(self.ebm.proposal, "set_x"):
+                self.ebm.proposal.set_x(None)
+            self.ebm.eval()
 
-        # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
-        if (
-            self.nb_sample_train_estimate is not None
-            and self.nb_sample_train_estimate > 0
-        ):
-            estimate_log_z, _ = self.ebm.estimate_log_z(
-                x, nb_sample=self.nb_sample_train_estimate
-            )
-            SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
-            log_likelihood = -dic_output["energy"].mean() - estimate_log_z
-            dic_output[f"SNL_{self.nb_sample_train_estimate}"] = SNL_fix_z
-            dic_output[
-                f"log_likelihood_{self.nb_sample_train_estimate}"
-            ] = log_likelihood
+            # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
+            if (
+                self.nb_sample_train_estimate is not None
+                and self.nb_sample_train_estimate > 0
+            ):
+                estimate_log_z, _ = self.ebm.estimate_log_z(
+                    x, nb_sample=self.nb_sample_train_estimate
+                )
+                SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
+                log_likelihood = -dic_output["energy"].mean() - estimate_log_z
+                dic_output[f"SNL_{self.nb_sample_train_estimate}"] = SNL_fix_z
+                dic_output[
+                    f"log_likelihood_{self.nb_sample_train_estimate}"
+                ] = log_likelihood
 
-        for key in dic_output:
-            self.log(f"train/{key}_mean", dic_output[key].mean().item())
-        self.ebm.train()
+            for key in dic_output:
+                self.log(f"train/{key}_mean", dic_output[key].mean().item())
+            self.ebm.train()
 
     def validation_step(self, batch, batch_idx, type="val"):
         """
