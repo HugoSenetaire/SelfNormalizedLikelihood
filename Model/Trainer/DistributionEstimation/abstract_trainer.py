@@ -89,7 +89,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.sampler = get_sampler(
             cfg,
         )
-        if hasattr(self.ebm, "transform_back"):
+        if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
         else:
             self.transform_back = None
