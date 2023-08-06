@@ -39,6 +39,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         ebm_opt.zero_grad()
         if proposal_opt is not None:
             proposal_opt.zero_grad()
+        self.configure_gradient_flow('energy')
 
         x = batch["data"]
         x = x.requires_grad_()

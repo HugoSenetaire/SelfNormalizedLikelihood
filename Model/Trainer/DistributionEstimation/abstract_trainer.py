@@ -159,6 +159,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
             proposal_opt (torch.optim): The optimizer for the proposal parameters
         """
         if self.train_proposal:
+            self.configure_gradient_flow("proposal")
             proposal_opt.zero_grad()
             self.stupid_test(x, suffix="proposal_training_before")
             if estimate_log_z is None:
@@ -482,6 +483,56 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     transform_back=self.transform_back,
                     step=self.global_step,
                 )
+
+    def fix_energy(self,):
+        for param in self.ebm.energy.parameters():
+            param.requires_grad = False
+        for param in self.ebm.explicit_bias.parameters():
+            param.requires_grad = False
+
+    def free_energy(self,):
+        for param in self.ebm.energy.parameters():
+            param.requires_grad = True
+        for param in self.ebm.explicit_bias.parameters():
+            param.requires_grad = True
+    
+    def fix_proposal(self,):
+        for param in self.ebm.proposal.parameters():
+            param.requires_grad = False
+    
+    def free_proposal(self,):
+        for param in self.ebm.proposal.parameters():
+            param.requires_grad = True
+
+    def fix_base_dist(self,):
+        for param in self.ebm.base_dist.parameters():
+            param.requires_grad = False
+    
+    def free_base_dist(self,):
+        for param in self.ebm.base_dist.parameters():
+            param.requires_grad = True
+
+    def configure_gradient_flow(self, task = 'energy'):
+        if task == 'energy':
+            self.free_energy()
+            if self.ebm.base_dist == self.ebm.proposal :
+                if self.train_base_dist :
+                    self.free_base_dist()
+                else :
+                    self.fix_base_dist()
+                    self.fix_proposal()
+            else :
+                self.fix_proposal()
+                if self.train_base_dist:
+                    self.free_base_dist()
+                else :
+                    self.fix_base_dist()
+        elif task == 'proposal':
+            self.fix_base_dist()
+            self.fix_energy()
+            self.free_proposal()
+        else:
+            raise NotImplementedError
 
     def configure_optimizers(self):
         """
