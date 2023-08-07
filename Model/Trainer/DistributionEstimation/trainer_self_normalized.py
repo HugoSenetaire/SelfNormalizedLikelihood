@@ -45,9 +45,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         loss_energy = (
             (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
         )
-        print(f"{energy_samples.shape = }")
-        print(f"{proposal_log_prob.shape = }")
-        raise NotImplementedError
         return loss_energy
 
     def training_step(self, batch, batch_idx):
