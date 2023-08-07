@@ -9,7 +9,8 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
+from Model.Utils.save_dir_utils import (get_accelerator, seed_everything,
+                                        setup_callbacks)
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -62,6 +63,8 @@ def main(cfg):
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
     cfg.dataset.input_size = complete_dataset.get_dim_input()
+
+
 
     # name and save_dir will be in cfg
 

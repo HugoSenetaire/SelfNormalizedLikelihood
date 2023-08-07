@@ -1,7 +1,7 @@
 defaults:
   - base_config
   - dataset: mnist_paddedto32
-  - base_distribution: no_base_distribution
+  - base_distribution: gaussian_larger
   - default_proposal: gaussian # Only used when proposal is adaptive
   - proposal: real_nvp
   - proposal_training : log_prob

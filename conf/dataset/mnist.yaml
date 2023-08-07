@@ -2,5 +2,4 @@ defaults:
   - base_dataset_config_name
 download : True
 dataset_name : 'MNIST'
-
-
+batch_size : 1024

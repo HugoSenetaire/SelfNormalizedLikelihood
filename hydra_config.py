@@ -96,7 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
-    coef_regul : Optional[float] = 1.0
+    coef_regul: Optional[float] = 0.0
 
 
 @dataclass
@@ -268,7 +268,7 @@ class BaseTrainConfig:
     bias_training_iter: Optional[int] = 0
     lr_bias: Optional[float] = 1e-3
 
-    noise_annealing_init: Optional[float] = 0
+    noise_annealing_init: Optional[float] = 0.0
     noise_annealing_gamma: Optional[float] = 0.999
 
     def __post_init__(self):

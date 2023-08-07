@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pytorch_lightning as pl
 import torch
+from omegaconf import OmegaConf, open_dict
 from wandb import watch
 
 from ...Sampler import get_sampler
@@ -82,8 +83,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
         super().__init__()
         self.ebm = ebm
         self.cfg = cfg
+        # self.logger.update
+        # self.save_hyperparameters(OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True), ignore='complete_dataset')
         # self.hparams.update(args_dict)
-        logger.info(f"You might want to save some hparams here")
         self.last_save = -float("inf")  # To save the energy contour plot
         self.last_save_sample = 0  # To save the samples
         self.sampler = get_sampler(
@@ -166,6 +168,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     self.num_samples_train,
                     detach_sample=False,
                 )
+            self.stupid_test(x, suffix="before_proposal")
 
             # TODEL
             count = 0
@@ -174,13 +177,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     # print(name, parameter)
                     self.log("parameter/" + name + str(count), parameter.data.mean())
                     count += 1
-            x_noisy = (
-                x
-                + torch.randn_like(x) * self.cfg.proposal_training.extra_noise_proposal
-            )
-            log_prob_proposal_data = self.ebm.proposal.log_prob(
-                x_noisy,
-            )
+           
+            log_prob_proposal_data = self.ebm.proposal.log_prob(x)
             self.log(
                 "train_proposal/proposal_log_likelihood", log_prob_proposal_data.mean()
             )
@@ -199,6 +197,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     max_norm=self.cfg.optim_proposal.clip_grad_norm,
                 )
             proposal_opt.step()
+            self.stupid_test(x, suffix="after_proposal")
 
             return proposal_loss.mean(), dic
 
@@ -272,6 +271,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
             for key in dic_output:
                 self.log(f"train/{key}_mean", dic_output[key].mean().item())
+
             self.ebm.train()
 
     def validation_step(self, batch, batch_idx, type="val"):
@@ -814,3 +814,36 @@ class AbstractDistributionEstimation(pl.LightningModule):
             else:
                 raise NotImplementedError
             self.last_save_sample = self.global_step
+
+    def stupid_test(self, x, suffix=""):
+        if not hasattr(self, "stupid_x") or self.stupid_x is None:
+            self.stupid_x = torch.cat(
+                [self.ebm.proposal.sample(1).detach().reshape(1,*x.shape[1:]), x[0, None]]
+            )
+        stupid_out_energy = self.ebm.energy(self.stupid_x).mean()
+        if self.ebm.base_dist is not None:
+            stupid_out_base_dist = self.ebm.base_dist.log_prob(self.stupid_x).mean()
+        stupid_out_proposal = self.ebm.proposal.log_prob(self.stupid_x).mean()
+        self.log(f"stupid_test/energy_{suffix}", stupid_out_energy.mean())
+        if self.ebm.base_dist is not None:
+            self.log(f"stupid_test/base_dist_{suffix}", stupid_out_base_dist.mean())
+        self.log(f"stupid_test/proposal_{suffix}", stupid_out_proposal.mean())
+        if "before" in suffix:
+            self.stupid_out_energy_before = stupid_out_energy
+            if self.ebm.base_dist is not None:
+                self.stupid_out_base_dist_before = stupid_out_base_dist
+            self.stupid_out_proposal_before = stupid_out_proposal
+        else:
+            self.log(
+                f"stupid_test/energy_diff_{suffix}",
+                (stupid_out_energy - self.stupid_out_energy_before).abs().max(),
+            )
+            if self.ebm.base_dist is not None:
+                self.log(
+                    f"stupid_test/base_dist_diff_{suffix}",
+                    (stupid_out_base_dist - self.stupid_out_base_dist_before).abs().max(),
+                )
+            self.log(
+                f"stupid_test/proposal_diff_{suffix}",
+                (stupid_out_proposal - self.stupid_out_proposal_before).abs().max(),
+            )

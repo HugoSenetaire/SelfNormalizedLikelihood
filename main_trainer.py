@@ -9,7 +9,8 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
+from Model.Utils.save_dir_utils import (get_accelerator, seed_everything,
+                                        setup_callbacks)
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-@hydra.main(version_base="1.1", config_path="conf", config_name="config_mnist_real_nvp")
+@hydra.main(version_base="1.1", config_path="conf", config_name="config")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
@@ -96,15 +97,21 @@ def main(cfg):
         if cfg.machine.machine == "karolina":
             print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
             logger_trainer = WandbLogger(
-                project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path
+                project="SelfNormalizedLikelihood",
+                save_dir=cfg.machine.wandb_path,
+                config = my_cfg,
             )
         else:
             print(f"Working on {cfg.machine.machine = }")
-            logger_trainer = WandbLogger(project="SelfNormalizedLikelihood")
+            logger_trainer = WandbLogger(
+                project="SelfNormalizedLikelihood",
+                config=my_cfg,
+            )
     else:
         print("You have not specified a machine")
         logger_trainer = True
         # Get Trainer
+
     trainer = pl.Trainer(
         accelerator=accelerator,
         default_root_dir=cfg.train.save_dir,

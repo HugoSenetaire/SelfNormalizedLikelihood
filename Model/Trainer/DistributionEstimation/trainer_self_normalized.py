@@ -37,13 +37,13 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     def regul_loss(
         self,
     ):
-        if self.cfg.optim_energy.coef_regul <= 0.0:
+        if self.cfg.optim_energy.coef_regul < 0.0:
             return 0
         x_gen = self.ebm.proposal.sample(self.num_samples_train).detach()
         energy_samples, dic_output = self.ebm.calculate_energy(x_gen)
         proposal_log_prob = self.ebm.proposal.log_prob(x_gen)
-        # loss_energy = (energy_samples + proposal_log_prob).pow(2).mean()
-        return energy_samples, proposal_log_prob
+        loss_energy = (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
+        return loss_energy
 
     def training_step(self, batch, batch_idx):
         # Get parameters
@@ -58,7 +58,8 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             proposal_opt.zero_grad()
         self.configure_gradient_flow("energy")
 
-        x = batch["data"]
+        self.stupid_test(batch["data"], suffix="before")
+
         x = x.requires_grad_()
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(x)
@@ -70,47 +71,25 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             detach_sample=True,
             requires_grad=True,
             return_samples=True,
-            noise_annealing=calculate_current_noise_annealing(
-                self.global_step,
-                self.cfg.train.noise_annealing_init,
-                self.cfg.train.noise_annealing_gamma,
-            ),
+            noise_annealing=calculate_current_noise_annealing(self.global_step, self.cfg.train.noise_annealing_init, self.cfg.train.noise_annealing_gamma,),
         )
         # self.ebm.apply(set_bn_to_train)
 
-        energy_samples, dic_output = self.ebm.calculate_energy(x)
+        energy_data, dic_output = self.ebm.calculate_energy(x)
 
         estimate_log_z = estimate_log_z.mean()
-        if (
-            self.cfg.train.start_with_IS_until is not None
-            and self.global_step < self.cfg.train.start_with_IS_until
-        ):
+        if (self.cfg.train.start_with_IS_until is not None and self.global_step < self.cfg.train.start_with_IS_until) or ():
             loss_estimate_z = estimate_log_z
         else:
             loss_estimate_z = estimate_log_z.exp() - 1
 
-        loss_energy = energy_samples.mean()
+        loss_energy = energy_data.mean()
         loss_total = loss_energy + loss_estimate_z
+        loss_grad_energy = self.gradient_control_l2(x, loss_energy, self.cfg.optim_energy.pg_control_data)
+        loss_grad_estimate_z = self.gradient_control_l2(x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen )
+        loss_regul_control = self.cfg.optim_energy.coef_regul * self.regul_loss()
 
-        loss_grad_energy = self.gradient_control_l2(
-            x, loss_energy, self.cfg.optim_energy.pg_control_data
-        )
-        loss_grad_estimate_z = self.gradient_control_l2(
-            x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen
-        )
-
-        energy_samples, proposal_log_prob = self.regul_loss()
-        self.log("train/loss_regul_energy_samples_mean", energy_samples.mean())
-        self.log("train/loss_regul_proposal_log_prob_mean", proposal_log_prob.mean())
-
-        loss_regul_control = (
-            self.cfg.optim_energy.coef_regul
-            * (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
-        )
-
-        loss_total = (
-            loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control
-        )
+        loss_total = (loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control)
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
@@ -118,31 +97,35 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
         self.log("train/loss_regul_control", loss_regul_control)
-        self.log(
-            "train/noise_annealing",
-            calculate_current_noise_annealing(
-                self.global_step,
-                self.cfg.train.noise_annealing_init,
-                self.cfg.train.noise_annealing_gamma,
-            ),
-        )
+        self.log("train/noise_annealing",calculate_current_noise_annealing(self.global_step,self.cfg.train.noise_annealing_init,self.cfg.train.noise_annealing_gamma,),)
 
         # Backward ebm
-        self.manual_backward(
-            loss_total,
-        )
+        self.manual_backward(loss_total,)
+
+        # dic_1 = {name : param.grad.norm() for name, param in self.ebm.energy.named_parameters()}
+        # for name in dic_1 :
+        # print(name, dic_1[name])
+
         if self.cfg.optim_energy.clip_grad_norm is not None:
             torch.nn.utils.clip_grad_norm_(
                 parameters=self.ebm.parameters(),
                 max_norm=self.cfg.optim_energy.clip_grad_norm,
             )
+        # self.log("method/full", 1)
+        # self.log("method/no_proposal_zero_grad", 1)
+        # self.log("method/nostep", 1)
         proposal_opt.zero_grad()
         ebm_opt.step()
         ebm_opt.zero_grad()
         if proposal_opt is not None:
             proposal_opt.zero_grad()
 
-        torch.nn.utils.clip_grad_norm_(self.ebm.parameters(), 1.0)
+        self.stupid_test(batch["data"], suffix="after")
+
+        # dic_2 = {name : param.clone().detach().cpu() for name, parawm in self.ebm.base_dist.named_parameters()}
+
+        # for name in dic_1 :
+        #     print(name, (dic_1[name] - dic_2[name[]]).abs().max())
 
         # Update the parameters of the proposal
         self._proposal_step(
