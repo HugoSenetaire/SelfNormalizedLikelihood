@@ -8,6 +8,7 @@ class MockBaseDist(nn.Module):
     '''
     def __init__(self) -> None:
         super().__init__()
+        self.mock_param = torch.nn.parameter.Parameter(torch.zeros(1, requires_grad=False))
     
     def log_prob(self, x):
         '''
