@@ -43,7 +43,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         energy_samples, dic_output = self.ebm.calculate_energy(x_gen)
         proposal_log_prob = self.ebm.proposal.log_prob(x_gen)
         loss_energy = (
-            (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
+            (energy_samples.flatten() / proposal_log_prob.flatten() - 1).pow(2).mean()
         )
         return loss_energy
 
