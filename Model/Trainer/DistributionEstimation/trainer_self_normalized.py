@@ -42,7 +42,12 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         x_gen = self.ebm.proposal.sample(self.num_samples_train).detach()
         energy_samples, dic_output = self.ebm.calculate_energy(x_gen)
         proposal_log_prob = self.ebm.proposal.log_prob(x_gen)
-        loss_energy = (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
+        loss_energy = (
+            (energy_samples.flatten() + proposal_log_prob.flatten()).pow(2).mean()
+        )
+        print(f"{energy_samples.shape = }")
+        print(f"{proposal_log_prob.shape = }")
+        raise NotImplementedError
         return loss_energy
 
     def training_step(self, batch, batch_idx):
@@ -71,25 +76,38 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             detach_sample=True,
             requires_grad=True,
             return_samples=True,
-            noise_annealing=calculate_current_noise_annealing(self.global_step, self.cfg.train.noise_annealing_init, self.cfg.train.noise_annealing_gamma,),
+            noise_annealing=calculate_current_noise_annealing(
+                self.global_step,
+                self.cfg.train.noise_annealing_init,
+                self.cfg.train.noise_annealing_gamma,
+            ),
         )
         # self.ebm.apply(set_bn_to_train)
 
         energy_data, dic_output = self.ebm.calculate_energy(x)
 
         estimate_log_z = estimate_log_z.mean()
-        if (self.cfg.train.start_with_IS_until is not None and self.global_step < self.cfg.train.start_with_IS_until) or ():
+        if (
+            self.cfg.train.start_with_IS_until is not None
+            and self.global_step < self.cfg.train.start_with_IS_until
+        ) or ():
             loss_estimate_z = estimate_log_z
         else:
             loss_estimate_z = estimate_log_z.exp() - 1
 
         loss_energy = energy_data.mean()
         loss_total = loss_energy + loss_estimate_z
-        loss_grad_energy = self.gradient_control_l2(x, loss_energy, self.cfg.optim_energy.pg_control_data)
-        loss_grad_estimate_z = self.gradient_control_l2(x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen )
+        loss_grad_energy = self.gradient_control_l2(
+            x, loss_energy, self.cfg.optim_energy.pg_control_data
+        )
+        loss_grad_estimate_z = self.gradient_control_l2(
+            x_gen, loss_estimate_z, self.cfg.optim_energy.pg_control_gen
+        )
         loss_regul_control = self.cfg.optim_energy.coef_regul * self.regul_loss()
 
-        loss_total = (loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control)
+        loss_total = (
+            loss_total + loss_grad_energy + loss_grad_estimate_z + loss_regul_control
+        )
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
@@ -97,10 +115,19 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
         self.log("train/loss_regul_control", loss_regul_control)
-        self.log("train/noise_annealing",calculate_current_noise_annealing(self.global_step,self.cfg.train.noise_annealing_init,self.cfg.train.noise_annealing_gamma,),)
+        self.log(
+            "train/noise_annealing",
+            calculate_current_noise_annealing(
+                self.global_step,
+                self.cfg.train.noise_annealing_init,
+                self.cfg.train.noise_annealing_gamma,
+            ),
+        )
 
         # Backward ebm
-        self.manual_backward(loss_total,)
+        self.manual_backward(
+            loss_total,
+        )
 
         # dic_1 = {name : param.grad.norm() for name, param in self.ebm.energy.named_parameters()}
         # for name in dic_1 :
