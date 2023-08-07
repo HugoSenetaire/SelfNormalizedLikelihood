@@ -177,6 +177,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     raise NotImplementedError
         else :
             loss,dic_output = self.training_energy(x)
+            if self.train_proposal:
+                loss, dic_output = self.proposal_step(
+                    x,
+                )
+            elif self.train_base_dist:
+                loss,dic_output = self.base_dist_step(
+                    x,
+                )
            
         # loss, dic_output = self.proposal_step(
                     # x,
