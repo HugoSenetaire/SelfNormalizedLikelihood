@@ -207,7 +207,9 @@ class BaseProposalTrainingConfig:
     train_proposal: bool = MISSING
     proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
-    extra_noise_proposal: Optional[float] = 0.0
+    proposal_pretraining_epochs: Optional[int] = 10
+    noise_annealing_init: Optional[float] = 0.0
+    noise_annealing_gamma: Optional[float] = 0.9999
 
     def __post_init__(self):
         if self.train_proposal:
@@ -263,13 +265,15 @@ class BaseTrainConfig:
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
     save_locally: Optional[bool] = False
-    start_with_IS_until: Optional[Union[None, int]] = None
+    start_with_IS_until: Optional[Union[None, int]] = 0
 
     bias_training_iter: Optional[int] = 0
     lr_bias: Optional[float] = 1e-3
 
     noise_annealing_init: Optional[float] = 0.0
     noise_annealing_gamma: Optional[float] = 0.999
+
+    nb_energy_steps: Optional[int] = 0
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -319,6 +323,7 @@ class Config:
     energy: BaseEnergyConfig = MISSING
     optim_energy: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
+    optim_base_dist: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
     proposal: BaseProposalConfig = MISSING
     default_proposal: Optional[Union[BaseProposalConfig, None]] = None
@@ -328,6 +333,7 @@ class Config:
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler_energy: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_base_dist: Optional[Union[BaseSchedulerConfig, None]] = None
     machine: Optional[Machine] = None
 
     # def _complete_dataset(self):
@@ -366,6 +372,8 @@ def store_main():
         name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
     )
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
+    cs.store(name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig)
+    cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler
     cs.store(
@@ -376,6 +384,11 @@ def store_main():
     cs.store(
         name="base_scheduler_config_name",
         group="scheduler_proposal",
+        node=BaseSchedulerConfig,
+    )
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_base_dist",
         node=BaseSchedulerConfig,
     )
     # Proposal training

@@ -38,11 +38,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-@hydra.main(
-    version_base="1.1",
-    config_path="conf",
-    config_name="config_mnist_real_nvp_just_proposal",
-)
+@hydra.main(version_base="1.1", config_path="conf", config_name="config_mnist_real_nvp_just_proposal")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
@@ -63,8 +59,6 @@ def main(cfg):
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
     cfg.dataset.input_size = complete_dataset.get_dim_input()
-
-
 
     # name and save_dir will be in cfg
 
@@ -103,15 +97,21 @@ def main(cfg):
         if cfg.machine.machine == "karolina":
             print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
             logger_trainer = WandbLogger(
-                project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path
+                project="SelfNormalizedLikelihood",
+                save_dir=cfg.machine.wandb_path,
+                config = my_cfg,
             )
         else:
             print(f"Working on {cfg.machine.machine = }")
-            logger_trainer = WandbLogger(project="SelfNormalizedLikelihood")
+            logger_trainer = WandbLogger(
+                project="SelfNormalizedLikelihood",
+                config=my_cfg,
+            )
     else:
         print("You have not specified a machine")
         logger_trainer = True
         # Get Trainer
+
     trainer = pl.Trainer(
         accelerator=accelerator,
         default_root_dir=cfg.train.save_dir,

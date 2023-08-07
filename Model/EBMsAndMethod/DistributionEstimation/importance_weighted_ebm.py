@@ -142,6 +142,7 @@ class ImportanceWeightedEBM(nn.Module):
         x,
         nb_sample=1000,
         detach_sample=True,
+        detach_base_dist = False,
         requires_grad=False,
         return_samples=False,
         noise_annealing=0.0,
@@ -200,18 +201,10 @@ class ImportanceWeightedEBM(nn.Module):
         ] = f_theta_proposal  # Store the energy without the base distribution
         # Add the base distribution and proposal contributions to the energy if they are different
         if self.base_dist != self.proposal or noise_annealing > 1e-4:
-            base_dist_log_prob = (
-                self.base_dist.log_prob(samples_proposal_noisy)
-                .view(samples_proposal.size(0), -1)
-                .sum(1)
-                .unsqueeze(1)
-            )
-            samples_proposal_log_prob = (
-                self.proposal.log_prob(samples_proposal)
-                .reshape(samples_proposal.shape[0], -1)
-                .sum(1)
-                .unsqueeze(1)
-            )
+            base_dist_log_prob = self.base_dist.log_prob(samples_proposal_noisy).view(samples_proposal.size(0), -1).sum(1).unsqueeze(1)
+            if detach_base_dist:
+                base_dist_log_prob = base_dist_log_prob.detach()
+            samples_proposal_log_prob = self.proposal.log_prob(samples_proposal).reshape(samples_proposal.shape[0], -1).sum(1).unsqueeze(1)
             aux_prob = base_dist_log_prob - samples_proposal_log_prob - log_prob_noise
             log_z_estimate = (-f_theta_proposal + aux_prob).flatten()
 
