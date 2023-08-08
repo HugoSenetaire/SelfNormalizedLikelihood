@@ -19,6 +19,7 @@ def get_BNDC_GAN_Discriminator(input_size, cfg):
         img_size=input_size[1],
     )
 
+
 def get_DC_GAN_DiscriminatorSNv2(input_size, cfg):
     return DCGANDiscriminatorSNv2(
         in_channels=input_size[0],
@@ -26,6 +27,7 @@ def get_DC_GAN_DiscriminatorSNv2(input_size, cfg):
         nout=cfg.nout,
         img_size=input_size[1],
     )
+
 
 def DCGANDiscriminatorSN(in_channels=3, ngf=64, nout=1, img_size=32):
     """
@@ -40,18 +42,22 @@ def DCGANDiscriminatorSN(in_channels=3, ngf=64, nout=1, img_size=32):
     return nn.Sequential(
         # input is (nc) x 32 x 32
         spectral_norm(nn.Conv2d(in_channels, ngf, 4, 2, 1)),
+        nn.Dropout2d(0.3),
         nn.LeakyReLU(0.2, inplace=True),
         # state size. (ngf) x 16 x 16
         spectral_norm(nn.Conv2d(ngf, 2 * ngf, 4, 2, 1)),
         # nn.BatchNorm2d(ngf * 2),
+        nn.Dropout2d(0.3),
         nn.LeakyReLU(0.2, inplace=True),
         # state size. (ngf*2) x 8 x 8
         spectral_norm(nn.Conv2d(2 * ngf, 4 * ngf, 4, 2, 1)),
         # nn.BatchNorm2d(ngf * 4),
+        nn.Dropout2d(0.3),
         nn.LeakyReLU(0.2, inplace=True),
         # state size. (ngf*4) x 4 x 4
         spectral_norm(nn.Conv2d(4 * ngf, 8 * ngf, 4, 2, 1)),
         # nn.BatchNorm2d(ngf * 8),
+        nn.Dropout2d(0.3),
         nn.LeakyReLU(0.2, inplace=True),
         # state size. (ngf*8) x 2 x 2
         spectral_norm(nn.Conv2d(8 * ngf, nout, final_kernel, 1, 0, bias=False)),
