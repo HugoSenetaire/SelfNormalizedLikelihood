@@ -269,7 +269,7 @@ class BaseTrainConfig:
     task: str = MISSING
     save_dir: Optional[Path] = None
     multi_gpu: str = MISSING
-    val_check_interval: Optional[bool] = MISSING
+    val_check_interval: Optional[float] = MISSING
     save_energy_every: int = MISSING
     samples_every: int = MISSING
     sigma: Optional[float] = None

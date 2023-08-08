@@ -16,6 +16,7 @@ from .ProposalForDistributionEstimation.maf import get_MAFProposal
 from .ProposalForDistributionEstimation.noise_gradation_adaptive import (
     get_NoiseGradationAdaptiveProposal,
 )
+from .ProposalForDistributionEstimation.gaussian_full import get_GaussianFull
 from .ProposalForDistributionEstimation.poisson import get_Poisson
 from .ProposalForDistributionEstimation.pytorch_flows import get_PytorchFlowsProposal
 from .ProposalForDistributionEstimation.real_nvp_proposal import get_RealNVPProposal
@@ -25,6 +26,7 @@ from .ProposalForRegression import get_UniformRegression
 from .ProposalForRegression.gaussian import get_GaussianRegression
 from .ProposalForRegression.MDNProposal import get_MDNProposalRegression
 from .ProposalForRegression.uniform import get_UniformRegression
+
 
 dic_proposals = {
     "gaussian": get_Gaussian,
@@ -40,6 +42,7 @@ dic_proposals = {
     "vera": get_vera,
     "maf": get_MAFProposal,
     "pytorch_flows": get_PytorchFlowsProposal,
+    'gaussian_full': get_GaussianFull,
 }
 
 

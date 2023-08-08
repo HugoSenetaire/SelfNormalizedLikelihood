@@ -42,8 +42,9 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         proposal_opt.zero_grad()
 
         self.configure_gradient_flow("energy")
-
-
+        if self.train_base_dist :
+            for param in self.ebm.base_dist.parameters():
+                param.requires_grad = True
         current_noise_annealing = calculate_current_noise_annealing(
                 self.current_step,
                 self.cfg.train.noise_annealing_init,
@@ -59,7 +60,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             x,
             self.num_samples_train,
             detach_sample=True,
-            requires_grad=True,
+            requires_grad=False,
             return_samples=True,
             noise_annealing=current_noise_annealing,
         )
@@ -69,13 +70,12 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         if (
             self.cfg.train.start_with_IS_until is not None
             and self.current_step < self.cfg.train.start_with_IS_until
-        ) or ():
+        ) :
             loss_estimate_z = estimate_log_z
         else:
             loss_estimate_z = estimate_log_z.exp() - 1
 
  
-
         loss_energy = energy_data.mean()
         loss_total = loss_energy + loss_estimate_z
 
@@ -118,4 +118,33 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             )
 
         energy_opt.step()
+        if self.train_base_dist :
+            base_dist_opt.step()
+        energy_opt.zero_grad()
+        base_dist_opt.zero_grad()
+        proposal_opt.zero_grad()
+
+        # if (
+        #     self.cfg.train.start_with_IS_until is not None
+        #     and self.current_step < self.cfg.train.start_with_IS_until
+        # ) :
+        #     for param in self.ebm.energy.parameters():
+        #         param.requires_grad = False
+        #     for param in self.ebm.explicit_bias.parameters():
+        #         param.requires_grad = True
+            
+            
+        #     estimate_log_z, dic, x_gen, x_gen_noisy = self.ebm.estimate_log_z(
+        #         x,
+        #         self.num_samples_train,
+        #         detach_sample=True,
+        #         requires_grad=False,
+        #         return_samples=True,
+        #         noise_annealing=current_noise_annealing,
+        #     )
+        #     loss_estimate_z = (estimate_log_z.exp()-1).mean()
+        #     self.manual_backward(loss_estimate_z,retain_graph=False,)
+        #     energy_opt.step()
+
+            
         return loss_total, dic_output
