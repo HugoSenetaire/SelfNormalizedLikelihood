@@ -9,8 +9,7 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import (get_accelerator, seed_everything,
-                                        setup_callbacks)
+from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -35,6 +34,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import pathlib
+
 from tensorboardX import SummaryWriter
 
 
@@ -47,6 +48,12 @@ def main(cfg):
 
     if cfg.dataset.seed is not None:
         seed_everything(cfg.dataset.seed)
+
+    if cfg.machine.machine == "karolina":
+        cfg.dataset.root = pathlib.Path(
+            pathlib.Path.home().parent.parent,
+            "scratch/project/dd-23-57/uci_dataset/data",
+        )
 
     # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)

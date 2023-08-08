@@ -18,6 +18,7 @@ except:
 
 import logging
 import os
+import pathlib
 from dataclasses import asdict
 from pprint import pformat
 
@@ -46,6 +47,12 @@ def main(cfg):
 
     if cfg.dataset.seed is not None:
         seed_everything(cfg.dataset.seed)
+
+    if cfg.machine.machine == "karolina":
+        cfg.dataset.root = pathlib.Path(
+            pathlib.Path.home().parent.parent,
+            "scratch/project/dd-23-57/uci_dataset/data",
+        )
 
     # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)
