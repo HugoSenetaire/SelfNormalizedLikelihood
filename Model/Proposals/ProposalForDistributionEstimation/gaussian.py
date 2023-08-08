@@ -47,8 +47,15 @@ class Gaussian(AbstractProposal):
             self.log_std = nn.parameter.Parameter(
                 (data.std(0) * std_multiplier).log(), requires_grad=True
             )
+
+            
         else:
-            raise NotImplementedError
+            try :
+                self.log_std = nn.parameter.Parameter(
+                torch.log(torch.ones(self.input_size) * float(std)), requires_grad=True
+                )
+            except :
+                raise NotImplementedError
 
         print("Init Standard Gaussian... end")
 

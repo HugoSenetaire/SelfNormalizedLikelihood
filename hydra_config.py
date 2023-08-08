@@ -186,6 +186,17 @@ class BaseProposalConfig:
     feats: Optional[int] = 128  # Features for the Resnet
     h_dim: Optional[int] = 128  # Hidden dimension for the MLP
 
+    maf_hidden_dim: Optional[list] = field(
+        default_factory=lambda: [512]
+    )  # Used in MAF proposal
+    maf_num_blocks: Optional[int] = 5  # Used in MAF proposal
+    maf_use_reverse: Optional[bool] = False  # Used in MAF proposal
+
+    pytorch_flow_name: Optional[str] = "maf"  # Used in pytorch flows proposal
+    pytorch_flow_hidden_dim: Optional[int] = 1024  # Used in pytorch flows proposal
+    pytorch_flow_num_blocks: Optional[int] = 5  # Used in pytorch flows proposal
+    pytorch_flow_act: Optional[str] = "relu"  # Used in pytorch flows proposal
+
 
 @dataclass
 class BaseBaseDistributionConfig(BaseProposalConfig):
@@ -372,7 +383,9 @@ def store_main():
         name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
     )
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
-    cs.store(name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig
+    )
     cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler

@@ -38,7 +38,6 @@ class ProposalTrainer(AbstractDistributionEstimation):
         proposal_loss, dic = self.proposal_step(
             x=x,
         )
-        self.log('train/loss_total', proposal_loss)
-    
+        self.log('train/loss_total', torch.tensor(0.))
 
         return proposal_loss, dic

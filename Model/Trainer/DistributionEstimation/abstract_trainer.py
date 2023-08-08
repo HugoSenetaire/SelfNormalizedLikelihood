@@ -126,7 +126,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.automatic_optimization = False
         self.train_proposal = cfg.proposal_training.train_proposal
         self.train_base_dist = cfg.base_distribution.train_base_dist
-
+        
         if self.ebm.base_dist is not None:
             for param in self.ebm.base_dist.parameters():
                 param.requires_grad = self.train_base_dist
@@ -158,33 +158,32 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         The training step to be defined in inherited classes.
         """
-        x = batch["data"]
-        if (self.train_proposal or self.train_base_dist) and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps >0 :
+        x = batch["data"].to(self.device, self.dtype)
+        if self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps >0 :
             if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
                 loss, dic_output = self.training_energy(
                     x,
                 )
             else:
-                if self.train_proposal:
-                    loss, dic_output = self.proposal_step(
-                        x,
-                    )
-                elif self.train_base_dist:
-                    loss, dic_output = self.base_dist_step(
-                        x,
-                    )
-                else:
-                    raise NotImplementedError
-        else :
-            loss,dic_output = self.training_energy(x)
-            if self.train_proposal:
+                # if self.train_proposal:
                 loss, dic_output = self.proposal_step(
                     x,
                 )
-            elif self.train_base_dist:
-                loss,dic_output = self.base_dist_step(
-                    x,
-                )
+                # elif self.train_base_dist:
+                #     loss, dic_output = self.base_dist_step(
+                #         x,
+                #     )
+                # else:
+                #     raise NotImplementedError
+        else :
+            loss, dic_output = self.training_energy(x)
+            if self.train_proposal:
+                loss, dic_output = self.proposal_step(x,)
+                # )
+            # elif self.train_base_dist:
+            #     loss, dic_output = self.base_dist_step(
+            #         x,
+            #     )
            
         # loss, dic_output = self.proposal_step(
                     # x,
@@ -331,6 +330,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         x = batch["data"]
         energy_batch, dic_output = self.ebm.calculate_energy(x)
+        proposal_likelihood = self.ebm.proposal.log_prob(x)
+        base_dist = self.ebm.base_dist.log_prob(x)
+        self.log(f"{type}/energy", energy_batch.mean())
+        self.log(f"{type}/proposal_likelihood", proposal_likelihood.mean())
+        self.log(f"{type}/base_dist_likelihood", base_dist.mean())
         self.update_dic_output(dic_output, type=type)
 
         return dic_output
@@ -723,7 +727,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
         nb_sample = self.num_samples_val if name == "val/" else self.num_samples_test
         log_z_estimate, dic = self.ebm.estimate_log_z(
-            x=torch.zeros((1,), dtype=torch.float32, device=self.device),
+            x=torch.zeros((1,), dtype=self.dtype, device=self.device),
             nb_sample=nb_sample,
         )
 
