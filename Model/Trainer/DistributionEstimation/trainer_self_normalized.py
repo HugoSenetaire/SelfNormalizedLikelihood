@@ -100,7 +100,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         for i in range(len(x.shape) - 1):
             epsilon = epsilon.unsqueeze(-1)
         epsilon = epsilon.expand(min_data_len, *x.shape[1:])
-        aux_2 = (epsilon * x[:min_data_len,] + (1 - epsilon) * x_gen[:min_data_len]).detach()
+        aux_2 = (epsilon.sqrt() * x[:min_data_len,] + (1 - epsilon).sqrt() * x_gen[:min_data_len]).detach()
         aux_2.requires_grad_(True)
         f_theta_gen_2 = self.ebm.energy(aux_2).mean()
         f_theta_gen_2.backward(retain_graph=True)
