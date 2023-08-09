@@ -95,14 +95,28 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             aux_gen, -f_theta_gen, self.cfg.optim_energy.pg_control_gen
         )
 
+        min_data_len = min(x.shape[0], x_gen.shape[0])
+        epsilon = torch.rand(min_data_len, device=x.device)
+        for i in range(len(x.shape) - 1):
+            epsilon = epsilon.unsqueeze(-1)
+        epsilon = epsilon.expand(min_data_len, *x.shape[1:])
+        aux_2 = (epsilon * x[:min_data_len,] + (1 - epsilon) * x_gen[:min_data_len]).detach()
+        aux_2.requires_grad_(True)
+        f_theta_gen_2 = self.ebm.energy(aux_2).mean()
+        f_theta_gen_2.backward(retain_graph=True)
+        loss_grad_estimate_mix = self.gradient_control_l2(
+            aux_2, -f_theta_gen_2, self.cfg.optim_energy.pg_control_mix
+        )
 
-        loss_total = (loss_total + loss_grad_energy + loss_grad_estimate_z)
+
+        loss_total = (loss_total + loss_grad_energy + loss_grad_estimate_z+loss_grad_estimate_mix)
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
         self.log("train/loss_estimate_z", loss_estimate_z)
         self.log("train/loss_grad_energy", loss_grad_energy)
         self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
+        self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
         self.log("train/noise_annealing",current_noise_annealing,)
 
         # Backward ebm

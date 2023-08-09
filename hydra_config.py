@@ -96,6 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
+    pg_control_mix : Optional[float] = 0.0
     coef_regul: Optional[float] = 0.0
 
 
@@ -123,6 +124,8 @@ class BaseSchedulerConfig:
     min_lr: Optional[float] = 0
     eps: Optional[float] = 1e-8
     verbose: Optional[bool] = False
+
+
 
 
 @dataclass
