@@ -292,13 +292,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         # Just in case it's an adaptive proposal that requires x
         with torch.no_grad():
             self.current_step += 1
-            try:
+
+            if self.cfg.scheduler_energy.scheduler_name != 'reduce_lr_on_plateau':
                 for scheduler in self.lr_schedulers():
-                    # print(scheduler)
-                    if scheduler is not None:
-                        scheduler.step()
-            except:
-                self.lr_schedulers().step()
+                    scheduler.step()
+
             with torch.no_grad():
                 if hasattr(self.ebm.proposal, "set_x"):
                     self.ebm.proposal.set_x(None)
@@ -331,10 +329,19 @@ class AbstractDistributionEstimation(pl.LightningModule):
         x = batch["data"]
         energy_batch, dic_output = self.ebm.calculate_energy(x)
         proposal_likelihood = self.ebm.proposal.log_prob(x)
+        if torch.any(torch.isnan(proposal_likelihood)):
+            print(self.global_step)
+            import time
+            time.sleep(5)
+            logger.info(f"Proposal likelihood is nan, {self.global_step}")
+            
+
         base_dist = self.ebm.base_dist.log_prob(x)
+
         self.log(f"{type}/energy", energy_batch.mean())
         self.log(f"{type}/proposal_likelihood", proposal_likelihood.mean())
         self.log(f"{type}/base_dist_likelihood", base_dist.mean())
+        
         self.update_dic_output(dic_output, type=type)
 
         return dic_output
@@ -378,6 +385,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         outputs = self.validation_step_outputs
 
         self.update_dic_logger(outputs, name="val/")
+        
         self.proposal_visualization()
         self.base_dist_visualization()
         self.plot_energy()
@@ -743,6 +751,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.log(name + "likelihood_log", total_likelihood)
 
         self.log("val/loss_total", total_loss_self_norm)
+        if self.cfg.scheduler_energy.scheduler_name == 'reduce_lr_on_plateau':
+            for scheduler in self.lr_schedulers():
+                if scheduler is not None:
+                    scheduler.step(total_loss_self_norm)
+              
 
         for key in dic_output:
             self.log(key, dic_output[key])
