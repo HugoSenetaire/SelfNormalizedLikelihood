@@ -32,27 +32,12 @@ class ProposalTrainer(AbstractDistributionEstimation):
         )
         assert self.ebm.proposal is not None, "The proposal should not be None"
 
-    def training_step(self, batch, batch_idx):
-        # Get parameters
-        ebm_opt, proposal_opt = self.optimizers_perso()
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        dic_output = {}
-        x = batch["data"].to(device)
-
-        proposal_loss, dic = self._proposal_step(
+    def training_energy(self,x):
+       
+        self.configure_gradient_flow("proposal")
+        proposal_loss, dic = self.proposal_step(
             x=x,
-            estimate_log_z=None,
-            proposal_opt=proposal_opt,
-            dic_output=dic_output,
         )
-        self.log('train/loss_total', proposal_loss)
+        self.log('train/loss_total', torch.tensor(0.))
 
-
-        self.post_train_step_handler(
-            x,
-            dic_output,
-        )
-
-
-        return dic_output
+        return proposal_loss, dic

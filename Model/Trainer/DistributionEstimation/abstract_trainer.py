@@ -9,6 +9,7 @@ from omegaconf import OmegaConf, open_dict
 from wandb import watch
 
 from ...Sampler import get_sampler
+from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
@@ -91,6 +92,8 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.sampler = get_sampler(
             cfg,
         )
+        self.test_type = 'none'
+        self.current_step = 0
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
         else:
@@ -124,7 +127,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.automatic_optimization = False
         self.train_proposal = cfg.proposal_training.train_proposal
         self.train_base_dist = cfg.base_distribution.train_base_dist
-
+        
         if self.ebm.base_dist is not None:
             for param in self.ebm.base_dist.parameters():
                 param.requires_grad = self.train_base_dist
@@ -143,13 +146,43 @@ class AbstractDistributionEstimation(pl.LightningModule):
         watch(self.ebm.proposal, log="all", log_freq=self.cfg.train.log_every_n_steps)
         watch(self.ebm.base_dist, log="all", log_freq=self.cfg.train.log_every_n_steps)
 
-    def training_step(self, batch, batch_idx):
+    def training_energy(self, x):
         """
         The training step to be defined in inherited classes.
         """
         raise NotImplementedError
 
-    def _proposal_step(self, x, estimate_log_z, proposal_opt, dic_output):
+    def base_dist_step(self, x):
+        raise NotImplementedError
+
+    def training_step(self, batch, batch_idx):
+        """
+        The training step to be defined in inherited classes.
+        """
+        x = batch["data"].to(self.device, self.dtype)
+        if self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps >0 :
+            if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
+                loss, dic_output = self.training_energy(
+                    x,
+                )
+            else:
+                loss, dic_output = self.proposal_step(
+                    x,
+                )
+        else :
+            loss, dic_output = self.training_energy(x)
+            if self.train_proposal:
+                loss, dic_output = self.proposal_step(x,)
+
+        self.post_train_step_handler(
+            x,
+            dic_output,
+        )
+
+    def proposal_step(
+        self,
+        x,
+    ):
         """
         Update the parameters of the proposal to minimize the proposal loss.
 
@@ -159,52 +192,50 @@ class AbstractDistributionEstimation(pl.LightningModule):
             estimate_log_z (torch.Tensor): The estimate of the log normalization constant
             proposal_opt (torch.optim): The optimizer for the proposal parameters
         """
-        if self.train_proposal:
-            self.configure_gradient_flow("proposal")
-            proposal_opt.zero_grad()
-            if estimate_log_z is None:
-                estimate_log_z, dic = self.ebm.estimate_log_z(
-                    x,
-                    self.num_samples_train,
-                    detach_sample=False,
-                )
-            self.stupid_test(x, suffix="before_proposal")
+        self.configure_gradient_flow("proposal")
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers_perso()
+        proposal_opt.zero_grad()
+        base_dist_opt.zero_grad()
+        energy_opt.zero_grad()
 
-            # TODEL
-            count = 0
-            for name, parameter in self.ebm.proposal.named_parameters():
-                if "rescale" in name:
-                    # print(name, parameter)
-                    self.log("parameter/" + name + str(count), parameter.data.mean())
-                    count += 1
-           
-            log_prob_proposal_data = self.ebm.proposal.log_prob(x)
-            self.log(
-                "train_proposal/proposal_log_likelihood", log_prob_proposal_data.mean()
-            )
-            self.log("train_proposal/estimate_log_z", estimate_log_z.mean())
-            proposal_loss = self.proposal_loss(
-                log_prob_proposal_data,
-                estimate_log_z,
-            )
-            self.log("train_proposal/proposal_loss", proposal_loss.mean())
-            self.manual_backward(
-                (proposal_loss).mean(), inputs=list(self.ebm.proposal.parameters())
-            )
-            if self.cfg.optim_proposal.clip_grad_norm is not None:
-                torch.nn.utils.clip_grad_norm_(
-                    parameters=self.ebm.proposal.parameters(),
-                    max_norm=self.cfg.optim_proposal.clip_grad_norm,
-                )
-            proposal_opt.step()
-            self.stupid_test(x, suffix="after_proposal")
+        estimate_log_z, dic = self.ebm.estimate_log_z(
+            x,
+            self.num_samples_train,
+            detach_sample=True,
+            detach_base_dist=True,
+        )
 
-            return proposal_loss.mean(), dic
+        current_noise = calculate_current_noise_annealing(
+            self.current_step,
+            self.cfg.proposal_training.noise_annealing_init,
+            self.cfg.proposal_training.noise_annealing_gamma,
+        )
+
+        noisy_data = x + torch.randn_like(x) * current_noise
+
+
+
+        log_prob_proposal_data = self.ebm.proposal.log_prob(noisy_data)
+        proposal_loss = self.proposal_loss(log_prob_proposal_data,estimate_log_z,)
+
+        self.manual_backward((proposal_loss).mean(), )
+        # proposal_loss.backward()
+        if self.cfg.optim_proposal.clip_grad_norm is not None:
+            torch.nn.utils.clip_grad_norm_(parameters=self.ebm.proposal.parameters(), max_norm=self.cfg.optim_proposal.clip_grad_norm,)
+        
+        proposal_opt.step()
+        self.log("train_proposal/extra_noise", current_noise)
+        self.log("train_proposal/proposal_log_likelihood", log_prob_proposal_data.mean())
+        self.log("train_proposal/estimate_log_z", estimate_log_z.mean())
+        self.log("train_proposal/proposal_loss", proposal_loss.mean())
+
+
+        return proposal_loss.mean(), dic
 
     def train_bias(
         self,
         x,
-        ebm_opt,
+        energy_opt,
         nb_iteration,
     ):
         self.fix_base_dist()
@@ -214,14 +245,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
             param.requires_grad = True
         for i in range(nb_iteration):
             # self.configure_gradient_flow("bias")
-            ebm_opt.zero_grad()
+            energy_opt.zero_grad()
             loss_estimate_z, _ = self.ebm.estimate_log_z(x, self.num_samples_train)
             loss_estimate_z = loss_estimate_z.exp() - 1
             if torch.isnan(loss_estimate_z) or torch.isinf(loss_estimate_z):
                 logger.info("Loss estimate z is nan or inf")
                 break
             self.manual_backward(loss_estimate_z.mean())
-            # for param_group in ebm_opt.param_groups:
+            # for param_group in energy_opt.param_groups:
             # param_group['lr']
             for param in self.ebm.explicit_bias.parameters():
                 param.data = param.data + self.cfg.train.lr_bias * param
@@ -245,34 +276,42 @@ class AbstractDistributionEstimation(pl.LightningModule):
             dic_output (dict): The dictionary of outputs from the EBM
         """
         # Just in case it's an adaptive proposal that requires x
-        for scheduler in self.lr_schedulers():
-            # print(scheduler)
-            if scheduler is not None:
-                scheduler.step()
         with torch.no_grad():
-            if hasattr(self.ebm.proposal, "set_x"):
-                self.ebm.proposal.set_x(None)
-            self.ebm.eval()
+            self.current_step += 1
 
-            # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
-            if (
-                self.nb_sample_train_estimate is not None
-                and self.nb_sample_train_estimate > 0
-            ):
-                estimate_log_z, _ = self.ebm.estimate_log_z(
-                    x, nb_sample=self.nb_sample_train_estimate
-                )
-                SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
-                log_likelihood = -dic_output["energy"].mean() - estimate_log_z
-                dic_output[f"SNL_{self.nb_sample_train_estimate}"] = SNL_fix_z
-                dic_output[
-                    f"log_likelihood_{self.nb_sample_train_estimate}"
-                ] = log_likelihood
+            if self.cfg.scheduler_energy.scheduler_name != 'reduce_lr_on_plateau':
+                for scheduler in self.lr_schedulers():
+                    scheduler.step()
 
-            for key in dic_output:
-                self.log(f"train/{key}_mean", dic_output[key].mean().item())
+            with torch.no_grad():
+                if hasattr(self.ebm.proposal, "set_x"):
+                    self.ebm.proposal.set_x(None)
+                self.ebm.eval()
 
-            self.ebm.train()
+                # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
+                if (
+                    self.nb_sample_train_estimate is not None
+                    and self.nb_sample_train_estimate > 0
+                ):
+                    estimate_log_z, _ = self.ebm.estimate_log_z(
+                        x, nb_sample=self.nb_sample_train_estimate
+                    )
+                    SNL_fix_z = -dic_output["energy"].mean() - estimate_log_z.exp() + 1
+                    log_likelihood = -dic_output["energy"].mean() - estimate_log_z
+                    dic_output[f"SNL_{self.nb_sample_train_estimate}"] = SNL_fix_z
+                    dic_output[
+                        f"log_likelihood_{self.nb_sample_train_estimate}"
+                    ] = log_likelihood
+
+                for key in dic_output:
+                    self.log(f"train/{key}_mean", dic_output[key].mean().item())
+
+                self.ebm.train()
+
+    # def set_trainer(self, trainer, test_loader):
+    #     self.trainer = trainer
+    #     self.test_loader = test_loader
+    #     self.trainer_already_set = True
 
     def validation_step(self, batch, batch_idx, type="val"):
         """
@@ -280,7 +319,21 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         x = batch["data"]
         energy_batch, dic_output = self.ebm.calculate_energy(x)
-        self.update_dic_output(dic_output, type=type)
+        proposal_likelihood = self.ebm.proposal.log_prob(x)
+        if torch.any(torch.isnan(proposal_likelihood)):
+            print(self.global_step)
+            import time
+            time.sleep(5)
+            logger.info(f"Proposal likelihood is nan, {self.global_step}")
+            
+
+        base_dist = self.ebm.base_dist.log_prob(x)
+
+        self.log(f"{type}energy", energy_batch.mean())
+        self.log(f"{type}proposal_likelihood", proposal_likelihood.mean())
+        self.log(f"{type}base_dist_likelihood", base_dist.mean())
+        
+        self.update_dic_output(dic_output, current_type=type)
 
         return dic_output
 
@@ -288,21 +341,21 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         The test step is the same as the validation step.
         """
-        return self.validation_step(batch, batch_idx, type="test")
+        return self.validation_step(batch, batch_idx, type="test_"+self.test_type +"/")
 
     def update_dic_output(
         self,
         outputs,
-        type="train",
+        current_type="train/",
     ):
         """
         Update the dic output after a step
         """
-        if type == "train":
+        if "train" in current_type:
             self.training_steps_outputs.append(outputs)
-        elif type == "val":
+        elif 'val' in current_type:
             self.validation_step_outputs.append(outputs)
-        elif type == "test":
+        elif 'test' in current_type:
             self.test_step_outputs.append(outputs)
         else:
             raise NotImplementedError
@@ -323,11 +376,16 @@ class AbstractDistributionEstimation(pl.LightningModule):
         outputs = self.validation_step_outputs
 
         self.update_dic_logger(outputs, name="val/")
+        
         self.proposal_visualization()
         self.base_dist_visualization()
         self.plot_energy()
         self.plot_samples()
         self.validation_step_outputs = []
+        # if self.trainer_already_set and self.global_step>1:
+            # self.trainer.test(self, dataloaders=self.test_loader)
+
+        
 
     def on_test_epoch_end(
         self,
@@ -337,7 +395,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         """
         outputs = self.test_step_outputs
-        self.update_dic_logger(outputs, name="test/")
+        self.update_dic_logger(outputs, name="test_"+self.test_type+"/")
         self.test_step_outputs = []
 
     def resample_base_dist(
@@ -457,7 +515,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 samples=[self.example, self.example_proposal],
                 samples_title=["Samples from dataset", "Samples from proposal"],
                 name="proposal",
-                step=self.global_step,
+                step=self.current_step,
             )
         elif self.input_type == "image":
             self.resample_proposal()
@@ -470,7 +528,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                 save_dir=save_dir,
                 name="proposal_samples",
                 transform_back=self.transform_back,
-                step=self.global_step,
+                step=self.current_step,
             )
 
     def base_dist_visualization(self):
@@ -498,7 +556,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                         "Samples from proposal",
                     ],
                     name="base_dist",
-                    step=self.global_step,
+                    step=self.current_step,
                 )
             elif self.input_type == "image":
                 self.resample_base_dist()
@@ -511,7 +569,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     save_dir=save_dir,
                     name="base_dist_samples",
                     transform_back=self.transform_back,
-                    step=self.global_step,
+                    step=self.current_step,
                 )
 
     def fix_energy(
@@ -588,70 +646,64 @@ class AbstractDistributionEstimation(pl.LightningModule):
             opt_list (list): The list of optimizers
             sch_list (list): The list of schedulers
         """
-        parameters_ebm = [
+        parameters_energy = [
             self.ebm.energy.parameters(),
-            self.ebm.base_dist.parameters(),
+            self.ebm.explicit_bias.parameters(),
         ]
-        if (
-            self.cfg.proposal_training.train_proposal
-            and self.ebm.proposal == self.ebm.base_dist
-        ):
-            # In case the base dist is equal to the proposal, I can't train both of them with the same loss
-            # If I want to train the proposal it takes priority over the base distribution
-            print("Proposal takes priority here")
-        else:
-            parameters_ebm.append(self.ebm.base_dist.parameters())
 
-        # parameters_ebm.append(self.ebm.parameters())
-        ebm_opt = get_optimizer(
-            cfg=self.cfg.optim_energy, list_parameters_gen=parameters_ebm
+        if self.ebm.base_dist is not None:
+            parameters_base_dist = [self.ebm.base_dist.parameters()]
+        else:
+            parameters_base_dist = []
+
+        if self.ebm.proposal is not None:
+            parameters_proposal = [self.ebm.proposal.parameters()]
+        else:
+            parameters_proposal = []
+
+        energy_opt = get_optimizer(
+            cfg=self.cfg.optim_energy, list_parameters_gen=parameters_energy
         )
-        ebm_sch = get_scheduler(cfg=self.cfg.scheduler_energy, optim=ebm_opt)
-        opt_list = [ebm_opt]
+        ebm_sch = get_scheduler(cfg=self.cfg.scheduler_energy, optim=energy_opt)
+        opt_list = [energy_opt]
         sch_list = [ebm_sch]
 
-        if (
-            not self.cfg.proposal_training.train_proposal
-            and self.ebm.proposal == self.ebm.base_dist
-        ):
-            proposal_opt = None
-            proposal_sch = None
-        else:
-            parameters_proposal = (
-                [self.ebm.proposal.parameters()]
-                if self.ebm.proposal is not None
-                else []
+        if self.ebm.base_dist is not None:
+            base_dist_opt = get_optimizer(
+                cfg=self.cfg.optim_base_dist, list_parameters_gen=parameters_base_dist
             )
+            base_dist_sch = get_scheduler(
+                cfg=self.cfg.scheduler_base_dist, optim=base_dist_opt
+            )
+            opt_list.append(base_dist_opt)
+            sch_list.append(base_dist_sch)
+
+        if self.ebm.proposal is not None:
             proposal_opt = get_optimizer(
                 cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal
             )
             proposal_sch = get_scheduler(
                 cfg=self.cfg.scheduler_proposal, optim=proposal_opt
             )
-
-        if proposal_opt is not None:
             opt_list.append(proposal_opt)
             sch_list.append(proposal_sch)
+
         return opt_list, sch_list
-        # if ebm_sch is not None and proposal_sch is not None:
-        #     return opt_list, [ebm_sch, proposal_sch]
-        # elif ebm_sch is not None:
-        #     return opt_list, ebm_sch
-        # elif proposal_sch is not None:
-        #     return opt_list, proposal_sch
-        # else:
-        #     return opt_list
 
     def optimizers_perso(self):
         """
         I don't remember why I needed that. #TODO : CHECK WHY I WROTE THIS.
         """
         liste_opt = super().optimizers()
-        try:
-            ebm_opt, proposal_opt = liste_opt
-            return liste_opt
-        except:
-            return liste_opt, None
+        if len(liste_opt) == 1:
+            return liste_opt[0]
+        elif len(liste_opt) == 2:
+            if self.ebm.base_dist is None:
+                return liste_opt[0], None, liste_opt[1]
+            elif self.ebm.proposal is None:
+                return liste_opt[0], liste_opt[1], None
+        else:
+            return liste_opt[0], liste_opt[1], liste_opt[2]
 
     def update_dic_logger(self, outputs, name="val/"):
         """
@@ -678,22 +730,30 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
         nb_sample = self.num_samples_val if name == "val/" else self.num_samples_test
         log_z_estimate, dic = self.ebm.estimate_log_z(
-            x=torch.zeros((1,), dtype=torch.float32, device=self.device),
+            x=torch.zeros((1,), dtype=self.dtype, device=self.device),
             nb_sample=nb_sample,
         )
+        
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})
-        total_loss_self_norm = mean_energy + log_z_estimate.exp()
+        total_loss_self_norm = mean_energy + log_z_estimate.exp()-1
         self.log(name + "loss_self_norm", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate.exp() + 1
         self.log(name + "likelihood_normalized", total_likelihood)
+        self.log(name +"loss_total_SNL", total_loss_self_norm)
+
 
         total_loss_self_norm = mean_energy + log_z_estimate
         self.log(name + "loss_log", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate
         self.log(name + "likelihood_log", total_likelihood)
 
-        self.log("val/loss_total", total_loss_self_norm)
+        self.log(name +"loss_total", total_loss_self_norm)
+        if self.cfg.scheduler_energy.scheduler_name == 'reduce_lr_on_plateau':
+            for scheduler in self.lr_schedulers():
+                if scheduler is not None:
+                    scheduler.step(total_loss_self_norm)
+              
 
         for key in dic_output:
             self.log(key, dic_output[key])
@@ -719,7 +779,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         If possible show the current energy function and the samples from the proposal and dataset
         """
         if np.prod(self.cfg.dataset.input_size) == 2:
-            if self.global_step - self.last_save > self.cfg.train.save_energy_every:
+            if self.current_step - self.last_save > self.cfg.train.save_energy_every:
                 save_dir = self.cfg.train.save_dir
                 save_dir = os.path.join(save_dir, "contour_energy")
                 if not os.path.exists(save_dir):
@@ -730,7 +790,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     samples=[self.example, self.example_proposal],
                     samples_title=["Samples from dataset", "Samples from proposal"],
                     name="contour",
-                    step=self.global_step,
+                    step=self.current_step,
                 )
 
                 # Add auxiliary contour plots, might be useful if we use a base distribution.
@@ -752,11 +812,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
                         samples=[self.example, self.example_proposal],
                         samples_title=["Samples from dataset", "Samples from proposal"],
                         name=ebm_name,
-                        step=self.global_step,
+                        step=self.current_step,
                         energy_type=False,
                     )
 
-                self.last_save = self.global_step
+                self.last_save = self.current_step
 
     def samples_mcmc(self, num_samples=None):
         """
@@ -780,10 +840,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
         torch.set_grad_enabled(True)  # Required for MCMC sampling
 
         print(
-            f" {self.global_step - self.last_save_sample = }, {self.cfg.train.samples_every = }"
+            f" {self.current_step - self.last_save_sample = }, {self.cfg.train.samples_every = }"
         )
 
-        if self.global_step - self.last_save_sample > self.cfg.train.samples_every:
+        if self.current_step - self.last_save_sample > self.cfg.train.samples_every:
             save_dir = self.cfg.train.save_dir
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
@@ -798,7 +858,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     samples=[samples],
                     samples_title=["HMC samples"],
                     name="samples",
-                    step=self.global_step,
+                    step=self.current_step,
                 )
             elif self.input_type == "image":
                 print("Plotting images")
@@ -807,18 +867,21 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     save_dir=save_dir,
                     images=samples,
                     name="samples",
-                    step=self.global_step,
+                    step=self.current_step,
                     init_samples=init_samples,
                     transform_back=self.transform_back,
                 )
             else:
                 raise NotImplementedError
-            self.last_save_sample = self.global_step
+            self.last_save_sample = self.current_step
 
     def stupid_test(self, x, suffix=""):
         if not hasattr(self, "stupid_x") or self.stupid_x is None:
             self.stupid_x = torch.cat(
-                [self.ebm.proposal.sample(1).detach().reshape(1,*x.shape[1:]), x[0, None]]
+                [
+                    self.ebm.proposal.sample(1).detach().reshape(1, *x.shape[1:]),
+                    x[0, None],
+                ]
             )
         stupid_out_energy = self.ebm.energy(self.stupid_x).mean()
         if self.ebm.base_dist is not None:
@@ -841,7 +904,9 @@ class AbstractDistributionEstimation(pl.LightningModule):
             if self.ebm.base_dist is not None:
                 self.log(
                     f"stupid_test/base_dist_diff_{suffix}",
-                    (stupid_out_base_dist - self.stupid_out_base_dist_before).abs().max(),
+                    (stupid_out_base_dist - self.stupid_out_base_dist_before)
+                    .abs()
+                    .max(),
                 )
             self.log(
                 f"stupid_test/proposal_diff_{suffix}",

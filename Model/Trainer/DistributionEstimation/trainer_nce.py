@@ -2,6 +2,8 @@ import torch
 import logging
 
 from .abstract_trainer import AbstractDistributionEstimation
+from ...Utils.noise_annealing import calculate_current_noise_annealing
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,13 +27,26 @@ class NCETrainer(AbstractDistributionEstimation):
             complete_dataset=complete_dataset,
         )
 
-    def training_step(self, batch, batch_idx):
+    def training_energy(self, x):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers_perso()
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers_perso()
+        energy_opt.zero_grad()
+        base_dist_opt.zero_grad()
+        proposal_opt.zero_grad()
 
-        x = batch['data']
+        self.configure_gradient_flow("energy")
+        if self.train_base_dist :
+            for param in self.ebm.base_dist.parameters():
+                param.requires_grad = True
+        current_noise_annealing = calculate_current_noise_annealing(
+                self.current_step,
+                self.cfg.train.noise_annealing_init,
+                self.cfg.train.noise_annealing_gamma,
+            )
+
+        x = x.requires_grad_()
+
         batch_size = x.shape[0]
-
         if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(x)
 
@@ -48,7 +63,7 @@ class NCETrainer(AbstractDistributionEstimation):
         samples = self.ebm.sample(self.num_samples_train).to(x.device, x.dtype)
         energy_samples = self.ebm.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         if self.ebm.explicit_bias :
-            energy_samples = self.ebm.explicit_bias_module(energy_samples)
+            energy_samples = self.ebm.explicit_bias(energy_samples)
         dic_output["f_theta_samples"] = energy_samples
 
         if self.ebm.base_dist is not None:
@@ -92,30 +107,35 @@ class NCETrainer(AbstractDistributionEstimation):
 
         # value_data = logp_x - torch.logsumexp(torch.cat([logp_x, logq_x], dim=1), dim=1, keepdim=True)  # logp(x)/(logp(x) + logq(x))
         # value_gen = logq_gen - torch.logsumexp(torch.cat([logp_gen, logq_gen], dim=1), dim=1, keepdim=True)  # logq(x̃)/(logp(x̃) + logq(x̃))
-        nce_objective = value_data.mean() + (value_gen + log_noise_ratio).mean()
+        nce_objective = value_data.mean() + (value_gen + log_noise_ratio).mean() ## SHOULD I DO BOTH TIMES THE ADDING OF LOG NOISE RATIO
+        # nce_objective = value_data.mean() + value_gen.mean() ## SHOULD I DO BOTH TIMES THE ADDING OF LOG NOISE RATIO
         nce_loss = -nce_objective
-
-        loss_total = nce_loss
-
-        # Backward ebm
-        ebm_opt.zero_grad()
-        self.manual_backward(
-            loss_total,
-            retain_graph=True,
-        )
-        self.log("train_loss", loss_total)
-
-        # Update the parameters of the proposal
-        self._proposal_step(x = x, estimate_log_z = estimate_log_z, proposal_opt = proposal_opt, dic_output=dic_output,)
-
-
-        # Update the parameters of the ebm
-        ebm_opt.step()
-        # dic_output.update(dic)
-
-        self.post_train_step_handler(
-            x,
-            dic_output,
+        
+        
+        min_data_len = min(x.shape[0], samples.shape[0])
+        epsilon = torch.rand(min_data_len, device=x.device)
+        for i in range(len(x.shape) - 1):
+            epsilon = epsilon.unsqueeze(-1)
+        epsilon = epsilon.expand(min_data_len, *x.shape[1:])
+        aux_2 = (epsilon.sqrt() * x[:min_data_len,] + (1 - epsilon).sqrt() * samples[:min_data_len]).detach()
+        aux_2.requires_grad_(True)
+        f_theta_gen_2 = self.ebm.energy(aux_2).mean()
+        f_theta_gen_2.backward(retain_graph=True)
+        loss_grad_estimate_mix = self.gradient_control_l2(
+            aux_2, -f_theta_gen_2, self.cfg.optim_energy.pg_control_mix
         )
 
-        return loss_total
+        loss_total = nce_loss + loss_grad_estimate_mix
+        # loss_total = nce_loss
+
+        self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
+        self.log("train/loss_nce", nce_loss)
+        self.log("train/loss_total", loss_total)
+
+        self.manual_backward(loss_total)
+        energy_opt.step()
+        if self.train_base_dist:
+            base_dist_opt.step()
+
+        return loss_total, dic_output
+

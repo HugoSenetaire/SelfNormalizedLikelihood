@@ -55,21 +55,26 @@ def setup_callbacks(
     """
     Setup all the callbacks for the training
     """
-    checkpoint_callback_val = pl.callbacks.ModelCheckpoint(
+    checkpoint_callback_val_log = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.train.save_dir, "val_checkpoint"),
         save_top_k=2,
         monitor="val/loss_total",
+    )
+    checkpoint_callback_val_snl = pl.callbacks.ModelCheckpoint(
+        dirpath=os.path.join(cfg.train.save_dir, "val_checkpoint"),
+        save_top_k=2,
+        monitor="val/loss_total_SNL",
     )
     checkpoint_callback_train = pl.callbacks.ModelCheckpoint(
         dirpath=os.path.join(cfg.train.save_dir, "train_checkpoint"),
         save_top_k=2,
         monitor="train/loss_total",
     )
-    checkpoints = [checkpoint_callback_val, checkpoint_callback_train]
+    checkpoints = [checkpoint_callback_val_log, checkpoint_callback_val_snl, checkpoint_callback_train]
     if cfg.train.decay_ema is not None and cfg.train.decay_ema > 0:
         ema_callback = EMA(decay=cfg.train.decay_ema)
         checkpoints.append(ema_callback)
 
     checkpoints.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
 
-    return checkpoint_callback_val, checkpoints
+    return checkpoint_callback_val_snl, checkpoints

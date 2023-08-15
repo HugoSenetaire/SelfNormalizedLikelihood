@@ -64,7 +64,7 @@ class NutsSampler:
                     .reshape(self.num_samples, self.thinning, 1, *self.input_size)[:, 0]
                 )  # 0 is because I have defined initial parameters as 0
 
-            samples = torch.cat(samples, dim=1).reshape(
+            samples = torch.cat(samples, dim=0).reshape(
                 self.num_samples * self.num_chains, *self.input_size
             )
         else:

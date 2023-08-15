@@ -96,6 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
+    pg_control_mix: Optional[float] = 10000.0
     coef_regul: Optional[float] = 0.0
 
 
@@ -131,7 +132,7 @@ class BaseProposalConfig:
     covariance_type: Optional[str] = "diag"  # Used in gaussian
     eps: Optional[float] = 1.0e-6  # Used in GaussianMixtureProposal
     n_components: Optional[int] = 10  # Used in GaussianMixtureProposal
-    nb_sample_estimate: Optional[int] = 10000
+    nb_sample_estimate: Optional[int] = 100000
     init_parameters: Optional[str] = "kmeans"
     delta: Optional[float] = 1e-3
     n_iter: Optional[int] = 100
@@ -186,6 +187,17 @@ class BaseProposalConfig:
     feats: Optional[int] = 128  # Features for the Resnet
     h_dim: Optional[int] = 128  # Hidden dimension for the MLP
 
+    maf_hidden_dim: Optional[list] = field(
+        default_factory=lambda: [512]
+    )  # Used in MAF proposal
+    maf_num_blocks: Optional[int] = 5  # Used in MAF proposal
+    maf_use_reverse: Optional[bool] = False  # Used in MAF proposal
+
+    pytorch_flow_name: Optional[str] = "maf"  # Used in pytorch flows proposal
+    pytorch_flow_hidden_dim: Optional[int] = 1024  # Used in pytorch flows proposal
+    pytorch_flow_num_blocks: Optional[int] = 5  # Used in pytorch flows proposal
+    pytorch_flow_act: Optional[str] = "relu"  # Used in pytorch flows proposal
+
 
 @dataclass
 class BaseBaseDistributionConfig(BaseProposalConfig):
@@ -207,7 +219,9 @@ class BaseProposalTrainingConfig:
     train_proposal: bool = MISSING
     proposal_loss_name: Union[str, None] = None
     proposal_pretraining: Optional[str] = None
-    extra_noise_proposal: Optional[float] = 0.0
+    proposal_pretraining_epochs: Optional[int] = 10
+    noise_annealing_init: Optional[float] = 0.0
+    noise_annealing_gamma: Optional[float] = 0.9999
 
     def __post_init__(self):
         if self.train_proposal:
@@ -256,20 +270,22 @@ class BaseTrainConfig:
     task: str = MISSING
     save_dir: Optional[Path] = None
     multi_gpu: str = MISSING
-    val_check_interval: Optional[bool] = MISSING
+    val_check_interval: Optional[float] = MISSING
     save_energy_every: int = MISSING
     samples_every: int = MISSING
     sigma: Optional[float] = None
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
     save_locally: Optional[bool] = False
-    start_with_IS_until: Optional[Union[None, int]] = None
+    start_with_IS_until: Optional[Union[None, int]] = 0
 
     bias_training_iter: Optional[int] = 0
     lr_bias: Optional[float] = 1e-3
 
     noise_annealing_init: Optional[float] = 0.0
     noise_annealing_gamma: Optional[float] = 0.999
+
+    nb_energy_steps: Optional[int] = 0
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -319,6 +335,7 @@ class Config:
     energy: BaseEnergyConfig = MISSING
     optim_energy: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
+    optim_base_dist: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
     proposal: BaseProposalConfig = MISSING
     default_proposal: Optional[Union[BaseProposalConfig, None]] = None
@@ -328,6 +345,7 @@ class Config:
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler_energy: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_base_dist: Optional[Union[BaseSchedulerConfig, None]] = None
     machine: Optional[Machine] = None
 
     # def _complete_dataset(self):
@@ -366,6 +384,10 @@ def store_main():
         name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
     )
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig
+    )
+    cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler
     cs.store(
@@ -376,6 +398,11 @@ def store_main():
     cs.store(
         name="base_scheduler_config_name",
         group="scheduler_proposal",
+        node=BaseSchedulerConfig,
+    )
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_base_dist",
         node=BaseSchedulerConfig,
     )
     # Proposal training

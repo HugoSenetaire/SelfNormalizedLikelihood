@@ -9,8 +9,7 @@ from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import (get_accelerator, seed_everything,
-                                        setup_callbacks)
+from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
 
 try:
     from pytorch_lightning.loggers import WandbLogger
@@ -99,7 +98,7 @@ def main(cfg):
             logger_trainer = WandbLogger(
                 project="SelfNormalizedLikelihood",
                 save_dir=cfg.machine.wandb_path,
-                config = my_cfg,
+                config=my_cfg,
             )
         else:
             print(f"Working on {cfg.machine.machine = }")
@@ -125,18 +124,25 @@ def main(cfg):
         log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
+    #    algo.set_trainer(trainer, test_loader)
     if not cfg.train.just_test:
         trainer.fit(
             algo,
             ckpt_path=ckpt_path,
             train_dataloaders=train_loader,
-            val_dataloaders=val_loader,
+            # val_dataloaders=val_loader,
+            val_dataloaders=test_loader,
         )
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
         )
 
-    trainer.test(algo, ckpt_path=ckpt_path, dataloaders=test_loader)
+    algo.test_type = "log"
+    algo.load_state_dict(torch.load(checkpoints[0].best_model_path)["state_dict"])
+    trainer.test(algo, dataloaders=test_loader)
+    algo.test_type = "snl"
+    algo.load_state_dict(torch.load(checkpoints[1].best_model_path)["state_dict"])
+    trainer.test(algo, dataloaders=val_loader)
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
             print(f"Prod = 2")

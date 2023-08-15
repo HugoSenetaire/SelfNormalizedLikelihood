@@ -142,7 +142,8 @@ def init_proposal_to_data(proposal, input_size, dataloader, cfg):
         param.requires_grad = True
     optimizer = torch.optim.Adam(proposal.parameters(), lr=1e-3)
     print("Init proposal to data")
-    epochs = cfg.proposal.epochs
+    epochs = cfg.proposal_training.proposal_pretraining_epochs
+    print(f"Number of epochs : {epochs}")
     for epoch in range(epochs):
         tqdm_range = tqdm.tqdm(dataloader)
         for batch in tqdm_range:

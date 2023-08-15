@@ -5,14 +5,16 @@ defaults:
   - default_proposal: gaussian # Only used when proposal is adaptive
   - proposal: real_nvp
   - proposal_training : log_prob
-  - energy: dc_gan_distribution
+  - energy: dc_gan_distribution_sn
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: just_proposal_distribution
   - optim_energy: adamw
   - optim_proposal: adamw
+  - optim_base_dist: adamw
   - scheduler_energy: cyclic_lr
   - scheduler_proposal: cyclic_lr
+  - scheduler_base_dist: cyclic_lr
   - sampler: nuts_mnist
   - machine: dtu_cluster
 

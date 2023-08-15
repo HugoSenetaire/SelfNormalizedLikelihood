@@ -5,3 +5,4 @@ from .gaussian_mixture_adaptive import GaussianMixtureAdaptiveProposal, get_Gaus
 from .noise_gradation_adaptive import NoiseGradationAdaptiveProposal, get_NoiseGradationAdaptiveProposal
 from .student import StudentProposal, get_StudentProposal
 from .real_nvp_proposal import RealNVPProposal, get_RealNVPProposal
+from .gaussian_full import get_GaussianFull, GaussianFull

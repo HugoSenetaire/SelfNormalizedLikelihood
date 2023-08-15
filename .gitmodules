@@ -7,3 +7,9 @@
 [submodule "Model/Proposals/real_nvp"]
 	path = Model/Proposals/real_nvp
 	url = git@github.com:HugoSenetaire/real_nvp.git
+[submodule "Model/Proposals/maf"]
+	path = Model/Proposals/maf
+	url = git@github.com:HugoSenetaire/maf.git
+[submodule "Model/Proposals/pytorch-flows"]
+	path = Model/Proposals/pytorch-flows
+	url = git@github.com:HugoSenetaire/pytorch-flows.git

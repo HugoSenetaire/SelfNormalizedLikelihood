@@ -3,16 +3,20 @@ from .EnergyForDistribution import (
     get_ConvEnergy,
     get_DC_GAN_Discriminator,
     get_DC_GAN_DiscriminatorSN,
+    get_DC_GAN_DiscriminatorSNv2,
     get_EnergyCategoricalDistrib,
     get_EnergyIsing,
     get_EnergyPoissonDistribution,
     get_EnergyRBM,
     get_fc_energy,
+    get_fc_energy_sn,
+    get_fc_energy_sn_miniboone,
     get_ResNetDiscriminator,
 )
 
 dic_energy = {
     "fc": get_fc_energy,
+    "fc_sn": get_fc_energy_sn,
     "conv": get_ConvEnergy,
     "rbm": get_EnergyRBM,
     "categorical": get_EnergyCategoricalDistrib,
@@ -20,8 +24,10 @@ dic_energy = {
     "ising": get_EnergyIsing,
     "dc_gan": get_DC_GAN_Discriminator,
     "dc_gan_sn": get_DC_GAN_DiscriminatorSN,
+    "dc_gan_sn_v2": get_DC_GAN_DiscriminatorSNv2,
     "resnet": get_ResNetDiscriminator,
     "bndc_gan": get_BNDC_GAN_Discriminator,
+    "fc_sn_miniboone": get_fc_energy_sn_miniboone,
 }
 
 
