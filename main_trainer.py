@@ -124,18 +124,25 @@ def main(cfg):
         log_every_n_steps=cfg.train.log_every_n_steps,
     )
 
+    #    algo.set_trainer(trainer, test_loader)
     if not cfg.train.just_test:
         trainer.fit(
             algo,
             ckpt_path=ckpt_path,
             train_dataloaders=train_loader,
-            val_dataloaders=val_loader,
+            # val_dataloaders=val_loader,
+            val_dataloaders=test_loader,
         )
         algo.load_state_dict(
             torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
         )
 
-    trainer.test(algo, ckpt_path=ckpt_path, dataloaders=test_loader)
+    algo.test_type = "log"
+    algo.load_state_dict(torch.load(checkpoints[0].best_model_path)["state_dict"])
+    trainer.test(algo, dataloaders=test_loader)
+    algo.test_type = "snl"
+    algo.load_state_dict(torch.load(checkpoints[1].best_model_path)["state_dict"])
+    trainer.test(algo, dataloaders=val_loader)
     if algo.sampler is not None:
         if np.prod(complete_dataset.get_dim_input()) == 2:
             print(f"Prod = 2")
