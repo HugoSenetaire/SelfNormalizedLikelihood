@@ -79,21 +79,21 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         loss_energy = energy_data.mean()
         loss_total = loss_energy + loss_estimate_z
 
-        aux_data = x.detach()
-        aux_data.requires_grad_(True)
-        f_theta_data = self.ebm.energy(aux_data).mean()
-        f_theta_data.backward(retain_graph=True)
-        loss_grad_energy = self.gradient_control_l2(
-            aux_data, -f_theta_data, self.cfg.optim_energy.pg_control_data
-        )
+        # aux_data = x.detach()
+        # aux_data.requires_grad_(True)
+        # f_theta_data = self.ebm.energy(aux_data).mean()
+        # f_theta_data.backward(retain_graph=True)
+        # loss_grad_energy = self.gradient_control_l2(
+        #     aux_data, -f_theta_data, self.cfg.optim_energy.pg_control_data
+        # )
 
-        aux_gen = x_gen.detach()
-        aux_gen.requires_grad_(True)
-        f_theta_gen = self.ebm.energy(aux_gen).mean()
-        f_theta_gen.backward(retain_graph=True)
-        loss_grad_estimate_z = self.gradient_control_l2(
-            aux_gen, -f_theta_gen, self.cfg.optim_energy.pg_control_gen
-        )
+        # aux_gen = x_gen.detach()
+        # aux_gen.requires_grad_(True)
+        # f_theta_gen = self.ebm.energy(aux_gen).mean()
+        # f_theta_gen.backward(retain_graph=True)
+        # loss_grad_estimate_z = self.gradient_control_l2(
+        #     aux_gen, -f_theta_gen, self.cfg.optim_energy.pg_control_gen
+        # )
 
         min_data_len = min(x.shape[0], x_gen.shape[0])
         epsilon = torch.rand(min_data_len, device=x.device)
@@ -109,13 +109,13 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         )
 
 
-        loss_total = (loss_total + loss_grad_energy + loss_grad_estimate_z+loss_grad_estimate_mix)
+        loss_total = (loss_total+loss_grad_estimate_mix)
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
         self.log("train/loss_estimate_z", loss_estimate_z)
-        self.log("train/loss_grad_energy", loss_grad_energy)
-        self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
+        # self.log("train/loss_grad_energy", loss_grad_energy)
+        # self.log("train/loss_grad_estimate_z", loss_grad_estimate_z)
         self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
         self.log("train/noise_annealing",current_noise_annealing,)
 

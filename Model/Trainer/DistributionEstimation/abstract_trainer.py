@@ -92,6 +92,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.sampler = get_sampler(
             cfg,
         )
+        self.test_type = 'none'
         self.current_step = 0
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
@@ -165,29 +166,14 @@ class AbstractDistributionEstimation(pl.LightningModule):
                     x,
                 )
             else:
-                # if self.train_proposal:
                 loss, dic_output = self.proposal_step(
                     x,
                 )
-                # elif self.train_base_dist:
-                #     loss, dic_output = self.base_dist_step(
-                #         x,
-                #     )
-                # else:
-                #     raise NotImplementedError
         else :
             loss, dic_output = self.training_energy(x)
             if self.train_proposal:
                 loss, dic_output = self.proposal_step(x,)
-                # )
-            # elif self.train_base_dist:
-            #     loss, dic_output = self.base_dist_step(
-            #         x,
-            #     )
-           
-        # loss, dic_output = self.proposal_step(
-                    # x,
-                # )
+
         self.post_train_step_handler(
             x,
             dic_output,
@@ -322,6 +308,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
                 self.ebm.train()
 
+    # def set_trainer(self, trainer, test_loader):
+    #     self.trainer = trainer
+    #     self.test_loader = test_loader
+    #     self.trainer_already_set = True
+
     def validation_step(self, batch, batch_idx, type="val"):
         """
         Validation step, just returns the logs from calculating the energy of the EBM.
@@ -338,11 +329,11 @@ class AbstractDistributionEstimation(pl.LightningModule):
 
         base_dist = self.ebm.base_dist.log_prob(x)
 
-        self.log(f"{type}/energy", energy_batch.mean())
-        self.log(f"{type}/proposal_likelihood", proposal_likelihood.mean())
-        self.log(f"{type}/base_dist_likelihood", base_dist.mean())
+        self.log(f"{type}energy", energy_batch.mean())
+        self.log(f"{type}proposal_likelihood", proposal_likelihood.mean())
+        self.log(f"{type}base_dist_likelihood", base_dist.mean())
         
-        self.update_dic_output(dic_output, type=type)
+        self.update_dic_output(dic_output, current_type=type)
 
         return dic_output
 
@@ -350,21 +341,21 @@ class AbstractDistributionEstimation(pl.LightningModule):
         """
         The test step is the same as the validation step.
         """
-        return self.validation_step(batch, batch_idx, type="test")
+        return self.validation_step(batch, batch_idx, type="test_"+self.test_type +"/")
 
     def update_dic_output(
         self,
         outputs,
-        type="train",
+        current_type="train/",
     ):
         """
         Update the dic output after a step
         """
-        if type == "train":
+        if "train" in current_type:
             self.training_steps_outputs.append(outputs)
-        elif type == "val":
+        elif 'val' in current_type:
             self.validation_step_outputs.append(outputs)
-        elif type == "test":
+        elif 'test' in current_type:
             self.test_step_outputs.append(outputs)
         else:
             raise NotImplementedError
@@ -391,6 +382,10 @@ class AbstractDistributionEstimation(pl.LightningModule):
         self.plot_energy()
         self.plot_samples()
         self.validation_step_outputs = []
+        # if self.trainer_already_set and self.global_step>1:
+            # self.trainer.test(self, dataloaders=self.test_loader)
+
+        
 
     def on_test_epoch_end(
         self,
@@ -400,7 +395,7 @@ class AbstractDistributionEstimation(pl.LightningModule):
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         """
         outputs = self.test_step_outputs
-        self.update_dic_logger(outputs, name="test/")
+        self.update_dic_logger(outputs, name="test_"+self.test_type+"/")
         self.test_step_outputs = []
 
     def resample_base_dist(
@@ -738,19 +733,22 @@ class AbstractDistributionEstimation(pl.LightningModule):
             x=torch.zeros((1,), dtype=self.dtype, device=self.device),
             nb_sample=nb_sample,
         )
+        
 
         dic_output.update({name + k + "_mean": v.mean() for k, v in dic.items()})
-        total_loss_self_norm = mean_energy + log_z_estimate.exp()
+        total_loss_self_norm = mean_energy + log_z_estimate.exp()-1
         self.log(name + "loss_self_norm", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate.exp() + 1
         self.log(name + "likelihood_normalized", total_likelihood)
+        self.log(name +"loss_total_SNL", total_loss_self_norm)
+
 
         total_loss_self_norm = mean_energy + log_z_estimate
         self.log(name + "loss_log", total_loss_self_norm)
         total_likelihood = -mean_energy - log_z_estimate
         self.log(name + "likelihood_log", total_likelihood)
 
-        self.log("val/loss_total", total_loss_self_norm)
+        self.log(name +"loss_total", total_loss_self_norm)
         if self.cfg.scheduler_energy.scheduler_name == 'reduce_lr_on_plateau':
             for scheduler in self.lr_schedulers():
                 if scheduler is not None:

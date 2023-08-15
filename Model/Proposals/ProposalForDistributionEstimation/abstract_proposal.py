@@ -32,7 +32,7 @@ class AbstractProposal(nn.Module):
         """
         Consider a subset of data for initialization
         """
-        index = np.random.choice(len(dataset), min(10000, len(dataset)))
+        index = np.random.choice(len(dataset), min(nb_sample_for_init, len(dataset)))
         data = torch.cat([dataset.__getitem__(i)["data"] for i in index]).reshape(
             -1, *self.input_size
         )

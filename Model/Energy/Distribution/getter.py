@@ -10,6 +10,7 @@ from .EnergyForDistribution import (
     get_EnergyRBM,
     get_fc_energy,
     get_fc_energy_sn,
+    get_fc_energy_sn_miniboone,
     get_ResNetDiscriminator,
 )
 
@@ -26,6 +27,7 @@ dic_energy = {
     "dc_gan_sn_v2": get_DC_GAN_DiscriminatorSNv2,
     "resnet": get_ResNetDiscriminator,
     "bndc_gan": get_BNDC_GAN_Discriminator,
+    "fc_sn_miniboone": get_fc_energy_sn_miniboone,
 }
 
 

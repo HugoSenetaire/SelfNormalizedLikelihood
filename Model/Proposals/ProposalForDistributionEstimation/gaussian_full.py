@@ -28,14 +28,12 @@ class GaussianFull(AbstractProposal):
         dataset,
         mean="dataset",
         std="dataset",
-        nb_sample_estimate=50000,
+        nb_sample_estimate=100000,
         std_multiplier=1,
         **kwargs
     ) -> None:
         super().__init__(input_size=input_size)
-        print("Init Standard Gaussian...")
         data = self.get_data(dataset, nb_sample_estimate).flatten(1).numpy()
-
         m, s = fit_gaussian(data)
         self.mean = torch.nn.Parameter(torch.tensor(m).float())
         print(self.mean.shape)

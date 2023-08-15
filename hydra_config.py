@@ -96,7 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
-    pg_control_mix : Optional[float] = 0.0
+    pg_control_mix: Optional[float] = 10000.0
     coef_regul: Optional[float] = 0.0
 
 
@@ -126,15 +126,13 @@ class BaseSchedulerConfig:
     verbose: Optional[bool] = False
 
 
-
-
 @dataclass
 class BaseProposalConfig:
     proposal_name: Union[str, None] = MISSING
     covariance_type: Optional[str] = "diag"  # Used in gaussian
     eps: Optional[float] = 1.0e-6  # Used in GaussianMixtureProposal
     n_components: Optional[int] = 10  # Used in GaussianMixtureProposal
-    nb_sample_estimate: Optional[int] = 10000
+    nb_sample_estimate: Optional[int] = 100000
     init_parameters: Optional[str] = "kmeans"
     delta: Optional[float] = 1e-3
     n_iter: Optional[int] = 100

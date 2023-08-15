@@ -1,4 +1,5 @@
 from .DistributionEstimation import (
+    KALE,
     VERA,
     DenoisingScoreMatchingTrainer,
     NCETrainer,
@@ -19,6 +20,7 @@ dic_trainer = {
     "score_matching": ScoreMatchingTrainer,
     "denoising_score_matching": DenoisingScoreMatchingTrainer,
     "vera": VERA,
+    "kale": KALE,
 }
 
 dic_trainer_regression = {
