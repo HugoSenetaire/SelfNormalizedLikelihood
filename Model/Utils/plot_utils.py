@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision
-
+import wandb
 # def plot_energy_1d(algo, save_dir, samples = [], samples_title = [], step, energy_type=True):
 
 
@@ -70,16 +70,11 @@ def plot_energy_2d(
         plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
         plt.savefig(os.path.join(save_dir, "{}_{}.pdf".format(name, step)))
     try:
-        algo.logger.log_image(
-            key="{}.png".format(
-                name,
-            ),
-            images=[fig],
-        )
+        image = wandb.Image(fig, caption = "{}_{}.png".format(name, step))
+        algo.logger.log({"{}.png".format(name,) :image}, step = step)
+
     except AttributeError as e:
-        print(
-            e,
-        )
+        print(e,)
     plt.close()
 
 
@@ -173,16 +168,10 @@ def plot_energy_1d_1d_regression(
     if algo.cfg.train.save_locally:
         plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try:
-        algo.logger.log_image(
-            key="{}.png".format(
-                name,
-            ),
-            images=[fig],
-        )
+        image = wandb.Image(fig, caption = "{}_{}.png".format(name, step))
+        algo.logger.log({"{}.png".format(name,) :image}, step = step)
     except AttributeError as e:
-        print(
-            e,
-        )
+        print(e,)
     print("Saved at ", os.path.join(save_dir, "{}_{}.png".format(name, step)))
     plt.close()
 
@@ -283,16 +272,10 @@ def plot_energy_image_1d_regression(
     if algo.cfg.train.save_locally:
         plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
     try:
-        algo.logger.log_image(
-            key="{}.png".format(
-                name,
-            ),
-            images=[fig],
-        )
+        image = wandb.Image(fig, caption = "{}_{}.png".format(name, step))
+        algo.logger.log({"{}.png".format(name,) :image}, step = step)
     except AttributeError as e:
-        print(
-            e,
-        )
+        print(e,)
     plt.close()
 
 
@@ -333,14 +316,7 @@ def plot_images(
         )
 
     try:
-        algo.logger.log_image(
-            key="{}.png".format(
-                name,
-            ),
-            images=[grid],
-        )
+        image = wandb.Image(grid, caption = "{}_{}.png".format(name, step))
+        algo.logger.log({"{}.png".format(name,) :image}, step = step)
     except AttributeError as e:
-        print(f"{algo = }")
-        print(
-            e,
-        )
+        print(e,)

@@ -11,17 +11,23 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self,
         ebm,
         cfg,
+        device,
+        logger,
         complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
 
+
     def training_step(self, batch, batch_idx):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers_perso()
+               energy_opt, base_dist_opt, proposal_opt = self.optimizers
+
         x = batch['data']
         if hasattr(self.ebm.proposal, 'set_x'):
             self.ebm.proposal.set_x(x)

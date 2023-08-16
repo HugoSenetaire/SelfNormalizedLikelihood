@@ -13,13 +13,18 @@ class VERA(AbstractDistributionEstimation):
         self,
         ebm,
         cfg,
+        device,
+        logger,
         complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
+
         self.entropy_weight = cfg.train.entropy_weight
         assert (
             self.ebm.proposal != self.ebm.base_dist
@@ -49,11 +54,11 @@ class VERA(AbstractDistributionEstimation):
         # sch_list = [self.scheduler, proposal_sch]
         return opt_list
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, x):
         # Get parameters
-        ebm_opt, proposal_opt = self.optimizers_perso()
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers
 
-        x = batch["data"].requires_grad_()
+
         x_gen, h_gen = self.ebm.proposal.sample_vera(self.num_samples_train)
         x_gen_detach = x_gen.detach()
 
@@ -77,12 +82,11 @@ class VERA(AbstractDistributionEstimation):
         self.log("train_loss", loss_total)
 
         # Backward ebm
-        ebm_opt.zero_grad()
-        self.manual_backward(
-            loss_total,
-            retain_graph=False,
-        )
-        ebm_opt.step()
+        energy_opt.zero_grad()
+       
+        loss_total.backward()
+        energy_opt.step()
+        energy_opt.zero_grad()
 
         # Update the parameters of the proposal
         energy_gen, _ = self.ebm.calculate_energy(x_gen)

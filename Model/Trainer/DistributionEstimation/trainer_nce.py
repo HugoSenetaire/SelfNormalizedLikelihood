@@ -19,13 +19,21 @@ class NCETrainer(AbstractDistributionEstimation):
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
     """
     def __init__(
-        self, ebm, cfg, complete_dataset=None,
+        self,
+        ebm,
+        cfg,
+        device,
+        logger,
+        complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
+
 
     def training_energy(self, x):
         # Get parameters

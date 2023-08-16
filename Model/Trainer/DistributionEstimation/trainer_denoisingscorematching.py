@@ -16,13 +16,21 @@ class DenoisingScoreMatchingTrainer(AbstractDistributionEstimation):
     """
 
     def __init__(
-        self, ebm, cfg, complete_dataset=None,
+        self,
+        ebm,
+        cfg,
+        device,
+        logger,
+        complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
+
         self.sigma = cfg.trainer.sigma 
         logger.warning("DSM not taken in charge yet")
         raise NotImplementedError
@@ -49,29 +57,24 @@ class DenoisingScoreMatchingTrainer(AbstractDistributionEstimation):
 
         return loss, dic
 
-    def training_step(self, batch, batch_idx):
-        ebm_opt, proposal_opt = self.optimizers_perso()
-        x = batch['data']
+    def training_step(self, x,):
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers
+
         if hasattr(self.ebm.proposal, 'set_x'):
             self.ebm.proposal.set_x(x)
 
         loss_total, dic_output = self.denoising_score_matching(x)
         self.log("train_loss", loss_total.mean())
-        ebm_opt.zero_grad()
-        self.manual_backward(
-            loss_total.mean(),
-            retain_graph=False,
-        )
-        ebm_opt.step()
+        energy_opt.zero_grad()
+       
+        loss_total.mean().backward()
+        energy_opt.step()
 
-        ebm_opt.zero_grad()
+        energy_opt.zero_grad()
 
         estimate_log_z, dic = self.ebm.estimate_log_z(x, self.num_samples_train)
         estimate_log_z = estimate_log_z.mean()
         dic_output.update(dic)
 
-        # Update the parameters of the proposal
-        self._proposal_step(x = x, estimate_log_z = estimate_log_z, proposal_opt = proposal_opt, dic_output=dic_output,)
-        self.post_train_step_handler(x, dic_output,)
         
-        return loss_total
+        return loss_total, dic_output

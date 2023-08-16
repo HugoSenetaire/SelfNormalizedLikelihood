@@ -1,5 +1,7 @@
-import torch
 import logging
+
+import torch
+
 from .abstract_trainer import AbstractDistributionEstimation
 
 logging.basicConfig(
@@ -16,11 +18,18 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
     """
     def __init__(
-        self, ebm, cfg, complete_dataset=None, 
+        self,
+        ebm,
+        cfg,
+        device,
+        logger,
+        complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
 
@@ -55,7 +64,8 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
         return loss, dic
 
     def training_step(self, batch, batch_idx):
-        ebm_opt, proposal_opt = self.optimizers_perso()
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers
+
 
         x = batch['data']
         if hasattr(self.ebm.proposal, 'set_x'):

@@ -21,26 +21,29 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
     """
-
     def __init__(
         self,
         ebm,
         cfg,
+        device,
+        logger,
         complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
 
+
     def training_energy(self,x):
         # Get parameters
-        energy_opt, base_dist_opt, proposal_opt = self.optimizers_perso()
+        energy_opt, base_dist_opt, proposal_opt = self.optimizers
         energy_opt.zero_grad()
         base_dist_opt.zero_grad()
         proposal_opt.zero_grad()
-
         self.configure_gradient_flow("energy")
         if self.train_base_dist :
             for param in self.ebm.base_dist.parameters():
@@ -120,7 +123,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train/noise_annealing",current_noise_annealing,)
 
         # Backward ebm
-        self.manual_backward(loss_total,retain_graph=True,)
+        loss_total.backward()
 
         # for param in self.ebm.explicit_bias :
             # print(param.grad)

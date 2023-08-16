@@ -26,11 +26,15 @@ class KALE(AbstractDistributionEstimation):
         self,
         ebm,
         cfg,
+        device,
+        logger,
         complete_dataset=None,
     ):
         super().__init__(
             ebm=ebm,
             cfg=cfg,
+            device=device,
+            logger=logger,
             complete_dataset=complete_dataset,
         )
 

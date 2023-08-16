@@ -11,11 +11,7 @@ from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
 from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
 
-try:
-    from pytorch_lightning.loggers import WandbLogger
-except:
-    from lighting.pytorch.loggers import WandbLogger
-
+import wandb
 import logging
 import os
 from dataclasses import asdict
@@ -49,29 +45,22 @@ def main(cfg):
 
     # Get datasets and dataloaders :
     args_dict = asdict(cfg.dataset)
-    complete_dataset, complete_masked_dataset = get_dataset(
-        args_dict,
-    )
-    train_loader = get_dataloader(
-        complete_masked_dataset.dataset_train, args_dict, shuffle=True
-    )
+    complete_dataset, complete_masked_dataset = get_dataset(args_dict,)
+    train_loader = get_dataloader(complete_masked_dataset.dataset_train, args_dict, shuffle=True)
     val_loader = get_dataloader(complete_masked_dataset.dataset_val, args_dict)
     test_loader = get_dataloader(complete_masked_dataset.dataset_test, args_dict)
     cfg.dataset.input_size = complete_dataset.get_dim_input()
 
     # name and save_dir will be in cfg
+    ebm = get_model(cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader)
 
-    ebm = get_model(
-        cfg, complete_dataset, complete_masked_dataset, loader_train=train_loader
-    )
-
-    algo = dic_trainer[cfg.train.trainer_name](
-        ebm=ebm,
-        cfg=cfg,
-        complete_dataset=complete_dataset,
-    )
-
-    nb_gpu, accelerator, devices, strategy = get_accelerator(cfg)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        ebm = ebm.to(device)
+        cfg.train.device = device
+    else:
+        device = torch.device("cpu")
+        cfg.train.device = device
 
     if cfg.train.load_from_checkpoint or cfg.train.just_test:
         ckpt_dir = os.path.join(cfg.train.save_dir, "val_checkpoint")
@@ -83,91 +72,40 @@ def main(cfg):
     else:
         ckpt_path = None
 
-    # Checkpoint callback :
-    checkpoint_callback_val, checkpoints = setup_callbacks(cfg)
+   
+    if cfg.machine is not None:
+        if cfg.machine.machine == "karolina":
+            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
+            # logger_trainer = WandbLogger(project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path, config=my_cfg,)
+            logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg, dir=cfg.machine.wandb_path)
+        else:
+            print(f"Working on {cfg.machine.machine = }")
+            # logger_trainer = WandbLogger(project="SelfNormalizedLikelihood",config=my_cfg,)
+            logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg)
+    else:
+        print("You have not specified a machine")
+        logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg)
+        
+    algo = dic_trainer[cfg.train.trainer_name](
+        ebm=ebm,
+        cfg=cfg,
+        device = device,
+        logger=logger_trainer,
+        complete_dataset=complete_dataset,
+        )
+
+
 
     # Handle training duration :
     if cfg.train.max_epochs is not None:
         max_steps = cfg.train.max_epochs * (len(train_loader) + len(val_loader))
         cfg.train.max_steps = max_steps
-    val_check_interval = cfg.train.val_check_interval
+    else :
+        max_steps = cfg.train.max_steps
 
-    if cfg.machine is not None:
-        if cfg.machine.machine == "karolina":
-            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
-            logger_trainer = WandbLogger(
-                project="SelfNormalizedLikelihood",
-                save_dir=cfg.machine.wandb_path,
-                config=my_cfg,
-            )
-        else:
-            print(f"Working on {cfg.machine.machine = }")
-            logger_trainer = WandbLogger(
-                project="SelfNormalizedLikelihood",
-                config=my_cfg,
-            )
-    else:
-        print("You have not specified a machine")
-        logger_trainer = True
-        # Get Trainer
+    algo.train(max_steps, train_loader, val_loader=val_loader)
 
-    trainer = pl.Trainer(
-        accelerator=accelerator,
-        default_root_dir=cfg.train.save_dir,
-        callbacks=checkpoints,
-        strategy=strategy,
-        devices=devices,
-        precision=16,
-        max_steps=cfg.train.max_steps,
-        val_check_interval=val_check_interval,
-        logger=logger_trainer,
-        log_every_n_steps=cfg.train.log_every_n_steps,
-    )
-
-    #    algo.set_trainer(trainer, test_loader)
-    if not cfg.train.just_test:
-        trainer.fit(
-            algo,
-            ckpt_path=ckpt_path,
-            train_dataloaders=train_loader,
-            # val_dataloaders=val_loader,
-            val_dataloaders=test_loader,
-        )
-        algo.load_state_dict(
-            torch.load(checkpoint_callback_val.best_model_path)["state_dict"]
-        )
-
-    algo.test_type = "log"
-    algo.load_state_dict(torch.load(checkpoints[0].best_model_path)["state_dict"])
-    trainer.test(algo, dataloaders=test_loader)
-    algo.test_type = "snl"
-    algo.load_state_dict(torch.load(checkpoints[1].best_model_path)["state_dict"])
-    trainer.test(algo, dataloaders=val_loader)
-    if algo.sampler is not None:
-        if np.prod(complete_dataset.get_dim_input()) == 2:
-            print(f"Prod = 2")
-            samples = algo.samples_mcmc()[0].flatten(1)
-            plot_energy_2d(
-                algo=algo,
-                save_dir=cfg.train.save_dir,
-                samples=[algo.example, algo.example_proposal, samples],
-                samples_title=[
-                    "Samples from dataset",
-                    "Samples from proposal",
-                    "Samples HMC",
-                ],
-            )
-        else:
-            print(f"IMAGES!")
-            images = algo.samples_mcmc()[0]
-            plot_images(
-                images=images,
-                save_dir=cfg.train.save_dir,
-                algo=algo,
-                transform_back=complete_dataset.transform_back,
-                name="samples_best",
-                step="",
-            )
+    
 
 
 if __name__ == "__main__":
