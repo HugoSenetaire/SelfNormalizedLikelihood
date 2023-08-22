@@ -23,29 +23,33 @@ def get_optimizer(cfg, list_parameters_gen):
         raise ValueError("Optimizer name not valid")
 
 
-def get_scheduler(cfg, optim):
+def get_scheduler(cfg, optim, feedback_scheduler= [], standard_scheduler= []):
     if (
         cfg is None
         or cfg.scheduler_name is None
         or cfg.scheduler_name == "no_scheduler"
     ):
-        return None
+        feedback_scheduler.append(None)
+        standard_scheduler.append(None)
     elif cfg.scheduler_name == "step_lr":
-        return lr_scheduler.StepLR(optim, step_size=cfg.step_size, gamma=cfg.gamma)
+        standard_scheduler.append(lr_scheduler.StepLR(optim, step_size=cfg.step_size, gamma=cfg.gamma))
+        feedback_scheduler.append(None)
     elif cfg.scheduler_name == "cyclic_lr":
-        return lr_scheduler.CyclicLR(
+        standard_scheduler.append(lr_scheduler.CyclicLR(
             optim,
             base_lr=cfg.base_lr,
             max_lr=cfg.max_lr,
             step_size_up=cfg.step_size_up,
             cycle_momentum=False,
-        )
+        ))
+        feedback_scheduler.append(None)
     elif cfg.scheduler_name == "cosine_lr":
-        return lr_scheduler.CosineAnnealingLR(
+        standard_scheduler(lr_scheduler.CosineAnnealingLR(
             optim, T_max=cfg.T_max, eta_min=cfg.eta_min
-        )
+        ))
+        feedback_scheduler.append(None)
     elif cfg.scheduler_name == "reduce_lr_on_plateau":
-        return lr_scheduler.ReduceLROnPlateau(
+        feedback_scheduler.append(lr_scheduler.ReduceLROnPlateau(
             optim,
             mode=cfg.mode,
             factor=cfg.factor,
@@ -56,7 +60,8 @@ def get_scheduler(cfg, optim):
             min_lr=cfg.min_lr,
             eps=cfg.eps,
             verbose=cfg.verbose,
-        )
+        ))
+        standard_scheduler.append(None)
     else:
         raise ValueError("Scheduler name not valid")
 

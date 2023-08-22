@@ -96,7 +96,7 @@ class AdamwConfig(BaseOptimConfig):
     eps: float = MISSING
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
-    pg_control_mix: Optional[float] = 10000.0
+    pg_control_mix: Optional[float] = 0.0
     coef_regul: Optional[float] = 0.0
 
 
@@ -124,6 +124,7 @@ class BaseSchedulerConfig:
     min_lr: Optional[float] = 0
     eps: Optional[float] = 1e-8
     verbose: Optional[bool] = False
+    feedback_loss: Optional[str] = 'SNL' # SNL or IS
 
 
 @dataclass
@@ -210,9 +211,7 @@ class BaseBaseDistributionConfig(BaseProposalConfig):
 
 @dataclass
 class BaseProposalTrainingConfig:
-    num_sample_train_estimate: Optional[
-        int
-    ] = None  # This is used to compare multiple training at once.
+    num_sample_train_estimate: Optional[int] = None  # This is used to compare multiple training at once.
     num_sample_proposal: int = MISSING
     num_sample_proposal_val: int = MISSING
     num_sample_proposal_test: int = MISSING
@@ -242,9 +241,7 @@ class BaseSamplerConfig:
 
     def __post_init__(self):
         if self.sampler_name not in ["no_sampler", "nuts"]:
-            raise RuntimeError(
-                f"sampler_name should be in ['nuts'] but got {self.sampler_name}"
-            )
+            raise RuntimeError(f"sampler_name should be in ['nuts'] but got {self.sampler_name}")
 
 
 @dataclass
@@ -289,29 +286,22 @@ class BaseTrainConfig:
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
-            raise RuntimeError(
-                f"task should be in ['regression', 'distribution_estimation'] but got {self.task}"
-            )
+            raise RuntimeError(f"task should be in ['regression', 'distribution_estimation'] but got {self.task}")
+        
         if self.save_dir is None:
             logger.warning("save_dir is None")
 
         if self.multi_gpu not in ["single", "ddp"]:
-            raise RuntimeError(
-                f"multi_gpu should be in ['single', 'ddp'] but got {self.multi_gpu}"
-            )
+            raise RuntimeError(f"multi_gpu should be in ['single', 'ddp'] but got {self.multi_gpu}")
 
         if self.max_steps is None and self.max_epochs is None:
             raise RuntimeError("max_steps and max_epochs are both None. Please set one")
 
         if self.max_steps is not None and self.max_epochs is not None:
-            raise RuntimeError(
-                "max_steps and max_epochs are both not None. Please set only one"
-            )
+            raise RuntimeError("max_steps and max_epochs are both not None. Please set only one")
 
         if "denoising" in self.trainer_name and self.sigma is None:
-            raise RuntimeError(
-                "Sigma is needed when considering training with denoising models"
-            )
+            raise RuntimeError("Sigma is needed when considering training with denoising models")
 
 
 @dataclass
@@ -333,7 +323,8 @@ class Config:
     base_distribution: BaseBaseDistributionConfig = MISSING
     dataset: BaseDatasetConfig = MISSING
     energy: BaseEnergyConfig = MISSING
-    optim_energy: BaseOptimConfig = MISSING
+    optim_f_theta: BaseOptimConfig = MISSING
+    optim_log_bias: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
     optim_base_dist: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
@@ -343,15 +334,12 @@ class Config:
     feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
-    scheduler_energy: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_f_theta: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_log_bias: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_base_dist: Optional[Union[BaseSchedulerConfig, None]] = None
     machine: Optional[Machine] = None
 
-    # def _complete_dataset(self):
-    #     self.dataset.seed = self.train.seed
-    #     self.dataset.batch_size = self.train.batch_size
-    #     self.dataset.num_workers = self.train.num_workers
 
     def _complete_train(self):
         self.train.save_dir = Path(self.train.output_folder) / self.dataset.dataset_name
@@ -371,86 +359,44 @@ def store_main():
     cs.store(name="base_config", node=Config)
 
     # Datasets
-    cs.store(
-        name="base_dataset_config_name",
-        group="dataset",
-        node=BaseDatasetConfig,
-    )
+    cs.store(name="base_dataset_config_name", group="dataset", node=BaseDatasetConfig,)
 
     # Optimizers
-    cs.store(name="base_optim_config_name", group="optim_energy", node=BaseOptimConfig)
-    cs.store(name="adamw_name", group="optim_energy", node=AdamwConfig)
-    cs.store(
-        name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
-    )
+    cs.store(name="base_optim_config_name", group="optim_f_theta", node=BaseOptimConfig)
+    cs.store(name="adamw_name", group="optim_f_theta", node=AdamwConfig)
+    cs.store(name="base_optim_config_name", group="optim_log_bias", node=BaseOptimConfig)
+    cs.store(name="adamw_name", group="optim_log_bias", node=AdamwConfig)
+    cs.store(name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
-    cs.store(
-        name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig
-    )
+    cs.store(name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_energy",
-        node=BaseSchedulerConfig,
-    )
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_proposal",
-        node=BaseSchedulerConfig,
-    )
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_base_dist",
-        node=BaseSchedulerConfig,
-    )
+    cs.store(name="base_scheduler_config_name", group="scheduler_f_theta", node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name", group="scheduler_log_bias", node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name", group="scheduler_proposal", node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name", group="scheduler_base_dist", node=BaseSchedulerConfig,)
+
     # Proposal training
-    cs.store(
-        name="base_proposal_training_config_name",
-        group="proposal_training",
-        node=BaseProposalTrainingConfig,
-    )
+    cs.store(name="base_proposal_training_config_name", group="proposal_training", node=BaseProposalTrainingConfig,)
 
     # Base Proposal
-    cs.store(
-        name="base_proposal_config_name", group="proposal", node=BaseProposalConfig
-    )
+    cs.store(name="base_proposal_config_name", group="proposal", node=BaseProposalConfig)
 
     # Base distributions
-    cs.store(
-        name="base_distribution_config_name",
-        group="base_distribution",
-        node=BaseBaseDistributionConfig,
-    )
+    cs.store(name="base_distribution_config_name",group="base_distribution",node=BaseBaseDistributionConfig,)
 
     # Base Default Proposal
-    cs.store(
-        name="base_default_proposal_config_name",
-        group="default_proposal",
-        node=BaseProposalConfig,
-    )
+    cs.store(name="base_default_proposal_config_name", group="default_proposal", node=BaseProposalConfig,)
 
     # Energy
-    cs.store(
-        name="base_energy_config_name",
-        group="energy",
-        node=BaseEnergyConfig,
-    )
+    cs.store(name="base_energy_config_name", group="energy", node=BaseEnergyConfig,)
 
     # Explicit bias
-    cs.store(
-        name="base_explicit_bias_config_name",
-        group="explicit_bias",
-        node=BaseExplicitBiasConfig,
-    )
+    cs.store(name="base_explicit_bias_config_name", group="explicit_bias", node=BaseExplicitBiasConfig,)
 
     # Feature extractor
-    cs.store(
-        name="base_feature_extractor_config_name",
-        group="feature_extractor",
-        node=BaseFeatureExtractorConfig,
-    )
+    cs.store(name="base_feature_extractor_config_name", group="feature_extractor", node=BaseFeatureExtractorConfig,)
 
     # Trainer
     cs.store(name="base_train_config_name", group="train", node=BaseTrainConfig)

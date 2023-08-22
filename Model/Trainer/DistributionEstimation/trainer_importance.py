@@ -26,7 +26,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
     def training_step(self, batch, batch_idx):
         # Get parameters
-               energy_opt, base_dist_opt, proposal_opt = self.optimizers
+        f_theta_opt, log_bias_opt, base_dist_opt, proposal_opt = self.optimizers
 
         x = batch['data']
         if hasattr(self.ebm.proposal, 'set_x'):
@@ -42,7 +42,8 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self.log("train_loss", loss_total)
 
         # Backward ebmxx
-        ebm_opt.zero_grad()
+        f_theta_opt.zero_grad()
+        log_bias_opt.zero_grad()
         self.manual_backward(
             loss_total,
             retain_graph=True,
@@ -52,7 +53,8 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         self._proposal_step(x = x, estimate_log_z = estimate_log_z, proposal_opt = proposal_opt, dic_output=dic_output,)
 
         # Update the parameters of the ebm
-        ebm_opt.step()
+        f_theta_opt.step()
+        log_bias_opt.step()
         dic_output.update(dic)
 
         self.post_train_step_handler(x,dic_output,)

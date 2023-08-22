@@ -1,9 +1,9 @@
-import torch
 import logging
 
-from .abstract_trainer import AbstractDistributionEstimation
-from ...Utils.noise_annealing import calculate_current_noise_annealing
+import torch
 
+from ...Utils.noise_annealing import calculate_current_noise_annealing
+from .abstract_trainer import AbstractDistributionEstimation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +18,7 @@ class NCETrainer(AbstractDistributionEstimation):
     Trainer for the an importance sampling estimator of the partition function, which can be either importance sampling (with log) or self.normalized (with exp).
     Here, the proposal is trained by maximizing the likelihood of the data under the proposal.
     """
+
     def __init__(
         self,
         ebm,
@@ -34,7 +35,6 @@ class NCETrainer(AbstractDistributionEstimation):
             complete_dataset=complete_dataset,
         )
 
-
     def training_energy(self, x):
         # Get parameters
         energy_opt, base_dist_opt, proposal_opt = self.optimizers_perso()
@@ -43,14 +43,14 @@ class NCETrainer(AbstractDistributionEstimation):
         proposal_opt.zero_grad()
 
         self.configure_gradient_flow("energy")
-        if self.train_base_dist :
+        if self.train_base_dist:
             for param in self.ebm.base_dist.parameters():
                 param.requires_grad = True
         current_noise_annealing = calculate_current_noise_annealing(
-                self.current_step,
-                self.cfg.train.noise_annealing_init,
-                self.cfg.train.noise_annealing_gamma,
-            )
+            self.current_step,
+            self.cfg.train.noise_annealing_init,
+            self.cfg.train.noise_annealing_gamma,
+        )
 
         x = x.requires_grad_()
 
@@ -69,9 +69,12 @@ class NCETrainer(AbstractDistributionEstimation):
         )
 
         samples = self.ebm.sample(self.num_samples_train).to(x.device, x.dtype)
-        energy_samples = self.ebm.energy(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
-        if self.ebm.explicit_bias :
-            energy_samples = self.ebm.explicit_bias(energy_samples)
+        energy_samples = (
+            self.ebm.f_theta(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
+        )
+        if self.ebm.explicit_bias:
+            log_bias = self.ebm.explicit_bias(energy_samples)
+            energy_samples = energy_samples + log_bias
         dic_output["f_theta_samples"] = energy_samples
 
         if self.ebm.base_dist is not None:
@@ -94,9 +97,17 @@ class NCETrainer(AbstractDistributionEstimation):
 
         logp_x = -energy_data.reshape(batch_size, 1)  # logp(x)
         logq_x = log_prob_proposal_data.reshape(batch_size, 1)  # logq(x)
-        logp_gen = -energy_samples.reshape(self.num_samples_train,1) # logp(x̃)
-        logq_gen = log_prob_proposal_samples.reshape(self.num_samples_train,1)  # logq(x̃)
-        log_noise_ratio = torch.log(torch.tensor(self.num_samples_train/batch_size, dtype=energy_data.dtype, device=energy_data.device))
+        logp_gen = -energy_samples.reshape(self.num_samples_train, 1)  # logp(x̃)
+        logq_gen = log_prob_proposal_samples.reshape(
+            self.num_samples_train, 1
+        )  # logq(x̃)
+        log_noise_ratio = torch.log(
+            torch.tensor(
+                self.num_samples_train / batch_size,
+                dtype=energy_data.dtype,
+                device=energy_data.device,
+            )
+        )
 
         value_data = logp_x - torch.logsumexp(
             torch.cat([logp_x, logq_x + log_noise_ratio], dim=1), dim=1, keepdim=True
@@ -115,19 +126,23 @@ class NCETrainer(AbstractDistributionEstimation):
 
         # value_data = logp_x - torch.logsumexp(torch.cat([logp_x, logq_x], dim=1), dim=1, keepdim=True)  # logp(x)/(logp(x) + logq(x))
         # value_gen = logq_gen - torch.logsumexp(torch.cat([logp_gen, logq_gen], dim=1), dim=1, keepdim=True)  # logq(x̃)/(logp(x̃) + logq(x̃))
-        nce_objective = value_data.mean() + (value_gen + log_noise_ratio).mean() ## SHOULD I DO BOTH TIMES THE ADDING OF LOG NOISE RATIO
+        nce_objective = (
+            value_data.mean() + (value_gen + log_noise_ratio).mean()
+        )  ## SHOULD I DO BOTH TIMES THE ADDING OF LOG NOISE RATIO
         # nce_objective = value_data.mean() + value_gen.mean() ## SHOULD I DO BOTH TIMES THE ADDING OF LOG NOISE RATIO
         nce_loss = -nce_objective
-        
-        
+
         min_data_len = min(x.shape[0], samples.shape[0])
         epsilon = torch.rand(min_data_len, device=x.device)
         for i in range(len(x.shape) - 1):
             epsilon = epsilon.unsqueeze(-1)
         epsilon = epsilon.expand(min_data_len, *x.shape[1:])
-        aux_2 = (epsilon.sqrt() * x[:min_data_len,] + (1 - epsilon).sqrt() * samples[:min_data_len]).detach()
+        aux_2 = (
+            epsilon.sqrt() * x[:min_data_len,]
+            + (1 - epsilon).sqrt() * samples[:min_data_len]
+        ).detach()
         aux_2.requires_grad_(True)
-        f_theta_gen_2 = self.ebm.energy(aux_2).mean()
+        f_theta_gen_2 = self.ebm.f_theta(aux_2).mean()
         f_theta_gen_2.backward(retain_graph=True)
         loss_grad_estimate_mix = self.gradient_control_l2(
             aux_2, -f_theta_gen_2, self.cfg.optim_energy.pg_control_mix
@@ -146,4 +161,3 @@ class NCETrainer(AbstractDistributionEstimation):
             base_dist_opt.step()
 
         return loss_total, dic_output
-

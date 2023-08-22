@@ -75,7 +75,7 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
     # Get EBM :
     print("Get EBM")
     ebm = ImportanceWeightedEBM(
-        energy=energy,
+        f_theta=energy,
         proposal=proposal,
         base_dist=base_dist,
         explicit_bias=explicit_bias,

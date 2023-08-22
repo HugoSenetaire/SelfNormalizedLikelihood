@@ -1,7 +1,11 @@
 defaults:
   - base_scheduler_config_name
 scheduler_name: 'reduce_lr_on_plateau'
-factor : 0.5
-patience : 5
-cooldown : 5
+mode: 'min'
+factor: 0.1
+patience: 10
+threshold: 1e-4
+threshold_mode: 'rel'
+cooldown: 0
+min_lr: 0
 feedback_loss : 'SNL'
