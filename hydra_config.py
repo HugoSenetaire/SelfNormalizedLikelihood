@@ -98,6 +98,7 @@ class AdamwConfig(BaseOptimConfig):
     pg_control_gen: Optional[float] = 0.0
     pg_control_mix: Optional[float] = 0.0
     coef_regul: Optional[float] = 0.0
+    clip_grad_norm: Optional[float] = None
 
 
 @dataclass
