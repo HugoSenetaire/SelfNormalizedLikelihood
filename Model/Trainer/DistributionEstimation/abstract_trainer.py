@@ -406,6 +406,7 @@ class AbstractDistributionEstimation:
                         save_dir=self.cfg.train.save_dir,
                         name="example",
                         transform_back=self.transform_back,
+                        step = self.current_step,
                     )
         else:
             self.example = None
