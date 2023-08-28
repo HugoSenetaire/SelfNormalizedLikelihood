@@ -22,6 +22,7 @@ from .ProposalForDistributionEstimation.pytorch_flows import get_PytorchFlowsPro
 from .ProposalForDistributionEstimation.real_nvp_proposal import get_RealNVPProposal
 from .ProposalForDistributionEstimation.student import get_StudentProposal
 from .ProposalForDistributionEstimation.vera_proposal import get_vera, get_vera_hmc
+from .ProposalForDistributionEstimation.pPCA import get_ProbabilisticPCA
 from .ProposalForRegression import get_UniformRegression
 from .ProposalForRegression.gaussian import get_GaussianRegression
 from .ProposalForRegression.MDNProposal import get_MDNProposalRegression
@@ -43,6 +44,7 @@ dic_proposals = {
     "maf": get_MAFProposal,
     "pytorch_flows": get_PytorchFlowsProposal,
     'gaussian_full': get_GaussianFull,
+    'ppca': get_ProbabilisticPCA,
 }
 
 

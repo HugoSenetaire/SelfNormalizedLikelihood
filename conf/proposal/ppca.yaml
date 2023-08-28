@@ -1,0 +1,5 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'ppca'
+n_components: 20 # Number of components for the mixture
+nb_sample_estimate: 10000 # Nb sample used to pretrain the gaussian (or just train if it is fixed during training)
