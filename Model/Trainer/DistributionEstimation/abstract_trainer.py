@@ -92,6 +92,8 @@ class AbstractDistributionEstimation:
         self.sampler = get_sampler(cfg,)
         self.device = device
         self.current_step = 0
+
+        self.last_sample_step = -float('inf')
         
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
@@ -730,7 +732,8 @@ class AbstractDistributionEstimation:
         torch.set_grad_enabled(True)  # Required for MCMC sampling
 
 
-        if self.current_step % self.cfg.train.samples_every == 0:
+        if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
+            self.last_sample_step = self.current_step
             save_dir = self.cfg.train.save_dir
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
