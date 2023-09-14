@@ -193,6 +193,8 @@ class ImportanceWeightedEBM(nn.Module):
         # Add the base distribution and proposal contributions to the energy if they are different
         # if self.base_dist != self.proposal or noise_annealing > 1e-4:
         base_dist_log_prob = self.base_dist.log_prob(samples_proposal_noisy).view(samples_proposal.size(0), -1).sum(1)
+
+        energy_samples = f_theta_proposal - base_dist_log_prob
         if detach_base_dist:
             base_dist_log_prob = base_dist_log_prob.detach()
         samples_proposal_log_prob = self.proposal.log_prob(samples_proposal).reshape(samples_proposal.shape[0], -1).sum(1)
@@ -220,10 +222,11 @@ class ImportanceWeightedEBM(nn.Module):
                 "z_estimation/ESS_estimate": ESS_estimate.detach(),
             }
         )
+        to_return = [log_z_estimate, dic_output]
         if return_samples:
-            return log_z_estimate, dic_output, samples_proposal, samples_proposal_noisy
-        else:
-            return log_z_estimate, dic_output
+            to_return.extend([energy_samples, samples_proposal, samples_proposal_noisy])
+       
+        return to_return
 
     def forward(self, x):
         """
