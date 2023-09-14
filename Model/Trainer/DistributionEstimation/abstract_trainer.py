@@ -14,7 +14,7 @@ from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
-from ...Utils.clip_grads_utils import clip_grad_adam 
+from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -189,8 +189,14 @@ class AbstractDistributionEstimation:
 
         self.post_train_step_handler(x, dic_output,)
 
-    def grads_and_reg(self, loss_total, x, x_gen = None, energy_data = None, energy_samples = None,):
-        if self.cfg.optim_f_theta.pg_control_mix is not None and self.cfg.optim_f_theta.pg_control_mix > 0:
+    def grads_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
+        '''
+        Compute different gradients and regularization terms given the energy or the loss.
+        '''
+        dic_loss = {}
+
+        # Regularization
+        if self.cfg.regularization.pg_control_mix is not None and self.cfg.regularization.pg_control_mix > 0:
             if x_gen is None:
                 x_gen = self.ebm.proposal.sample(self.num_samples_train)
             min_data_len = min(x.shape[0], x_gen.shape[0])
@@ -202,51 +208,61 @@ class AbstractDistributionEstimation:
             aux_2.requires_grad_(True)
             f_theta_gen_2 = self.ebm.f_theta(aux_2).mean()
             f_theta_gen_2.backward(retain_graph=True)
-            loss_grad_estimate_mix = self.gradient_control_l2(aux_2, -f_theta_gen_2, self.cfg.optim_f_theta.pg_control_mix)
-            loss_total = loss_total + loss_grad_estimate_mix
+            loss_grad_estimate_mix = self.gradient_control_l2(aux_2, -f_theta_gen_2, self.cfg.regularization.pg_control_mix)
+            dic_loss["loss_grad_estimate_mix"] = loss_grad_estimate_mix
             self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
 
-        if self.cfg.optim_f_theta.l2_control is not None and self.cfg.optim_f_theta.l2_control > 0:
-            if energy_data is None or energy_samples is None :
-                raise ValueError("Need to provide energy_data and energy_samples")
-            else :
-                loss_grad_estimate_l2 = self.cfg.optim_f_theta.l2_control * (energy_data**2 + energy_samples**2).mean()
-                loss_total = loss_total + loss_grad_estimate_l2
-                self.log("train/loss_grad_estimate_l2", loss_grad_estimate_l2)
+        if self.cfg.regularization.l2_control is not None and self.cfg.regularization.l2_control > 0:
+            loss_grad_estimate_l2 = self.cfg.regularization.l2_control * (energy_data**2 + energy_samples**2).mean()
+            dic_loss["loss_grad_estimate_l2"] = loss_grad_estimate_l2
+            self.log("train/loss_grad_estimate_l2", loss_grad_estimate_l2)
+            
+        loss_total = loss_energy + loss_samples
+        for key in dic_loss:
+            loss_total += dic_loss[key]
+
+        if self.cfg.regularization.normalize_sample_grad:
+            loss_energy.backward(retain_graph=True)
+            for p in self.ebm.f_theta.parameters():
+                current_grad = torch.autograd.grad(loss_samples, p, retain_graph=True, only_inputs=True)[0]
+                current_grad = current_grad / (current_grad.norm() + 1e-8)
+                p_grad_norm = p.grad.norm()
+                p.grad += current_grad * p_grad_norm
+            for key in dic_loss.keys():
+                dic_loss[key].backward(retain_graph=True)
+        else :
+            loss_total.backward()
             
 
-        loss_total.backward()
 
+        # Grad clipping 
         for i,type in enumerate(self.liste_optimizer_name):
             current_optim = self.optimizers[i]
             current_cfg_optim = getattr(self.cfg, "optim_{}".format(type))
             if current_cfg_optim.clip_grad_type == "norm":
                 if current_cfg_optim.clip_grad_value is not None:
+                    self.log("train/clip_grad_norm", current_cfg_optim.clip_grad_value)
                     torch.nn.utils.clip_grad_norm_(
                         parameters=getattr(self.ebm, type).parameters(),
                         max_norm=current_cfg_optim.clip_grad_value,
                     )
             elif current_cfg_optim.clip_grad_type == "abs":
                 if current_cfg_optim.clip_grad_value is not None:
+                    self.log("train/clip_grad_abs", current_cfg_optim.clip_grad_value)
                     torch.nn.utils.clip_grad_value_(
                         parameters=getattr(self.ebm, type).parameters(),
                         clip_value=current_cfg_optim.clip_grad_value,
                     )
             elif current_cfg_optim.clip_grad_type == "adam":
-                clip_grad_adam(getattr(self.ebm, type).parameters(),
+                if current_cfg_optim.nb_sigmas is not None:
+                    self.log("train/clip_grad_adam_nb_sigmas", current_cfg_optim.nb_sigmas)
+                    clip_grad_adam(getattr(self.ebm, type).parameters(),
                             current_optim,
                             nb_sigmas=current_cfg_optim.nb_sigmas)
             elif current_cfg_optim.clip_grad_type is None or current_cfg_optim.clip_grad_type == "none":
                 pass
             else :
                 raise NotImplementedError
-            
-
-        # if self.cfg.optim_f_theta.clip_grad_norm is not None:
-        #     torch.nn.utils.clip_grad_norm_(
-        #         parameters=self.ebm.parameters(),
-        #         max_norm=self.cfg.optim_f_theta.clip_grad_norm,
-        #     )
 
         return loss_total
         

@@ -127,12 +127,17 @@ class PersistentReplayLangevin(AbstractDistributionEstimation):
         energy_samples, dic = self.ebm.calculate_energy(x_init)
         for key in dic.keys():
             dic_output[key.replace("data", "samples")] = dic[key]
-        loss_total = torch.mean(energy_data) - torch.mean(energy_samples)
-        loss_total = self.grads_and_reg(loss_total=loss_total, x=x, x_gen=x_init, energy_data=energy_data, energy_samples=energy_samples,)
+        # loss_total =  - torch.mean(energy_samples)
+        loss_total = self.grads_and_reg(loss_energy=torch.mean(energy_data),
+                                        loss_samples=torch.mean(-energy_samples),
+                                        x=x,
+                                        x_gen=x_init,
+                                        energy_data=energy_data,
+                                        energy_samples=energy_samples,)
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", torch.mean(energy_data))
-        self.log("train/loss_samples", torch.mean(energy_samples))
+        self.log("train/loss_samples", -torch.mean(energy_samples))
 
         f_theta_opt.step()
         explicit_bias_opt.step()

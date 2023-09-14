@@ -45,7 +45,6 @@ class ShortTermLangevin(AbstractDistributionEstimation):
         assert self.ebm.proposal is not None, "The proposal should not be None"
 
     def training_energy(self, x):
-        # assert False
         # Get parameters
         f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
         f_theta_opt.zero_grad()
@@ -70,10 +69,15 @@ class ShortTermLangevin(AbstractDistributionEstimation):
         for key in dic.keys():
             dic_output["samples_" + key] = dic[key]
         loss_energy = torch.mean(energy_data)
-        loss_samples = torch.mean(energy_samples)
-        loss_total = loss_energy - loss_samples
+        loss_samples = -torch.mean(energy_samples)
 
-        self.grads_and_reg(loss_total=loss_total, x=x, x_gen=None)
+        loss_total = self.grads_and_reg(loss_energy=loss_energy,
+                                loss_samples=loss_samples,
+                                x=x,
+                                x_gen=x_init,
+                                energy_data=energy_data,
+                                energy_samples=energy_samples,)
+
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)

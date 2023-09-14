@@ -84,10 +84,6 @@ class BaseOptimConfig:
     clip_grad_value: Optional[float] = None
     clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
-    pg_control_data: Optional[float] = 0.0
-    pg_control_gen: Optional[float] = 0.0
-    pg_control_mix: Optional[float] = 0.0
-    l2_control: Optional[float] = 1.0
 
 
 @dataclass
@@ -98,14 +94,19 @@ class AdamwConfig(BaseOptimConfig):
     b1: float = MISSING
     b2: float = MISSING
     eps: float = MISSING
-    pg_control_data: Optional[float] = 0.0
-    pg_control_gen: Optional[float] = 0.0
-    pg_control_mix: Optional[float] = 0.0
-    coef_regul: Optional[float] = 0.0
     clip_grad_value: Optional[float] = None
     clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
+
+@dataclass
+class BaseRegularizationConfig:
+    coef_regul: Optional[float] = 0.0
+    pg_control_data: Optional[float] = 0.0
+    pg_control_gen: Optional[float] = 0.0
+    pg_control_mix: Optional[float] = 0.0
     l2_control: Optional[float] = 1.0
+    normalize_sample_grad: Optional[bool] = False
+
 
 
 
@@ -366,6 +367,7 @@ class Config:
     optim_explicit_bias: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
     optim_base_dist: BaseOptimConfig = MISSING
+    regularization: BaseRegularizationConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
     proposal: BaseProposalConfig = MISSING
     default_proposal: Optional[Union[BaseProposalConfig, None]] = None
@@ -402,6 +404,9 @@ def store_main():
         group="dataset",
         node=BaseDatasetConfig,
     )
+
+    # Regularization :
+    cs.store(name="base_regularization_config_name", group="regularization", node=BaseRegularizationConfig)
 
     # Optimizers
     cs.store(name="base_optim_config_name", group="optim_f_theta", node=BaseOptimConfig)
