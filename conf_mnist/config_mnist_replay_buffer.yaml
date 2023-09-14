@@ -1,14 +1,15 @@
 defaults:
   - base_config
-  - dataset: checkerboard
+  - dataset: mnist_paddedto32
   - base_distribution: no_base_distribution
-  - default_proposal: gaussian
-  - proposal: gaussian
+  - default_proposal: gaussian_larger # Only used when proposal is adaptive
+  - proposal: uniform
   - proposal_training : no_proposal_training
-  - energy: fc_distribution
+  - energy: dc_gan_distribution_sn
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
-  - train: self_normalized_distribution
+  - train: persistent_replay_langevin_distribution
+  - regularization: l2_reg
   - optim_f_theta: adamw
   - optim_proposal: adamw
   - optim_base_dist: adamw
@@ -17,6 +18,6 @@ defaults:
   - scheduler_proposal: null
   - scheduler_base_dist: null
   - scheduler_explicit_bias: null
-  - sampler: nuts
+  - sampler: langevin_mnist
   - machine: dtu_cluster
 

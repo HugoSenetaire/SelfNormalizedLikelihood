@@ -5,14 +5,15 @@ defaults:
   - default_proposal: gaussian_larger # Only used when proposal is adaptive
   - proposal: uniform
   - proposal_training : no_proposal_training
-  - energy: dc_gan_distribution_sn
+  - energy: conv_nijkamp
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
-  - train: persistent_replay_langevin_distribution
-  - optim_f_theta: adamw
-  - optim_proposal: adamw
-  - optim_base_dist: adamw
-  - optim_explicit_bias: adamw
+  - train: short_term_langevin_distribution
+  - optim_f_theta: adamw_shortterm
+  - optim_proposal: adamw_shortterm
+  - optim_base_dist: adamw_shortterm
+  - optim_explicit_bias: adamw_shortterm
+  - regularization: l2_reg
   - scheduler_f_theta: null
   - scheduler_proposal: null
   - scheduler_base_dist: null

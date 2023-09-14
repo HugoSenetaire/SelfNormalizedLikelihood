@@ -6,7 +6,6 @@ b1: 0.0
 b2: 0.999
 eps: 1.0e-8
 weight_decay: 1
-pg_control_mix: null
 clip_grad_value: null
 clip_grad_type: 'adam'
 nb_sigmas: 3.0
