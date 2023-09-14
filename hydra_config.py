@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 import hydra
+import numpy as np
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING, OmegaConf
 
@@ -35,11 +36,6 @@ class BaseDatasetConfig:
     )
 
 
-# defaults_base_energy = [
-#     {"dims": [100, 100, 100],},
-# ]
-
-
 @dataclass
 class BaseEnergyConfig:
     energy_name: str = MISSING
@@ -64,6 +60,10 @@ class BaseEnergyConfig:
     nout: Optional[int] = 1
     weight_norm: Optional[bool] = False
 
+    nijkamp_n_c: Optional[int] = 1
+    nijkamp_n_f: Optional[int] = 64
+    nijkamp_l: Optional[float] = 0.2
+
 
 @dataclass
 class BaseExplicitBiasConfig:
@@ -81,9 +81,13 @@ class BaseFeatureExtractorConfig:
 @dataclass
 class BaseOptimConfig:
     optimizer: str = MISSING
-    clip_grad_norm: Optional[float] = None
+    clip_grad_value: Optional[float] = None
+    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    nb_sigmas: Optional[float] = 3.0
     pg_control_data: Optional[float] = 0.0
     pg_control_gen: Optional[float] = 0.0
+    pg_control_mix: Optional[float] = 0.0
+    l2_control: Optional[float] = 1.0
 
 
 @dataclass
@@ -98,7 +102,11 @@ class AdamwConfig(BaseOptimConfig):
     pg_control_gen: Optional[float] = 0.0
     pg_control_mix: Optional[float] = 0.0
     coef_regul: Optional[float] = 0.0
-    clip_grad_norm: Optional[float] = None
+    clip_grad_value: Optional[float] = None
+    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    nb_sigmas: Optional[float] = 3.0
+    l2_control: Optional[float] = 1.0
+
 
 
 @dataclass
@@ -160,8 +168,8 @@ class BaseProposalConfig:
 
     K: Optional[int] = 4  # Used in MDN proposal regression
 
-    min_data: Optional[str] = "dataset"  # Used in UNIFORM proposal regression
-    max_data: Optional[str] = "dataset"  # Used in UNIFORM proposal regression
+    min_data: Optional[float] = None  # Used in UNIFORM proposal regression
+    max_data: Optional[float] = None  # Used in UNIFORM proposal regression
     shift_min: Optional[float] = 0.0  # Used in UNIFORM proposal regression
     shift_max: Optional[float] = 0.0  # Used in UNIFORM proposal regression
 
@@ -175,16 +183,10 @@ class BaseProposalConfig:
     network_proposal_name: Optional[str] = "DCGAN"  # Used in network proposal
     noise_dim: Optional[int] = 2  # Used in vera proposal
     mcmc_lr: Optional[float] = 0.02  # Used in vera hmc proposal
-    post_lr: Optional[
-        float
-    ] = 0.02  # Used in vera proposal, learning rate for learning eta
-    init_post_logsigma: Optional[
-        float
-    ] = 0.1  # Used in vera proposal, initial sigma for learning eta
+    post_lr: Optional[float] = 0.02  # Used in vera proposal, learning rate for learning eta
+    init_post_logsigma: Optional[float] = 0.1  # Used in vera proposal, initial sigma for learning eta
 
-    activation: Optional[
-        Union[str, None]
-    ] = None  # Used in network proposal, quite important, depends on where the data is relying
+    activation: Optional[Union[str, None]] = None  # Used in network proposal, quite important, depends on where the data is relying
     # If data in [0,1], sigmoid, if data in [-1,1], tanh, else None
     ngf: Optional[int] = 64  # Number of channels after the first conv of DCGAN
     feats: Optional[int] = 128  # Features for the Resnet
@@ -244,7 +246,7 @@ class BaseSamplerConfig:
     sampler_name: str = MISSING
 
     def __post_init__(self):
-        if self.sampler_name not in ["no_sampler", "nuts"]:
+        if self.sampler_name not in ["no_sampler", "nuts", "langevin"]:
             raise RuntimeError(
                 f"sampler_name should be in ['nuts'] but got {self.sampler_name}"
             )
@@ -258,6 +260,19 @@ class NutsConfig(BaseSamplerConfig):
     warmup_steps: int = MISSING
     thinning: int = MISSING
     multiprocess: Optional[bool] = False
+
+
+@dataclass
+class LangevinConfig(BaseSamplerConfig):
+    sampler_name: Optional[str] = "langevin"
+    num_chains: int = MISSING
+    num_samples: int = MISSING
+    warmup_steps: int = MISSING
+    thinning: int = MISSING
+    step_size: float = MISSING
+    sigma: float = MISSING
+    clip_max_norm: Union[float, None] = None
+    clip_max_value: Union[float, None] = None
 
 
 @dataclass
@@ -289,6 +304,16 @@ class BaseTrainConfig:
     noise_annealing_gamma: Optional[float] = 0.999
 
     nb_energy_steps: Optional[int] = 0
+
+    nb_steps_langevin: Optional[int] = 100
+    step_size_langevin: Optional[float] = 1.0
+    sigma_langevin: Optional[float] = 1e-2
+    sigma_data: Optional[float] = 1e-2
+    clip_max_norm: Union[float, None] = None
+    clip_max_value: Union[float, None] = None
+    prop_replay_buffer: Optional[float] = 0.95
+    size_replay_buffer: Optional[int] = 10000
+    save_buffer_every: Optional[int] = 200
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -338,7 +363,7 @@ class Config:
     dataset: BaseDatasetConfig = MISSING
     energy: BaseEnergyConfig = MISSING
     optim_f_theta: BaseOptimConfig = MISSING
-    optim_log_bias: BaseOptimConfig = MISSING
+    optim_explicit_bias: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
     optim_base_dist: BaseOptimConfig = MISSING
     proposal_training: BaseProposalTrainingConfig = MISSING
@@ -349,7 +374,7 @@ class Config:
     explicit_bias: BaseExplicitBiasConfig = MISSING
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler_f_theta: Optional[Union[BaseSchedulerConfig, None]] = None
-    scheduler_log_bias: Optional[Union[BaseSchedulerConfig, None]] = None
+    scheduler_explicit_bias: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_base_dist: Optional[Union[BaseSchedulerConfig, None]] = None
     machine: Optional[Machine] = None
@@ -382,9 +407,9 @@ def store_main():
     cs.store(name="base_optim_config_name", group="optim_f_theta", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_f_theta", node=AdamwConfig)
     cs.store(
-        name="base_optim_config_name", group="optim_log_bias", node=BaseOptimConfig
+        name="base_optim_config_name", group="optim_explicit_bias", node=BaseOptimConfig
     )
-    cs.store(name="adamw_name", group="optim_log_bias", node=AdamwConfig)
+    cs.store(name="adamw_name", group="optim_explicit_bias", node=AdamwConfig)
     cs.store(
         name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
     )
@@ -402,7 +427,7 @@ def store_main():
     )
     cs.store(
         name="base_scheduler_config_name",
-        group="scheduler_log_bias",
+        group="scheduler_explicit_bias",
         node=BaseSchedulerConfig,
     )
     cs.store(
@@ -469,6 +494,7 @@ def store_main():
     # Samplers
     cs.store(name="base_sampler_config_name", group="sampler", node=BaseSamplerConfig)
     cs.store(name="nuts_name", group="sampler", node=NutsConfig)
+    cs.store(name="langevin_name", group="sampler", node=LangevinConfig)
 
     # Machine
     cs.store(name="karolina_name", group="machine", node=Machine)

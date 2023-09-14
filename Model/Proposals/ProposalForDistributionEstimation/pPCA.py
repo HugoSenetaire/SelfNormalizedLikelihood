@@ -29,6 +29,68 @@ def get_C(w, mu, sigma):
     return w @ tr(w) + sigma**2 * torch.eye(w.shape[0])
 
 
+class PPCA(object):
+    def __init__(self, latent=2, sigma=1.0):
+        self.latent = latent
+        self.prior_sigma = torch.tensor(sigma, dtype=torch.float64)
+        self.distribution = None
+        self.w = None
+        self.mu = None
+        self.sigma = None
+
+    def get_C(self):
+        return self.w @ tr(self.w) + self.sigma**2 * torch.eye(self.w.shape[0]).to(self.w.device)
+
+    def fit(self, x, em=False):
+        self.d = x.shape[1]
+        [self.w, self.mu, self.sigma] = self.__fit_ml(x)
+
+    def sample(self, nb_sample=1000):
+        z = torch.randn((nb_sample, self.latent)) * self.prior_sigma
+        x_c = self.mu + tr(self.w @ tr(z))
+        x = x_c + torch.randn(x_c.shape) * self.sigma
+        return x_c, x
+
+    def get_marginal(self):
+        C = self.get_C()
+        self.distribution = torch.distributions.multivariate_normal.MultivariateNormal(
+            self.mu, C
+        )
+        return self.distribution
+
+    def log_prob(
+        self,
+        x,
+    ):
+        x_flatten = x.flatten(1)
+        batch_size = x.shape[0]
+        marginal = self.get_marginal()
+        log_prob = marginal.log_prob(x_flatten)
+        return log_prob
+
+    def __fit_ml(self, x):
+        mu = x.mean(0)
+        A = tr(x - mu) @ (x - mu) / x.shape[0]
+        [u, s, v] = torch.linalg.svd(
+            tr(x - mu) / np.sqrt(x.shape[0]), full_matrices=False
+        )
+        s = s
+        if self.latent > len(s):
+            ss = torch.zeros(self.latent)
+            ss[: len(s)] = s
+        else:
+            ss = s[: self.latent]
+        if self.latent < self.d:
+            sigma = torch.sqrt(
+                1.0 / (self.d - self.latent) * torch.sum(s[self.latent :] ** 2)
+            )
+        else:
+            sigma = 0.0
+
+        ss = torch.sqrt(torch.maximum(torch.zeros(1), ss**2 - sigma**2))
+        w = u[:, : self.latent] @ torch.diag(ss)
+        return (w, mu, sigma)
+
 
 class ProbabilisticPCA(AbstractProposal):
     """

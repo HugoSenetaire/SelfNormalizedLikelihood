@@ -67,7 +67,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         # If we use explicit bias, set it to a first estimation of the normalization constant.
         if hasattr(self.explicit_bias, "bias"):
-            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device), nb_sample=self.nb_sample_init_bias,)
+            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
             self.explicit_bias.bias.data = log_z_estimate
 
     def sample(self, nb_sample=1):
@@ -100,7 +100,14 @@ class ImportanceWeightedEBM(nn.Module):
 
         # Get the energy of the samples without base distribution
         f_theta_no_bias = self.f_theta(x).flatten()
-        if (self.training and self.proposal is not None and hasattr(self.proposal,"set_x",)):
+        if (
+            self.training
+            and self.proposal is not None
+            and hasattr(
+                self.proposal,
+                "set_x",
+            )
+        ):
             # During training, if the proposal is adapative to the batch, set the x of the proposal to the current batch.
             self.proposal.set_x(x)
 
@@ -120,10 +127,9 @@ class ImportanceWeightedEBM(nn.Module):
 
         dic_output["f_theta_no_bias_on_data"] = f_theta_no_bias.detach()
         dic_output["f_theta_on_data"] = f_theta.detach()
-        dic_output["log_bias_data"] = self.explicit_bias.bias.data.detach()
+        dic_output["explicit_bias_data"] = self.explicit_bias.bias.data.detach()
         dic_output["base_dist_log_likelihood_on_data"] = base_dist_log_prob.detach()
         dic_output["energy_on_data"] = current_energy.detach()
-
 
         return current_energy, dic_output
 
@@ -132,7 +138,7 @@ class ImportanceWeightedEBM(nn.Module):
         x,
         nb_sample=1000,
         detach_sample=True,
-        detach_base_dist = False,
+        detach_base_dist=False,
         requires_grad=False,
         return_samples=False,
         noise_annealing=0.0,
@@ -172,7 +178,7 @@ class ImportanceWeightedEBM(nn.Module):
         if noise_annealing > 1e-4:
             epsilon = torch.rand_like(samples_proposal).to(x.device, x.dtype)
             noise_to_add = epsilon * noise_annealing
-            log_prob_noise = torch.distributions.Normal(0,1).log_prob(epsilon).reshape((samples_proposal.shape[0],-1)).sum(-1)
+            log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
             samples_proposal_noisy = samples_proposal + noise_to_add
         else:
             log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
@@ -183,8 +189,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         # if self.explicit_bias:
         f_theta_proposal = self.explicit_bias.add_bias(f_theta_proposal_without_bias).flatten()
-        
-        
+
         # Add the base distribution and proposal contributions to the energy if they are different
         # if self.base_dist != self.proposal or noise_annealing > 1e-4:
         base_dist_log_prob = self.base_dist.log_prob(samples_proposal_noisy).view(samples_proposal.size(0), -1).sum(1)
@@ -193,10 +198,9 @@ class ImportanceWeightedEBM(nn.Module):
         samples_proposal_log_prob = self.proposal.log_prob(samples_proposal).reshape(samples_proposal.shape[0], -1).sum(1)
         aux_prob = base_dist_log_prob - samples_proposal_log_prob - log_prob_noise
 
-        
         if self.base_dist == self.proposal and not force_calculation:
             log_z_estimate = -f_theta_proposal.flatten() - log_prob_noise.flatten()
-        else :
+        else:
             log_z_estimate = (-f_theta_proposal + aux_prob).flatten()
 
         ESS_estimate_num = log_z_estimate.logsumexp(0) * 2
@@ -204,22 +208,21 @@ class ImportanceWeightedEBM(nn.Module):
         ESS_estimate = (ESS_estimate_num - ESS_estimate_denom).exp()
         log_z_estimate = torch.logsumexp(log_z_estimate, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
 
-
         dic_output.update(
-                {
-                    "z_estimation/f_theta_on_sample_proposal_without_bias": f_theta_proposal_without_bias.detach(),
-                    "z_estimation/f_theta_on_sample_proposal": f_theta_proposal.detach(),
-                    "z_estimation/base_dist_loglikelihood_on_sample_proposal": base_dist_log_prob.detach(),
-                    "z_estimation/proposal_loglikelihood_on_sample_proposal": samples_proposal_log_prob.detach(),
-                    "z_estimation/aux_prob_on_sample_proposal": aux_prob.detach(),
-                    "z_estimation/log_prob_noise": log_prob_noise.detach(),
-                    "z_estimation/log_z_estimate": log_z_estimate.detach(),
-                    "z_estimation/ESS_estimate": ESS_estimate.detach(),
-                }
-            )
+            {
+                "z_estimation/f_theta_on_sample_proposal_without_bias": f_theta_proposal_without_bias.detach(),
+                "z_estimation/f_theta_on_sample_proposal": f_theta_proposal.detach(),
+                "z_estimation/base_dist_loglikelihood_on_sample_proposal": base_dist_log_prob.detach(),
+                "z_estimation/proposal_loglikelihood_on_sample_proposal": samples_proposal_log_prob.detach(),
+                "z_estimation/aux_prob_on_sample_proposal": aux_prob.detach(),
+                "z_estimation/log_prob_noise": log_prob_noise.detach(),
+                "z_estimation/log_z_estimate": log_z_estimate.detach(),
+                "z_estimation/ESS_estimate": ESS_estimate.detach(),
+            }
+        )
         if return_samples:
             return log_z_estimate, dic_output, samples_proposal, samples_proposal_noisy
-        else :
+        else:
             return log_z_estimate, dic_output
 
     def forward(self, x):
@@ -236,8 +239,6 @@ class ImportanceWeightedEBM(nn.Module):
         energy : torch.tensor (shape : (x.shape[0], 1))
             The energy of each x.
         """
-        current_x = x[0].to(
-            next(self.f_theta.parameters()).device, next(self.f_theta.parameters()).dtype
-        )
-        energy, _ = self.calculate_energy(current_x)
+
+        energy, _ = self.calculate_energy(x)
         return energy

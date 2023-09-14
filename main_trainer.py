@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-@hydra.main(version_base="1.1", config_path="conf", config_name="config")
+@hydra.main(version_base="1.1", config_path="conf", config_name="config_mnist_replay_buffer")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)

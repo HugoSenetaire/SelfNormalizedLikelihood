@@ -7,3 +7,4 @@ from .student import StudentProposal, get_StudentProposal
 from .real_nvp_proposal import RealNVPProposal, get_RealNVPProposal
 from .gaussian_full import get_GaussianFull, GaussianFull
 from .pPCA import ProbabilisticPCA, get_ProbabilisticPCA
+from .uniform import Uniform, get_Uniform

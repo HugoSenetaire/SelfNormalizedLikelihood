@@ -1,0 +1,4 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'ppca'
+n_components : 2

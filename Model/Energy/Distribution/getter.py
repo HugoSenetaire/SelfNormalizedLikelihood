@@ -12,12 +12,14 @@ from .EnergyForDistribution import (
     get_fc_energy_sn,
     get_fc_energy_sn_miniboone,
     get_ResNetDiscriminator,
+    get_ConvEnergy_nijkamp
 )
 
 dic_energy = {
     "fc": get_fc_energy,
     "fc_sn": get_fc_energy_sn,
     "conv": get_ConvEnergy,
+    "conv_nijkamp": get_ConvEnergy_nijkamp,
     "rbm": get_EnergyRBM,
     "categorical": get_EnergyCategoricalDistrib,
     "poisson": get_EnergyPoissonDistribution,

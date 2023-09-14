@@ -73,8 +73,8 @@ class NCETrainer(AbstractDistributionEstimation):
             self.ebm.f_theta(samples).view(samples.size(0), -1).sum(1).unsqueeze(1)
         )
         if self.ebm.explicit_bias:
-            log_bias = self.ebm.explicit_bias(energy_samples)
-            energy_samples = energy_samples + log_bias
+            explicit_bias = self.ebm.explicit_bias(energy_samples)
+            energy_samples = energy_samples + explicit_bias
         dic_output["f_theta_samples"] = energy_samples
 
         if self.ebm.base_dist is not None:

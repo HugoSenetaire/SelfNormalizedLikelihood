@@ -23,13 +23,12 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             complete_dataset=complete_dataset,
         )
 
-
     def training_step(self, batch, batch_idx):
         # Get parameters
-        f_theta_opt, log_bias_opt, base_dist_opt, proposal_opt = self.optimizers
+        f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
 
-        x = batch['data']
-        if hasattr(self.ebm.proposal, 'set_x'):
+        x = batch["data"]
+        if hasattr(self.ebm.proposal, "set_x"):
             self.ebm.proposal.set_x(x)
         energy_samples, dic_output = self.ebm.calculate_energy(x)
 
@@ -43,20 +42,28 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
         # Backward ebmxx
         f_theta_opt.zero_grad()
-        log_bias_opt.zero_grad()
+        explicit_bias_opt.zero_grad()
         self.manual_backward(
             loss_total,
             retain_graph=True,
         )
 
         # Update the parameters of the proposal
-        self._proposal_step(x = x, estimate_log_z = estimate_log_z, proposal_opt = proposal_opt, dic_output=dic_output,)
+        self._proposal_step(
+            x=x,
+            estimate_log_z=estimate_log_z,
+            proposal_opt=proposal_opt,
+            dic_output=dic_output,
+        )
 
         # Update the parameters of the ebm
         f_theta_opt.step()
-        log_bias_opt.step()
+        explicit_bias_opt.step()
         dic_output.update(dic)
 
-        self.post_train_step_handler(x,dic_output,)
+        self.post_train_step_handler(
+            x,
+            dic_output,
+        )
 
         return loss_total

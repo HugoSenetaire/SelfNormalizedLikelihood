@@ -10,6 +10,13 @@ def get_ConvEnergy(input_size, cfg, ):
                         cfg.last_layer_bias,
                         )
 
+def get_ConvEnergy_nijkamp(input_size, cfg, ):
+    return conv_nijkamp(
+                        cfg.nijkamp_n_c,
+                        cfg.nijkamp_n_f,
+                        cfg.nijkamp_l,
+                        )
+
 class ConvEnergy(nn.Module):
     def __init__(self, input_size = (1,28,28), activation = None, last_layer_bias = False, **kwargs):
         super().__init__()
@@ -50,3 +57,23 @@ class ConvEnergy(nn.Module):
         if self.activation is not None :
             x = self.activation(x)
         return x.reshape(-1,1)
+
+
+class conv_nijkamp(nn.Module):
+    def __init__(self, n_c = 1, n_f = 64, l = 0.2):
+        super(conv_nijkamp, self).__init__()
+        self.f = nn.Sequential(
+            nn.Conv2d(n_c, n_f, 3, 1, 1),
+            nn.LeakyReLU(l),
+            nn.Conv2d(n_f, n_f*2, 4, 2, 1),
+            nn.LeakyReLU(l),
+            nn.Conv2d(n_f*2, n_f*4, 4, 2, 1),
+            nn.LeakyReLU(l),
+            nn.Conv2d(n_f*4, n_f*8, 4, 2, 1),
+            nn.LeakyReLU(l),
+            nn.Conv2d(n_f*8, 1, 4, 1, 0),
+        )
+    def forward(self, x):
+        return self.f(x).squeeze()
+    
+

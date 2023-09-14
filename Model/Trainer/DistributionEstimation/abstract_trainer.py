@@ -14,6 +14,7 @@ from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
+from ...Utils.clip_grads_utils import clip_grad_adam 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -152,20 +153,105 @@ class AbstractDistributionEstimation:
         The training step to be defined in inherited classes.
         """
         x = batch["data"].to(self.device,)
-        # print(self.train_proposal)
-        # assert False
         if (self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps > 0):
             if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
+                self.fix_proposal()
+                self.free_f_theta()
+                self.free_explicit_bias()
+                if self.train_base_dist:
+                    self.free_base_dist()
+                else:
+                    self.fix_base_dist()
                 loss, dic_output = self.training_energy(x,)
             else:
+
+                self.fix_f_theta()
+                self.fix_explicit_bias()
+                self.fix_base_dist()
+                self.free_proposal()
                 loss, dic_output = self.proposal_step(x,)
         else:
+            self.fix_proposal()
+            self.free_f_theta()
+            self.free_explicit_bias()
+            if self.train_base_dist:
+                self.free_base_dist()
+            else:
+                self.fix_base_dist()
             loss, dic_output = self.training_energy(x)
             if self.train_proposal:
+                self.fix_f_theta()
+                self.fix_explicit_bias()
+                self.fix_base_dist()
+                self.free_proposal()
                 loss, dic_output_proposal = self.proposal_step(x)
                 dic_output.update(dic_output_proposal)
 
         self.post_train_step_handler(x, dic_output,)
+
+    def grads_and_reg(self, loss_total, x, x_gen = None, energy_data = None, energy_samples = None,):
+        if self.cfg.optim_f_theta.pg_control_mix is not None and self.cfg.optim_f_theta.pg_control_mix > 0:
+            if x_gen is None:
+                x_gen = self.ebm.proposal.sample(self.num_samples_train)
+            min_data_len = min(x.shape[0], x_gen.shape[0])
+            epsilon = torch.rand(min_data_len, device=x.device)
+            for i in range(len(x.shape) - 1):
+                epsilon = epsilon.unsqueeze(-1)
+            epsilon = epsilon.expand(min_data_len, *x.shape[1:])
+            aux_2 = (epsilon.sqrt() * x[:min_data_len,] + (1 - epsilon).sqrt() * x_gen[:min_data_len]).detach()
+            aux_2.requires_grad_(True)
+            f_theta_gen_2 = self.ebm.f_theta(aux_2).mean()
+            f_theta_gen_2.backward(retain_graph=True)
+            loss_grad_estimate_mix = self.gradient_control_l2(aux_2, -f_theta_gen_2, self.cfg.optim_f_theta.pg_control_mix)
+            loss_total = loss_total + loss_grad_estimate_mix
+            self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
+
+        if self.cfg.optim_f_theta.l2_control is not None and self.cfg.optim_f_theta.l2_control > 0:
+            if energy_data is None or energy_samples is None :
+                raise ValueError("Need to provide energy_data and energy_samples")
+            else :
+                loss_grad_estimate_l2 = self.cfg.optim_f_theta.l2_control * (energy_data**2 + energy_samples**2).mean()
+                loss_total = loss_total + loss_grad_estimate_l2
+                self.log("train/loss_grad_estimate_l2", loss_grad_estimate_l2)
+            
+
+        loss_total.backward()
+
+        for i,type in enumerate(self.liste_optimizer_name):
+            current_optim = self.optimizers[i]
+            current_cfg_optim = getattr(self.cfg, "optim_{}".format(type))
+            if current_cfg_optim.clip_grad_type == "norm":
+                if current_cfg_optim.clip_grad_value is not None:
+                    torch.nn.utils.clip_grad_norm_(
+                        parameters=getattr(self.ebm, type).parameters(),
+                        max_norm=current_cfg_optim.clip_grad_value,
+                    )
+            elif current_cfg_optim.clip_grad_type == "abs":
+                if current_cfg_optim.clip_grad_value is not None:
+                    torch.nn.utils.clip_grad_value_(
+                        parameters=getattr(self.ebm, type).parameters(),
+                        clip_value=current_cfg_optim.clip_grad_value,
+                    )
+            elif current_cfg_optim.clip_grad_type == "adam":
+                clip_grad_adam(getattr(self.ebm, type).parameters(),
+                            current_optim,
+                            nb_sigmas=current_cfg_optim.nb_sigmas)
+            elif current_cfg_optim.clip_grad_type is None or current_cfg_optim.clip_grad_type == "none":
+                pass
+            else :
+                raise NotImplementedError
+            
+
+        # if self.cfg.optim_f_theta.clip_grad_norm is not None:
+        #     torch.nn.utils.clip_grad_norm_(
+        #         parameters=self.ebm.parameters(),
+        #         max_norm=self.cfg.optim_f_theta.clip_grad_norm,
+        #     )
+
+        return loss_total
+        
+
+
 
     def proposal_step(self,x,):
         """
@@ -252,19 +338,19 @@ class AbstractDistributionEstimation:
         self.fix_base_dist()
         self.fix_f_theta()
         self.fix_proposal()
-        self.free_log_bias()
+        self.free_explicit_bias()
 
-        f_theta_opt, log_bias_opt, base_dist_opt, proposal_opt = self.optimizers
+        f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
         for i in range(nb_iteration):   
-            log_bias_opt.zero_grad()
+            explicit_bias_opt.zero_grad()
             loss_estimate_z, _ = self.ebm.estimate_log_z(x, self.num_samples_train)
             loss_estimate_z = loss_estimate_z.exp() - 1
             if torch.isnan(loss_estimate_z) or torch.isinf(loss_estimate_z):
                 logger.info("Loss estimate z is nan or inf")
                 break
             loss_estimate_z.mean().backward()
-            log_bias_opt.step()
-        log_bias_opt.zero_grad()
+            explicit_bias_opt.step()
+        explicit_bias_opt.zero_grad()
 
 
     def post_train_step_handler(self, x, dic_output):
@@ -495,11 +581,11 @@ class AbstractDistributionEstimation:
         for param in self.ebm.f_theta.parameters():
             param.requires_grad = True
 
-    def fix_log_bias(self,):
+    def fix_explicit_bias(self,):
         for param in self.ebm.explicit_bias.parameters():
             param.requires_grad = False
     
-    def free_log_bias(self,):
+    def free_explicit_bias(self,):
         for param in self.ebm.explicit_bias.parameters():
             param.requires_grad = True
 
@@ -561,19 +647,19 @@ class AbstractDistributionEstimation:
         -------
             None
         """
-        self.liste_optimizer_name = ['f_theta', 'log_bias', 'base_dist', 'proposal']
-        self.cfg_scheduler = [self.cfg.scheduler_f_theta, self.cfg.scheduler_log_bias, self.cfg.scheduler_base_dist, self.cfg.scheduler_proposal]
+        self.liste_optimizer_name = ['f_theta', 'explicit_bias', 'base_dist', 'proposal']
+        self.cfg_scheduler = [self.cfg.scheduler_f_theta, self.cfg.scheduler_explicit_bias, self.cfg.scheduler_base_dist, self.cfg.scheduler_proposal]
         parameters_f_theta = [self.ebm.f_theta.parameters()]
-        parameters_log_bias = [self.ebm.explicit_bias.parameters()]
+        parameters_explicit_bias = [self.ebm.explicit_bias.parameters()]
 
 
         f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
-        log_bias_opt = get_optimizer(cfg=self.cfg.optim_log_bias, list_parameters_gen=parameters_log_bias)
-        opt_list = [f_theta_opt, log_bias_opt]
+        explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
+        opt_list = [f_theta_opt, explicit_bias_opt]
         feedback_sch = []
         standard_sch = []
         get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-        get_scheduler(cfg=self.cfg.scheduler_log_bias, optim=log_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+        get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
 
 
         # sch_list = [ebm_sch]
@@ -714,6 +800,7 @@ class AbstractDistributionEstimation:
         """
         Sample from the EBM distribution using an MCMC sampler.
         """
+
         if self.sampler is not None:
             samples, x_init = self.sampler.sample(
                 self.ebm, self.ebm.proposal, num_samples=num_samples
@@ -726,11 +813,9 @@ class AbstractDistributionEstimation:
         """
         Plot the samples from the EBM distribution using an MCMC sampler.
         """
-        print("PLOTTING SAMPLES")
         if self.sampler is None:
             return False
-        torch.set_grad_enabled(True)  # Required for MCMC sampling
-
+         # Required for MCMC sampling
 
         if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
             self.last_sample_step = self.current_step
@@ -738,7 +823,9 @@ class AbstractDistributionEstimation:
             save_dir = os.path.join(save_dir, "samples_energy")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            samples, init_samples = self.samples_mcmc(num_samples=num_samples)
+            with torch.set_grad_enabled(True) :
+                samples, init_samples = self.samples_mcmc(num_samples=num_samples)
+            print(samples.shape)
 
             if self.input_type == "2d":
                 samples = samples.flatten(1)

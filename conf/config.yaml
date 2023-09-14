@@ -12,11 +12,11 @@ defaults:
   - optim_f_theta: adamw
   - optim_proposal: adamw
   - optim_base_dist: adamw
-  - optim_log_bias: adamw
+  - optim_explicit_bias: adamw
   - scheduler_f_theta: null
   - scheduler_proposal: null
   - scheduler_base_dist: null
-  - scheduler_log_bias: null
+  - scheduler_explicit_bias: null
   - sampler: nuts
   - machine: dtu_cluster
 

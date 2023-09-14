@@ -1,0 +1,22 @@
+defaults:
+  - base_config
+  - dataset: checkerboard
+  - base_distribution: proposal
+  - default_proposal: gaussian
+  - proposal: ppca
+  - proposal_training : no_proposal_training
+  - energy: fc_distribution
+  - feature_extractor : null
+  - explicit_bias : scalar_explicit_bias
+  - train: self_normalized_distribution
+  - optim_f_theta: adamw
+  - optim_proposal: adamw
+  - optim_base_dist: adamw
+  - optim_explicit_bias: adamw
+  - scheduler_f_theta: null
+  - scheduler_proposal: null
+  - scheduler_base_dist: null
+  - scheduler_explicit_bias: null
+  - sampler: langevin
+  - machine: dtu_cluster
+

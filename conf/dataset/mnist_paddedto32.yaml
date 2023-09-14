@@ -1,6 +1,7 @@
 defaults:
   - base_dataset_config_name
 download : True
-dataset_name : 'MNISTLogitTransformedPadded32'
-batch_size : 1024
+dataset_name : 'MNISTPadded32'
+batch_size: 128
+# batch_size : 1024
 
