@@ -107,6 +107,19 @@ class BaseRegularizationConfig:
     l2_control: Optional[float] = 1.0
     normalize_sample_grad: Optional[bool] = False
 
+@dataclass
+class BaseBufferConfig:
+    nb_steps_langevin: Optional[int] = 100
+    step_size_langevin: Optional[float] = 1.0
+    sigma_langevin: Optional[float] = 1e-2
+    clip_max_norm: Union[float, None] = None
+    clip_max_value: Union[float, None] = None
+    prop_replay_buffer: Optional[float] = 0.95
+    size_replay_buffer: Optional[int] = 10000
+    save_buffer_every: Optional[int] = 200
+    clamp_min : Optional[Union[float,None]] = None
+    clamp_max : Optional[Union[float,None]] = None
+
 
 
 
@@ -274,6 +287,8 @@ class LangevinConfig(BaseSamplerConfig):
     sigma: float = MISSING
     clip_max_norm: Union[float, None] = None
     clip_max_value: Union[float, None] = None
+    clamp_min : Optional[Union[float,None]] = None # Applied on the samples at each langevin step
+    clamp_max : Optional[Union[float,None]] = None # Applied on the samples at each langevin step
 
 
 @dataclass
@@ -306,15 +321,12 @@ class BaseTrainConfig:
 
     nb_energy_steps: Optional[int] = 0
 
-    nb_steps_langevin: Optional[int] = 100
-    step_size_langevin: Optional[float] = 1.0
-    sigma_langevin: Optional[float] = 1e-2
-    sigma_data: Optional[float] = 1e-2
-    clip_max_norm: Union[float, None] = None
-    clip_max_value: Union[float, None] = None
-    prop_replay_buffer: Optional[float] = 0.95
-    size_replay_buffer: Optional[int] = 10000
-    save_buffer_every: Optional[int] = 200
+    nb_steps_langevin : Optional[int] = 100
+    step_size_langevin : Optional[float] = 1.0
+    sigma_langevin : Optional[float] = 1e-2
+    clip_max_norm : Optional[float] = None
+    clip_max_value : Optional[float] = None
+    sigma_data : Optional[float] = 1e-2
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -374,6 +386,7 @@ class Config:
     train: BaseTrainConfig = MISSING
     feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
+    buffer: BaseBufferConfig = MISSING
     sampler: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler_f_theta: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_explicit_bias: Optional[Union[BaseSchedulerConfig, None]] = None
@@ -405,46 +418,27 @@ def store_main():
         node=BaseDatasetConfig,
     )
 
+    # Buffer :
+    cs.store(name="base_buffer_config_name", group="buffer", node=BaseBufferConfig)
+
     # Regularization :
     cs.store(name="base_regularization_config_name", group="regularization", node=BaseRegularizationConfig)
 
     # Optimizers
     cs.store(name="base_optim_config_name", group="optim_f_theta", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_f_theta", node=AdamwConfig)
-    cs.store(
-        name="base_optim_config_name", group="optim_explicit_bias", node=BaseOptimConfig
-    )
+    cs.store(name="base_optim_config_name", group="optim_explicit_bias", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_explicit_bias", node=AdamwConfig)
-    cs.store(
-        name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
-    )
+    cs.store(name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
-    cs.store(
-        name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig
-    )
+    cs.store(name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_f_theta",
-        node=BaseSchedulerConfig,
-    )
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_explicit_bias",
-        node=BaseSchedulerConfig,
-    )
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_proposal",
-        node=BaseSchedulerConfig,
-    )
-    cs.store(
-        name="base_scheduler_config_name",
-        group="scheduler_base_dist",
-        node=BaseSchedulerConfig,
-    )
+    cs.store(name="base_scheduler_config_name",group="scheduler_f_theta",node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name", group="scheduler_explicit_bias", node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name", group="scheduler_proposal",node=BaseSchedulerConfig,)
+    cs.store(name="base_scheduler_config_name",group ="scheduler_base_dist",node=BaseSchedulerConfig,)
 
     # Proposal training
     cs.store(

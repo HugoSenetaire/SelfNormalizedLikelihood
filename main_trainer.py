@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 from tensorboardX import SummaryWriter
 
 
-@hydra.main(version_base="1.1", config_path="conf", config_name="config_mnist_replay_buffer")
+@hydra.main(version_base="1.1", config_path="conf_mnist", config_name="config_mnist_short_term_langevin_distribution")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
@@ -104,6 +104,7 @@ def main(cfg):
         max_steps = cfg.train.max_steps
 
     algo.train(max_steps, train_loader, val_loader=val_loader)
+    algo.test(test_loader)
 
     
 

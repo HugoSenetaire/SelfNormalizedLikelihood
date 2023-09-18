@@ -14,7 +14,10 @@ from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
-from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam 
+from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam
+from ...Utils.Buffer import SampleBuffer 
+from ...Sampler.Langevin.langevin import langevin_step
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +109,7 @@ class AbstractDistributionEstimation:
         self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
         self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
 
+
         if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
         elif len(cfg.dataset.input_size) == 1:
@@ -123,12 +127,44 @@ class AbstractDistributionEstimation:
         if self.ebm.base_dist == self.ebm.proposal and self.train_proposal :
             self.train_base_dist = False
 
+        if self.cfg.buffer.size_replay_buffer>0:
+            self.replay_buffer = SampleBuffer(cfg=self.cfg)
+            self.prop_replay_buffer = self.cfg.buffer.prop_replay_buffer
+
+
         self.configure_optimizers()
         self.initialize_examples(complete_dataset=complete_dataset)
         self.resample_base_dist()
         self.resample_proposal()
         self.proposal_visualization()
         self.base_dist_visualization()
+
+    def update_sample_buffer(self, x, id):
+        if self.cfg.buffer.size_replay_buffer>0:
+            if len(self.replay_buffer) < self.num_samples_train:  # In the original code, it's batch size here
+                x_init = self.ebm.proposal.sample(self.num_samples_train)
+                id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
+            else :
+                n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
+                replay_sample, replay_id = self.replay_buffer.get(n_replay)
+                random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
+                random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
+                x_init = torch.cat([replay_sample, random_sample], 0)
+                id_init = torch.cat([replay_id, random_id], 0)
+
+            for k in range(self.cfg.buffer.nb_steps_langevin):
+                x_init = langevin_step(
+                    x_init=x_init,
+                    energy=lambda x: self.ebm.calculate_energy(x, None)[0],
+                    step_size=self.cfg.buffer.step_size_langevin,
+                    sigma=self.cfg.buffer.sigma_langevin,
+                    clip_max_norm=self.cfg.buffer.clip_max_norm,
+                    clip_max_value=self.cfg.buffer.clip_max_value,
+                ).detach()
+                x_init.clamp_(self.cfg.buffer.clamp_min, self.cfg.buffer.clamp_max)
+        self.replay_buffer.push(x_init, id_init)
+        if self.current_step % self.cfg.buffer.save_buffer_every == 0:
+            self.replay_buffer.save_buffer(logger=self.logger, current_step=self.current_step)
 
 
     def on_train_start(self):
@@ -153,6 +189,11 @@ class AbstractDistributionEstimation:
         The training step to be defined in inherited classes.
         """
         x = batch["data"].to(self.device,)
+        if "target" in batch.keys():
+            target = batch["target"].to(self.device,)
+        else :
+            target = torch.randint(0, 10, (x.shape[0],), device=x.device)
+        self.update_sample_buffer(x, target)
         if (self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps > 0):
             if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
                 self.fix_proposal()
@@ -213,7 +254,7 @@ class AbstractDistributionEstimation:
             self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
 
         if self.cfg.regularization.l2_control is not None and self.cfg.regularization.l2_control > 0:
-            loss_grad_estimate_l2 = self.cfg.regularization.l2_control * (energy_data**2 + energy_samples**2).mean()
+            loss_grad_estimate_l2 = self.cfg.regularization.l2_control * ((energy_data**2).mean() + (energy_samples**2).mean())
             dic_loss["loss_grad_estimate_l2"] = loss_grad_estimate_l2
             self.log("train/loss_grad_estimate_l2", loss_grad_estimate_l2)
             
@@ -324,6 +365,7 @@ class AbstractDistributionEstimation:
         return proposal_loss.mean(), dic
 
     def train(self, nb_steps, loader_train, val_loader=None):
+        self.on_train_start()
         with torch.no_grad():
             self.ebm.eval()
             if val_loader is not None:

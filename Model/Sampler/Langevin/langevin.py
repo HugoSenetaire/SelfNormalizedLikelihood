@@ -4,7 +4,7 @@ import torch.distributions as dist
 import tqdm
 import torch.autograd as autograd
 
-def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_max_value=None):
+def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_max_value=None, clamp_min=None, clamp_max=None):
     """
     Performs a single step of the Langevin algorithm.
     """
@@ -24,6 +24,12 @@ def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_ma
     x_init.requires_grad = False
     noise = torch.randn_like(x_init) * sigma
     x_step = x_init - step_size * x_grad + np.sqrt(2*step_size)*noise
+
+    if clamp_min is not None:
+        x_step.clamp_(min=clamp_min)
+    if clamp_max is not None:
+        x_step.clamp_(max=clamp_max)
+
     return x_step
 
 
