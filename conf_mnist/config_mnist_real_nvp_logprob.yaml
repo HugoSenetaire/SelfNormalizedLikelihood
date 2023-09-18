@@ -1,6 +1,7 @@
 defaults:
   - base_config
   - dataset: mnist_paddedto32
+  - buffer: buffer_mnist
   - base_distribution: proposal
   - default_proposal: gaussian # Only used when proposal is adaptive
   - proposal: real_nvp
@@ -9,12 +10,15 @@ defaults:
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution
+  - regularization: l2_reg
   - optim_energy: adamw
   - optim_proposal: adamw
   - optim_base_dist: adamw
+  - optim_explicit_bias: adamw
   - scheduler_energy: cyclic_lr
   - scheduler_proposal: cyclic_lr
   - scheduler_base_dist: cyclic_lr
+  - scheduler_explicit_bias: cyclic_lr
   - sampler: nuts_mnist
   - machine: dtu_cluster
 

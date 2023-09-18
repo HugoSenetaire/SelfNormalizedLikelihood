@@ -1,6 +1,7 @@
 defaults:
   - base_config
   - dataset: mnist_paddedto32
+  - buffer: buffer_mnist_padded32
   - base_distribution: no_base_distribution
   - default_proposal: gaussian_larger # Only used when proposal is adaptive
   - proposal: uniform
@@ -13,11 +14,11 @@ defaults:
   - optim_proposal: adamw_shortterm
   - optim_base_dist: adamw_shortterm
   - optim_explicit_bias: adamw_shortterm
-  - regularization: l2_reg
+  - regularization: no_reg
   - scheduler_f_theta: null
   - scheduler_proposal: null
   - scheduler_base_dist: null
   - scheduler_explicit_bias: null
-  - sampler: langevin_mnist
+  - sampler: langevin_shortterm
   - machine: dtu_cluster
 

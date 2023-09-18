@@ -1,6 +1,7 @@
 defaults:
   - base_config
   - dataset: mnist_paddedto32
+  - buffer: buffer_mnist_padded32
   - base_distribution: no_base_distribution
   - default_proposal: gaussian_larger # Only used when proposal is adaptive
   - proposal: uniform
@@ -18,6 +19,6 @@ defaults:
   - scheduler_proposal: null
   - scheduler_base_dist: null
   - scheduler_explicit_bias: null
-  - sampler: langevin_mnist
+  - sampler: langevin_replay
   - machine: dtu_cluster
 

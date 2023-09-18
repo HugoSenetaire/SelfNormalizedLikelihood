@@ -13,10 +13,11 @@ save_dir: null
 multi_gpu: single
 val_check_interval: null
 save_energy_every: 100
-samples_every: 300
+samples_every: 40
 log_every_n_steps: 10
 nb_steps_langevin: 100
 step_size_langevin: 1.0
 sigma_langevin: 3e-2
 clip_max_norm: null
+clip_max_value: null
 sigma_data: 1e-2
