@@ -7,6 +7,7 @@ from jaxtyping import Float
 from torch.distributions import categorical
 from torch.nn.parameter import Parameter
 from torch.utils.data import Dataset
+
 from .abstract_proposal import AbstractProposal
 
 

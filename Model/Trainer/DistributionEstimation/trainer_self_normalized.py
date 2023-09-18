@@ -39,15 +39,6 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
         )
 
     def training_energy(self, x):
-        self.fix_proposal()
-        self.free_f_theta()
-        self.free_explicit_bias()
-        if self.train_base_dist:
-            self.free_base_dist()
-        else:
-            self.fix_base_dist()
-
-
          # Get parameters
         f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
         f_theta_opt.zero_grad()

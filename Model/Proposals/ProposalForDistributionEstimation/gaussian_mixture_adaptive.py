@@ -48,13 +48,17 @@ class GaussianMixtureAdaptiveProposal(AbstractAdaptiveProposal):
         self.x = None
         
         
-    def sample_adaptive(self, nb_sample = 1):
+    def sample_adaptive(self, nb_sample = 1, return_log_prob=False):
         if nb_sample > len(self.x) :
             index_sample = np.random.choice(len(self.x), nb_sample, replace=True)
         else :
             index_sample = np.random.choice(len(self.x), nb_sample, replace=False)
         x_repeat = self.x[index_sample].clone().detach().reshape(nb_sample, *self.input_size)
-        samples = torch.randn_like(x_repeat) * self.std.unsqueeze(0).expand(x_repeat.shape) + x_repeat
+        epsilon = torch.randn_like(x_repeat)
+        samples = epsilon * self.std.unsqueeze(0).expand(x_repeat.shape) + x_repeat
+        if return_log_prob:
+            log_prob = torch.distributions.Normal(torch.zeros_like(x_repeat), torch.ones_like(x_repeat)).log_prob(epsilon).flatten(1).sum(1) + torch.log(self.x.shape[0], dtype=self.x.dtype, device=self.x.device)
+            return samples, log_prob
         return samples
     
     def log_prob_adaptive(self, samples):

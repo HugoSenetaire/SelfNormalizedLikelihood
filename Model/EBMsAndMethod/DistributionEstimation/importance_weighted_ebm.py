@@ -70,11 +70,11 @@ class ImportanceWeightedEBM(nn.Module):
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
             self.explicit_bias.bias.data = log_z_estimate
 
-    def sample(self, nb_sample=1):
+    def sample(self, nb_sample=1, return_log_prob=False):
         """
         Samples from the proposal distribution.
         """
-        return self.proposal.sample(nb_sample)
+        return self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
 
     def calculate_energy(self, x, use_base_dist=True):
         """
@@ -169,7 +169,7 @@ class ImportanceWeightedEBM(nn.Module):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         x = x.to(device)
 
-        samples_proposal = self.sample(nb_sample).to(x.device, x.dtype)
+        samples_proposal, samples_proposal_log_prob = self.sample(nb_sample, return_log_prob=True).to(x.device, x.dtype)
         if detach_sample:
             samples_proposal = samples_proposal.detach()
         if requires_grad:
@@ -197,7 +197,6 @@ class ImportanceWeightedEBM(nn.Module):
         energy_samples = f_theta_proposal - base_dist_log_prob
         if detach_base_dist:
             base_dist_log_prob = base_dist_log_prob.detach()
-        samples_proposal_log_prob = self.proposal.log_prob(samples_proposal).reshape(samples_proposal.shape[0], -1).sum(1)
         aux_prob = base_dist_log_prob - samples_proposal_log_prob - log_prob_noise
 
         if self.base_dist == self.proposal and not force_calculation:
