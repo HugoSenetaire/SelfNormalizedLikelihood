@@ -56,7 +56,7 @@ class AbstractProposal(nn.Module):
         """
         Sample from the proposal.
         """
-        samples = self.sample_simple(nb_sample)
+        samples = self.sample_simple(nb_sample=nb_sample)
         if return_log_prob:
             log_prob = self.log_prob_simple(samples)
             return samples, log_prob

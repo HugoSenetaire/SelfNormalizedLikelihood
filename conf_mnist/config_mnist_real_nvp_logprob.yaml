@@ -19,6 +19,9 @@ defaults:
   - scheduler_proposal: cyclic_lr
   - scheduler_base_dist: cyclic_lr
   - scheduler_explicit_bias: cyclic_lr
-  - sampler: nuts_mnist
+  - sampler_init_base_dist: langevin
+  - sampler_init_buffer: langevin
+  - sampler_init_data: langevin
+  - sampler_init_proposal: langevin
   - machine: dtu_cluster
 

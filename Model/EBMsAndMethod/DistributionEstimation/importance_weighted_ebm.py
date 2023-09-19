@@ -169,7 +169,9 @@ class ImportanceWeightedEBM(nn.Module):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         x = x.to(device)
 
-        samples_proposal, samples_proposal_log_prob = self.sample(nb_sample, return_log_prob=True).to(x.device, x.dtype)
+        samples_proposal, samples_proposal_log_prob = self.sample(nb_sample, return_log_prob=True)
+        samples_proposal = samples_proposal.to(x.device, x.dtype)
+        samples_proposal_log_prob = samples_proposal_log_prob.to(x.device, x.dtype)
         if detach_sample:
             samples_proposal = samples_proposal.detach()
         if requires_grad:

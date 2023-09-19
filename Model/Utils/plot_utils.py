@@ -288,7 +288,6 @@ def plot_images(
     init_samples=None,
     step="",
 ):
-    print(f"GOIN TO PLOT IN {save_dir = }")
     if images is None:
         return None
 

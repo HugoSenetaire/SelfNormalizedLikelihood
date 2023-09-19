@@ -22,33 +22,25 @@ class NutsSampler:
         self.thinning = thinning
         self.multiprocess = multiprocess
 
-    def sample(self, energy_function, proposal=None, num_samples=None):
+    def sample(self, energy_function, x_init=None, num_samples=None):
         if num_samples is None:
             num_samples = self.num_samples
 
         # current_energy_function = lambda x: energy_function(x[0].unsqueeze(0))
-        if proposal is None:
+        if x_init is None:
             x_init = dist.Normal(
                 torch.zeros(self.input_size), torch.ones(self.input_size)
             )(self.num_chains).to(torch.float32)
-        else:
-            x_init = proposal.sample(self.num_chains).to(torch.float32).detach()
 
         hmc_kernel = NUTS(
             potential_fn=energy_function,
             adapt_step_size=True,
         )
 
-        print(
-            f"Running NUTS with {self.num_chains} chains and multiprocess = {self.multiprocess}"
-        )
+        print(f"Running NUTS with {self.num_chains} chains and multiprocess = {self.multiprocess}")
         if not self.multiprocess:
             samples = []
-            for (
-                x_init_i
-            ) in (
-                x_init
-            ):  # Some issues exists with pyro when multiprocessing, I am always using the same x
+            for x_init_i in x_init :  # Some issues exists with pyro when multiprocessing, I am always using the same x
                 mcmc = MCMC(
                     hmc_kernel,
                     num_samples=num_samples * self.thinning,

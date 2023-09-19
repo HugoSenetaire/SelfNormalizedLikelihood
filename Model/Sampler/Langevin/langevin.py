@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+import torch.autograd as autograd
 import torch.distributions as dist
 import tqdm
-import torch.autograd as autograd
+
 
 def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_max_value=None, clamp_min=None, clamp_max=None):
     """
@@ -80,19 +81,15 @@ class LangevinSampler:
         self.clip_max_value = clip_max_value
 
 
-    def sample(self, energy_function, proposal=None, num_samples=None):
+    def sample(self, energy_function, x_init=None, num_samples=None):
         if num_samples is None:
             num_samples = self.num_samples
 
         # current_energy_function = lambda x: energy_function(x[0].unsqueeze(0))
-        if torch.is_tensor(proposal):
-            x_init = proposal
-        elif proposal is None:
+        if x_init is None:
             x_init = dist.Normal(
                 torch.zeros(self.input_size), torch.ones(self.input_size)
             )(self.num_chains).to(torch.float32)
-        else:
-            x_init = proposal.sample(self.num_chains).to(torch.float32).detach()
         
         
         langevin_samples = langevin_sample(

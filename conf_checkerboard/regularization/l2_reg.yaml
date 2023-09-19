@@ -1,0 +1,7 @@
+defaults:
+  - base_regularization_config_name
+coef_regul: 0.0
+pg_control_data: 0.0
+pg_control_gen: 0.0
+pg_control_mix: 0.0
+l2_control: 1.0

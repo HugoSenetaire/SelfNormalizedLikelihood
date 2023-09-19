@@ -19,6 +19,9 @@ defaults:
   - scheduler_proposal: null
   - scheduler_base_dist: null
   - scheduler_explicit_bias: null
-  - sampler: langevin_shortterm
+  - sampler_init_base_dist: langevin_shortterm
+  - sampler_init_buffer: langevin_shortterm
+  - sampler_init_data: langevin_shortterm
+  - sampler_init_proposal: langevin_shortterm
   - machine: dtu_cluster
 

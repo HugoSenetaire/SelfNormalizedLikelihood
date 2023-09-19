@@ -93,7 +93,7 @@ class AbstractDistributionEstimation:
         self.cfg = cfg
         self.dtype = dtype
         self.logger = logger
-        self.sampler = get_sampler(cfg,)
+        self.samplers_dic = get_sampler(cfg,)
         self.device = device
         self.current_step = 0
 
@@ -142,16 +142,17 @@ class AbstractDistributionEstimation:
     def update_sample_buffer(self, x, id):
         if self.cfg.buffer.size_replay_buffer>0:
             if len(self.replay_buffer) < self.num_samples_train:  # In the original code, it's batch size here
-                x_init = self.ebm.proposal.sample(self.num_samples_train)
+                x_init = self.ebm.proposal.sample(self.num_samples_train).detach()
                 id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
             else :
                 n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
                 replay_sample, replay_id = self.replay_buffer.get(n_replay)
                 random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
                 random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
-                x_init = torch.cat([replay_sample, random_sample], 0)
+                x_init = torch.cat([replay_sample, random_sample], 0).detach()
                 id_init = torch.cat([replay_id, random_id], 0)
 
+           
             for k in range(self.cfg.buffer.nb_steps_langevin):
                 x_init = langevin_step(
                     x_init=x_init,
@@ -164,7 +165,8 @@ class AbstractDistributionEstimation:
                 x_init.clamp_(self.cfg.buffer.clamp_min, self.cfg.buffer.clamp_max)
         self.replay_buffer.push(x_init, id_init)
         if self.current_step % self.cfg.buffer.save_buffer_every == 0:
-            self.replay_buffer.save_buffer(logger=self.logger, current_step=self.current_step)
+            if self.input_type == 'image':
+                self.replay_buffer.save_buffer(logger=self.logger, current_step=self.current_step)
 
 
     def on_train_start(self):
@@ -854,57 +856,58 @@ class AbstractDistributionEstimation:
                         energy_type=False,
                     )
 
-    def samples_mcmc(self, num_samples=None):
+    def samples_mcmc(self, sampler_name, sampler, num_samples=None):
         """
         Sample from the EBM distribution using an MCMC sampler.
         """
-
-        if self.sampler is not None:
-            samples, x_init = self.sampler.sample(
-                self.ebm, self.ebm.proposal, num_samples=num_samples
-            )
-        else:
-            return False
+        if num_samples is None :
+            num_samples = sampler.num_chains
+        if sampler is not None:
+            if "buffer" in sampler_name:
+                if self.replay_buffer.buffer_image is None or len(self.replay_buffer.buffer_image) == 0:
+                    return None, None
+                x_init = torch.stack(self.replay_buffer.buffer_image[:num_samples])
+            elif "proposal" in sampler_name:
+                if self.ebm.proposal is None:
+                    return None, None
+                x_init = self.ebm.proposal.sample(nb_sample = num_samples)
+            elif "base_dist" in sampler_name:
+                if self.ebm.base_dist is None:
+                    return None, None
+                x_init = self.example_base_dist[:num_samples]
+            elif "data" in sampler_name:
+                x_init = self.example[:num_samples].reshape(num_samples, *self.cfg.dataset.input_size)
+        
+            x_init = x_init.detach().to(self.device, self.dtype)
+            samples, x_init = sampler.sample(self.ebm, x_init, num_samples=num_samples)
         return samples, x_init
 
     def plot_samples(self, num_samples=None):
         """
         Plot the samples from the EBM distribution using an MCMC sampler.
         """
-        if self.sampler is None:
-            return False
-         # Required for MCMC sampling
-
         if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
             self.last_sample_step = self.current_step
-            save_dir = self.cfg.train.save_dir
-            save_dir = os.path.join(save_dir, "samples_energy")
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            with torch.set_grad_enabled(True) :
-                samples, init_samples = self.samples_mcmc(num_samples=num_samples)
-            print(samples.shape)
+            for sampler_name, sampler in self.samplers_dic.items():
+                if sampler is None:
+                    continue
 
-            if self.input_type == "2d":
-                samples = samples.flatten(1)
-                plot_energy_2d(
-                    self,
-                    save_dir=save_dir,
-                    samples=[samples],
-                    samples_title=["HMC samples"],
-                    name="samples",
-                    step=self.current_step,
-                )
-            elif self.input_type == "image":
-                print("Plotting images")
-                plot_images(
-                    algo=self,
-                    save_dir=save_dir,
-                    images=samples,
-                    name="samples",
-                    step=self.current_step,
-                    init_samples=init_samples,
-                    transform_back=self.transform_back,
-                )
-            else:
-                raise NotImplementedError
+                # Required for MCMC sampling
+
+                save_dir = self.cfg.train.save_dir
+                save_dir = os.path.join(save_dir,sampler_name)
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                with torch.set_grad_enabled(True) :
+                    samples, init_samples = self.samples_mcmc(sampler_name = sampler_name, sampler= sampler, num_samples=num_samples)
+                
+                if samples is None:
+                    continue
+
+                if self.input_type == "2d":
+                    samples = samples.flatten(1)
+                    plot_energy_2d(self, save_dir=save_dir, samples=[samples], samples_title=["MCMC"], name=sampler_name,step=self.current_step,)
+                elif self.input_type == "image":
+                    plot_images(algo=self, save_dir=save_dir, images=samples, name=sampler_name, step=self.current_step, init_samples=init_samples,transform_back=self.transform_back,)
+                else:
+                    raise NotImplementedError

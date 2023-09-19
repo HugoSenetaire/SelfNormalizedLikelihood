@@ -387,7 +387,10 @@ class Config:
     feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
     buffer: BaseBufferConfig = MISSING
-    sampler: Optional[Union[BaseSamplerConfig, None]] = None
+    sampler_init_proposal: Optional[Union[BaseSamplerConfig, None]] = None
+    sampler_init_buffer: Optional[Union[BaseSamplerConfig, None]] = None
+    sampler_init_data: Optional[Union[BaseSamplerConfig, None]] = None
+    sampler_init_base_dist: Optional[Union[BaseSamplerConfig, None]] = None
     scheduler_f_theta: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_explicit_bias: Optional[Union[BaseSchedulerConfig, None]] = None
     scheduler_proposal: Optional[Union[BaseSchedulerConfig, None]] = None
@@ -491,9 +494,18 @@ def store_main():
     cs.store(name="base_train_config_name", group="train", node=BaseTrainConfig)
 
     # Samplers
-    cs.store(name="base_sampler_config_name", group="sampler", node=BaseSamplerConfig)
-    cs.store(name="nuts_name", group="sampler", node=NutsConfig)
-    cs.store(name="langevin_name", group="sampler", node=LangevinConfig)
+    cs.store(name="base_sampler_config_name", group="sampler_init_base_dist", node=BaseSamplerConfig)
+    cs.store(name="nuts_name", group="sampler_init_base_dist", node=NutsConfig)
+    cs.store(name="langevin_name", group="sampler_init_base_dist", node=LangevinConfig)
+    cs.store(name="base_sampler_config_name", group="sampler_init_buffer", node=BaseSamplerConfig)
+    cs.store(name="nuts_name", group="sampler_init_buffer", node=NutsConfig)
+    cs.store(name="langevin_name", group="sampler_init_buffer", node=LangevinConfig)
+    cs.store(name="base_sampler_config_name", group="sampler_init_data", node=BaseSamplerConfig)
+    cs.store(name="nuts_name", group="sampler_init_data", node=NutsConfig)
+    cs.store(name="langevin_name", group="sampler_init_data", node=LangevinConfig)
+    cs.store(name="base_sampler_config_name", group="sampler_init_proposal", node=BaseSamplerConfig)
+    cs.store(name="nuts_name", group="sampler_init_proposal", node=NutsConfig)
+    cs.store(name="langevin_name", group="sampler_init_proposal", node=LangevinConfig)
 
     # Machine
     cs.store(name="karolina_name", group="machine", node=Machine)
