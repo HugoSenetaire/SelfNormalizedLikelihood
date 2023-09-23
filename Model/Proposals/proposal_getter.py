@@ -4,6 +4,7 @@ import torch
 
 from .mock_base_dist import MockBaseDist
 from .ProposalForDistributionEstimation.categorical import get_Categorical
+from .ProposalForDistributionEstimation.cnf import get_NeuralODEProposal
 from .ProposalForDistributionEstimation.gaussian import get_Gaussian
 from .ProposalForDistributionEstimation.gaussian_full import get_GaussianFull
 from .ProposalForDistributionEstimation.gaussian_mixture import (
@@ -39,6 +40,7 @@ dic_proposals = {
     "noise_gradation_adaptive": get_NoiseGradationAdaptiveProposal,
     "student": get_StudentProposal,
     "real_nvp": get_RealNVPProposal,
+    "cnf": get_NeuralODEProposal,
     "vera_hmc": get_vera_hmc,
     "vera": get_vera,
     "maf": get_MAFProposal,
