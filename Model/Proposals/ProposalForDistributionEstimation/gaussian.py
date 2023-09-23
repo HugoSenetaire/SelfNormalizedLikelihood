@@ -36,7 +36,8 @@ class Gaussian(AbstractProposal):
         print("Init Standard Gaussian...")
         data = self.get_data(dataset, nb_sample_estimate)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        data = data.to(self.device)
+        data = data.to(self.device) 
+        data += torch.randn_like(data).to(self.device) * 1e-2
 
         if mean == "dataset":
             self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=True)

@@ -61,7 +61,7 @@ class ImportanceWeightedEBM(nn.Module):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.f_theta = f_theta.to(device)
         self.proposal = proposal.to(device)
-        self.nb_sample_init_bias = nb_sample_init_bias
+        self.nb_sample_init_bias = 1
         self.base_dist = base_dist.to(device)
         self.explicit_bias = explicit_bias.to(device)
 

@@ -71,6 +71,8 @@ def get_proposal(
     cfg,
     input_size,
     dataset,
+    f_theta=None,
+    base_dist=None,
 ):
     if not isinstance(dataset, list):
         dataset = [dataset]
@@ -92,6 +94,14 @@ def get_proposal(
             default_proposal=default_proposal,
             input_size=input_size,
             dataset=dataset,
+            cfg=cfg.proposal,
+        )
+    elif "cnf" in cfg.proposal.proposal_name:
+
+        return proposal(
+            input_size=input_size,
+            f_theta=f_theta,
+            base_dist=base_dist,
             cfg=cfg.proposal,
         )
 

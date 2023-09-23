@@ -18,11 +18,31 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
     energy = get_energy(input_size, cfg)
     print("Get energy function... end")
 
-    # Get proposal :
-    if cfg.proposal.proposal_name is not None:
-        print("Get proposal")
-        proposal = get_proposal(
+
+    
+
+    if cfg.base_distribution.proposal_name == "proposal":
+        # Get proposal :
+        if cfg.proposal.proposal_name is not None:
+            print("Get proposal")
+            proposal = get_proposal(
+                cfg=cfg,
+                input_size=input_size,
+                dataset=[
+                    complete_dataset.dataset_train,
+                    complete_dataset.dataset_val,
+                    complete_dataset.dataset_test,
+                ],
+                f_theta=energy,
+                base_dist=None,
+            )
+            print("Get proposal... end")
+        else:
+            raise ValueError("No proposal given")
+    else:
+        base_dist = get_base_dist(
             cfg=cfg,
+            proposal=None,
             input_size=input_size,
             dataset=[
                 complete_dataset.dataset_train,
@@ -30,9 +50,20 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
                 complete_dataset.dataset_test,
             ],
         )
-        print("Get proposal... end")
-    else:
-        raise ValueError("No proposal given")
+        if cfg.proposal.proposal_name is not None:
+            proposal = get_proposal(
+                cfg=cfg,
+                input_size=input_size,
+                dataset=[
+                    complete_dataset.dataset_train,
+                    complete_dataset.dataset_val,
+                    complete_dataset.dataset_test,
+                ],
+                f_theta=energy,
+                base_dist=base_dist,
+            )
+        else :
+            raise ValueError("No proposal given")
 
     # Get base_dist :
     print("Get base_dist")
