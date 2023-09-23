@@ -6,11 +6,18 @@ from torchdiffeq import odeint
 from .abstract_proposal import AbstractProposal
 
 
-def get_NeuralODEProposal(input_size, cfg,  f_theta, base_dist = None,):
+def get_NeuralODEProposal(
+    input_size,
+    cfg,
+    f_theta,
+    dataset,
+    base_dist=None,
+):
     return NeuralODEProposal(
         input_size=input_size,
         f_theta=f_theta,
         base_dist=base_dist,
+        dataset=dataset,
         cfg=cfg,
     )
 
@@ -24,7 +31,8 @@ def trace_df_dz(f, z):
     flat_f = torch.flatten(f, start_dim=1)
     for i in range(nb_dims):  # For each dimension
         elmnt = (
-            torch.autograd.grad(flat_f[:, i].sum(), z, create_graph=True)[0].flatten(1)
+            torch.autograd.grad(flat_f[:, i].sum(), z, create_graph=True)[0]
+            .flatten(1)
             .contiguous()[:, i]
             .contiguous()
         )
@@ -43,7 +51,7 @@ def divergence_approx(f, y, e=None):
 def m_score(f_theta, base_dist, x, **unused_kwargs):
     energy = f_theta(x)  # should be a scalar
     if base_dist is not None:
-        energy -= base_dist.log_prob(x)
+        energy += base_dist.log_prob(x)
     score = torch.autograd.grad(energy.sum(), x, retain_graph=True, create_graph=True)[
         0
     ]
@@ -70,7 +78,11 @@ class Func(nn.Module):
         elif self.divergence_fn == "exact":
             self.div_fn = trace_df_dz
         else:
-            raise ValueError("divergence_fn should be 'approximate' or 'exact', got {}".format(divergence_fn))
+            raise ValueError(
+                "divergence_fn should be 'approximate' or 'exact', got {}".format(
+                    divergence_fn
+                )
+            )
 
     def forward(self, t, states):
         x, logp_x = states
@@ -81,17 +93,25 @@ class Func(nn.Module):
             dlog_x_dt = -self.div_fn(dx_dt, x, e)
         elif self.divergence_fn == "exact":
             e = None
-            dlog_x_dt = -self.div_fn(dx_dt, x,)
+            dlog_x_dt = -self.div_fn(
+                dx_dt,
+                x,
+            )
         else:
-            raise ValueError("divergence_fn should be 'approximate' or 'exact', got {}".format(self.divergence_fn))
-        return dx_dt, dlog_x_dt
+            raise ValueError(
+                "divergence_fn should be 'approximate' or 'exact', got {}".format(
+                    self.divergence_fn
+                )
+            )
+        return dx_dt.detach(), dlog_x_dt.detach()
 
 
 class NeuralODEProposal(AbstractProposal):
     def __init__(
-        self,
+        selfw,
         input_size,
         cfg,
+        dataset,
         f_theta,
         base_dist=None,
     ):
@@ -107,12 +127,45 @@ class NeuralODEProposal(AbstractProposal):
             f_theta=self.f_theta, base_dist=self.base_dist, divergence_fn="exact"
         )
         flat_input_size = np.prod(input_size)
-        self.prior = torch.distributions.MultivariateNormal(
-            torch.zeros(flat_input_size), torch.eye(flat_input_size)
-        )
+
+        if base_dist is None:
+            mean = (cfg.mean,)
+            std = (cfg.std,)
+            nb_sample_estimate = (cfg.nb_sample_estimate,)
+            std_multiplier = cfg.std_multiplier
+            data = self.get_data(dataset, nb_sample_estimate)
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            data = data.to(self.device)
+            data += torch.randn_like(data).to(self.device) * 1e-2
+
+            if mean == "dataset":
+                self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=True)
+            else:
+                raise NotImplementedError
+
+            if std == "dataset":
+                self.log_std = nn.parameter.Parameter(
+                    (data.std(0) * std_multiplier).log(), requires_grad=True
+                )
+            else:
+                try:
+                    self.log_std = nn.parameter.Parameter(
+                        torch.log(torch.ones(self.input_size) * float(std)),
+                        requires_grad=True,
+                    )
+                except:
+                    raise NotImplementedError
+
+            self.prior = torch.distributions.MultivariateNormal(
+                self.mean, self.log_std.exp() ** 2 * torch.eye(flat_input_size)
+            )
+        else:
+            self.prior = base_dist
 
     def log_prob_simple(self, x_1):
-        logp_diff_t0 = torch.zeros(x_1.shape[0], 1).type(torch.float32)
+        logp_diff_t0 = (
+            torch.zeros(x_1.shape[0], 1).type(torch.float32).to(self.fake_param.device)
+        )
         x_t, logp_x_t = odeint(
             self.func,
             (x_1, logp_diff_t0),
@@ -126,8 +179,14 @@ class NeuralODEProposal(AbstractProposal):
         return prior_log_prob + logp_x_0
 
     def sample_simple(self, nb_sample: int = 1):
-        x_0 = self.prior.sample((nb_sample,)).to(self.fake_param.device).reshape(nb_sample, *self.input_size)
-        logp_diff_t0 = torch.zeros(nb_sample, 1).to(dtype=torch.float32, device=self.fake_param.device)
+        x_0 = (
+            self.prior.sample(nb_sample)
+            .to(self.fake_param.device)
+            .reshape(nb_sample, *self.input_size)
+        )
+        logp_diff_t0 = torch.zeros(nb_sample, 1).to(
+            dtype=torch.float32, device=self.fake_param.device
+        )
         x_t, logp_x_t = odeint(
             self.func,
             (x_0, logp_diff_t0),
@@ -143,7 +202,10 @@ class NeuralODEProposal(AbstractProposal):
         samples, log_prob = self.sample_simple(nb_sample=nb_sample)
         if return_log_prob:
             log_prob = self.log_prob_simple(samples)
-            return samples.reshape(nb_sample, *self.input_size).detach(), log_prob.reshape(nb_sample, 1).detach()
+            return (
+                samples.reshape(nb_sample, *self.input_size).detach(),
+                log_prob.reshape(nb_sample, 1).detach(),
+            )
         else:
             return samples.reshape(nb_sample, *self.input_size).detach()
 
