@@ -51,36 +51,20 @@ def langevin_mala_step(
     noise = torch.randn_like(x_init) * effective_std
     x_step = x_mu + noise
 
-    log_prob_forward = (
-        dist.Normal(x_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1)
-    )
+    log_prob_forward = dist.Normal(x_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1)
 
     x_step = x_step.detach()
     x_step.requires_grad = True
     energy_step = energy(x_step)
-    x_grad_step = autograd.grad(
-        energy_step.sum(),
-        x_step,
-    )[0]
-    x_grad_step = apply_clip_grad(
-        x_grad_step, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value
-    )
+    x_grad_step = autograd.grad(energy_step.sum(),x_step,)[0]
+    x_grad_step = apply_clip_grad(x_grad_step, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
 
     x_reverse_mu = x_step - step_size * x_grad_step
-    log_prob_backward = (
-        dist.Normal(x_reverse_mu, effective_std)
-        .log_prob(x_init)
-        .flatten(start_dim=1)
-        .sum(1)
-    )
+    log_prob_backward = dist.Normal(x_reverse_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1)
 
     log_prob_accept = log_prob_backward - log_prob_forward
     p_accept = log_prob_accept.exp()
-    accept = (
-        (torch.rand_like(p_accept) < p_accept)
-        .float()
-        .reshape(-1, *[1 for _ in range(len(x_init.shape) - 1)])
-    )
+    accept = (torch.rand_like(p_accept) < p_accept).float().reshape(-1, *[1 for _ in range(len(x_init.shape) - 1)])
     x_step = accept * x_step + (1 - accept) * x_init
 
     x_step = x_step.detach()
