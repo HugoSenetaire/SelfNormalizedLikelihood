@@ -77,12 +77,13 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
 
 
         loss_energy = energy_data.mean()
-        loss_total = self.grads_and_reg(loss_energy=loss_energy,
+        loss_total = self.backward_and_reg(loss_energy=loss_energy,
                         loss_samples=loss_estimate_z,
                         x=x,
                         x_gen=x_gen,
                         energy_data=energy_data,
                         energy_samples=energy_samples,)
+        self.grad_clipping()
 
 
 

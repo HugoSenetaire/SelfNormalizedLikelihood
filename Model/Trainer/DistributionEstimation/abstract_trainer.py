@@ -233,7 +233,7 @@ class AbstractDistributionEstimation:
 
         self.post_train_step_handler(x, dic_output,)
 
-    def grads_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
+    def backward_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
         '''
         Compute different gradients and regularization terms given the energy or the loss.
         '''
@@ -279,6 +279,9 @@ class AbstractDistributionEstimation:
             
 
 
+        return loss_total
+        
+    def grad_clipping(self, ):
         # Grad clipping 
         for i,type in enumerate(self.liste_optimizer_name):
             current_optim = self.optimizers[i]
@@ -307,9 +310,6 @@ class AbstractDistributionEstimation:
                 pass
             else :
                 raise NotImplementedError
-
-        return loss_total
-        
 
 
 
@@ -352,7 +352,8 @@ class AbstractDistributionEstimation:
         )
 
         proposal_loss.mean().backward()
-        # proposal_loss.backward()
+        self.grad_clipping()
+
 
         proposal_opt.step()
         self.log("train_proposal/extra_noise", current_noise)
