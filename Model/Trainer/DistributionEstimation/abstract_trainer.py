@@ -710,32 +710,34 @@ class AbstractDistributionEstimation:
         parameters_explicit_bias = [self.ebm.explicit_bias.parameters()]
 
 
-        f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
-        explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
-        opt_list = [f_theta_opt, explicit_bias_opt]
+        self.f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
+        self.explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
+        opt_list = [self.f_theta_opt, self.explicit_bias_opt]
         feedback_sch = []
         standard_sch = []
-        get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-        get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+        get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=self.f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+        get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=self.explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
 
 
         # sch_list = [ebm_sch]
 
         if self.ebm.base_dist is not None:
             # print(self.ebm.base_dist.parameters())
-            base_dist_opt = get_optimizer(cfg=self.cfg.optim_base_dist, list_parameters_gen=[self.ebm.base_dist.parameters()])
-            get_scheduler(cfg=self.cfg.scheduler_base_dist, optim=base_dist_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-            opt_list.append(base_dist_opt)
+            self.base_dist_opt = get_optimizer(cfg=self.cfg.optim_base_dist, list_parameters_gen=[self.ebm.base_dist.parameters()])
+            get_scheduler(cfg=self.cfg.scheduler_base_dist, optim=self.base_dist_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+            opt_list.append(self.base_dist_opt)
         else :
+            self.base_dist_opt = None
             opt_list.append(None)
             feedback_sch.append(None)
             standard_sch.append(None)
 
         if self.ebm.proposal is not None:
-            proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.ebm.proposal.parameters()])
-            get_scheduler(cfg=self.cfg.scheduler_proposal, optim=proposal_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-            opt_list.append(proposal_opt)
+            self.proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.ebm.proposal.parameters()])
+            get_scheduler(cfg=self.cfg.scheduler_proposal, optim=self.proposal_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+            opt_list.append(self.proposal_opt)
         else :
+            self.proposal_opt = None
             opt_list.append(None)
             feedback_sch.append(None)
             standard_sch.append(None)
