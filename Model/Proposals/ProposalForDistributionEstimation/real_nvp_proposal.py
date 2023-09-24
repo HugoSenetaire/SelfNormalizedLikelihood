@@ -36,8 +36,10 @@ class RealNVPProposal(AbstractProposal):
         return ll
 
     def sample_simple(self, nb_sample: int = 1):
+        self.flow.eval()
         z = torch.randn(nb_sample, *self.input_size, dtype=torch.float32, device=next(self.parameters()).device)
         x, _ = self.flow(z, reverse=True)
         if self.preprocess:
             x = torch.sigmoid(x)
+        self.flow.train()
         return x
