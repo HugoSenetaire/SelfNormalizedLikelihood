@@ -148,10 +148,14 @@ class AbstractDistributionEstimation:
             else :
                 n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
                 replay_sample, replay_id = self.replay_buffer.get(n_replay)
-                random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
-                random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
-                x_init = torch.cat([replay_sample, random_sample], 0).detach()
-                id_init = torch.cat([replay_id, random_id], 0)
+                if self.num_samples_train - n_replay > 0 :
+                    random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
+                    random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
+                    x_init = torch.cat([replay_sample, random_sample], 0).detach()
+                    id_init = torch.cat([replay_id, random_id], 0)
+                else :
+                    x_init = replay_sample.detach()
+                    id_init = replay_id
 
            
             for k in range(self.cfg.buffer.nb_steps_langevin):
@@ -860,6 +864,7 @@ class AbstractDistributionEstimation:
         """
         Sample from the EBM distribution using an MCMC sampler.
         """
+        
         if num_samples is None :
             num_samples = sampler.num_chains
         if sampler is not None:
@@ -882,6 +887,7 @@ class AbstractDistributionEstimation:
         
             x_init = x_init.detach().to(self.device, self.dtype)
             samples, x_init = sampler.sample(self.ebm, x_init, num_samples=num_samples)
+            print(samples.shape)
         return samples, x_init
 
     def plot_samples(self, num_samples=None):
@@ -891,6 +897,8 @@ class AbstractDistributionEstimation:
         if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
             self.last_sample_step = self.current_step
             for sampler_name, sampler in self.samplers_dic.items():
+                print(sampler_name)
+                print(sampler)
                 if sampler is None:
                     continue
 
