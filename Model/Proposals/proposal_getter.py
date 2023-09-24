@@ -102,6 +102,7 @@ def get_proposal(
             input_size=input_size,
             f_theta=f_theta,
             base_dist=base_dist,
+            dataset=dataset,
             cfg=cfg.proposal,
         )
 

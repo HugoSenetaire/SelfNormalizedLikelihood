@@ -68,7 +68,7 @@ class BaseEnergyConfig:
 @dataclass
 class BaseExplicitBiasConfig:
     explicit_bias_name: Union[str, None] = MISSING
-    nb_sample_init_bias: Optional[int] = 1024
+    nb_sample_init_bias: Optional[int] = 64
 
 
 @dataclass
@@ -216,6 +216,11 @@ class BaseProposalConfig:
     pytorch_flow_hidden_dim: Optional[int] = 1024  # Used in pytorch flows proposal
     pytorch_flow_num_blocks: Optional[int] = 5  # Used in pytorch flows proposal
     pytorch_flow_act: Optional[str] = "relu"  # Used in pytorch flows proposal
+
+    cnf_divergence_fn: Optional[str] = "approximate"  # Used in CNF proposal CHoice approximate, exact
+    cnf_method: Optional[str] = "euler"  # Used in CNF proposal Choice euler, rk4, dopri5
+    cnf_nb_solver_step: Optional[int] = 100 # Used in CNF proposal
+    cnf_T: Optional[int] = 10 # Used in CNF proposal
 
 
 @dataclass
