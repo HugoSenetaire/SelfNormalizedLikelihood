@@ -5,6 +5,6 @@ lr: 1e-3
 b1: 0.0
 b2: 0.999
 eps: 1.0e-8
-weight_decay: 1
-clip_grad_value: 1e-2
+weight_decay: 5e-5
+clip_grad_value: 100
 clip_grad_type: norm
