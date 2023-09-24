@@ -120,6 +120,7 @@ class AbstractDistributionEstimation:
             self.input_type = "other"
 
         self.proposal_loss_name = cfg.proposal_training.proposal_loss_name
+        
         self.proposal_loss = proposal_loss_getter(self.proposal_loss_name)
 
         self.train_proposal = cfg.proposal_training.train_proposal
@@ -323,10 +324,11 @@ class AbstractDistributionEstimation:
             proposal_opt (torch.optim): The optimizer for the proposal parameters
         """
         self.configure_gradient_flow("proposal")
-        energy_opt, base_dist_opt, proposal_opt = self.optimizers
-        proposal_opt.zero_grad()
+        f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
+        f_theta_opt.zero_grad()
+        explicit_bias_opt.zero_grad()
         base_dist_opt.zero_grad()
-        energy_opt.zero_grad()
+        proposal_opt.zero_grad()
 
         estimate_log_z, dic = self.ebm.estimate_log_z(
             x,
@@ -351,11 +353,6 @@ class AbstractDistributionEstimation:
 
         proposal_loss.mean().backward()
         # proposal_loss.backward()
-        if self.cfg.optim_proposal.clip_grad_norm is not None:
-            torch.nn.utils.clip_grad_norm_(
-                parameters=self.ebm.proposal.parameters(),
-                max_norm=self.cfg.optim_proposal.clip_grad_norm,
-            )
 
         proposal_opt.step()
         self.log("train_proposal/extra_noise", current_noise)
@@ -874,8 +871,10 @@ class AbstractDistributionEstimation:
             elif "base_dist" in sampler_name:
                 if self.ebm.base_dist is None:
                     return None, None
+                num_samples = min(num_samples, self.example_base_dist.shape[0])
                 x_init = self.example_base_dist[:num_samples]
             elif "data" in sampler_name:
+                num_samples = min(num_samples, self.example.shape[0])
                 x_init = self.example[:num_samples].reshape(num_samples, *self.cfg.dataset.input_size)
         
             x_init = x_init.detach().to(self.device, self.dtype)
