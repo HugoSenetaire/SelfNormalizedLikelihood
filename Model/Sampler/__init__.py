@@ -2,8 +2,7 @@ import logging
 
 from .hmc_grathwohl import *
 from .nuts import NutsSampler
-from .Langevin import LangevinSampler, langevin_sample, langevin_step
-
+from .Langevin import LangevinSampler, langevin_sample, langevin_step, langevin_mala_sample, langevin_mala_step, MetropolisAdjustedLangevinSampler
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_sampler(cfg):
-    liste_name = ["sampler_init_proposal", "sampler_init_data", "sampler_init_buffer"]
+    liste_name = ["sampler_init_proposal", "sampler_init_data", "sampler_init_buffer", "sampler_init_base_dist"]
     dic_sampler = {}
     for name in liste_name:
         cfg_sampler = getattr(cfg, name)
@@ -33,7 +32,26 @@ def get_sampler(cfg):
                 sigma=cfg_sampler.sigma,
                 clip_max_norm=cfg_sampler.clip_max_norm,
                 clip_max_value=cfg_sampler.clip_max_value,
+                clamp_min=cfg_sampler.clamp_min,
+                clamp_max=cfg_sampler.clamp_max,
             )
+
+        elif cfg_sampler.sampler_name == "mala":
+            dic_sampler[name] = MetropolisAdjustedLangevinSampler(
+                input_size=cfg.dataset.input_size,
+                num_chains=cfg_sampler.num_chains,
+                num_samples=cfg_sampler.num_samples,
+                warmup_steps=cfg_sampler.warmup_steps,
+                thinning=cfg_sampler.thinning,
+                step_size=cfg_sampler.step_size,
+                sigma=cfg_sampler.sigma,
+                clip_max_norm=cfg_sampler.clip_max_norm,
+                clip_max_value=cfg_sampler.clip_max_value,
+                clamp_min=cfg_sampler.clamp_min,
+                clamp_max=cfg_sampler.clamp_max,
+            )
+
+
 
         elif cfg_sampler.sampler_name == "nuts":
             dic_sampler[name] = NutsSampler(

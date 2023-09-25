@@ -31,20 +31,20 @@ def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_ma
     if clamp_max is not None:
         x_step.clamp_(max=clamp_max)
 
-    return x_step
+    return x_step.detach()
 
 
-def langevin_sample(x_init, energy, step_size, sigma, num_samples, clip_max_norm = None, clip_max_value = None, burn_in=0, thinning=0):
+def langevin_sample(x_init, energy, step_size, sigma, num_samples, clip_max_norm = None, clip_max_value = None, clamp_min = None, clamp_max = None, burn_in=0, thinning=0):
     """
     Performs a single step of the Langevin algorithm.
     """
     print("Burn in: ", burn_in)
     for k in tqdm.tqdm(range(burn_in)):
-        x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
+        x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value, clamp_min=clamp_min, clamp_max=clamp_max)
     x_samples = []
     for k in tqdm.tqdm(range(num_samples)):
         for t in range(thinning):
-            x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
+            x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value, clamp_min=clamp_min, clamp_max=clamp_max)
         x_samples.append(x_init)
 
     x_samples = torch.cat(x_samples, dim=0)
@@ -68,6 +68,8 @@ class LangevinSampler:
         sigma=1e-2,
         clip_max_norm=None,
         clip_max_value=None,
+        clamp_min=None,
+        clamp_max=None,
         **kwargs,
     ):
         self.input_size = input_size
@@ -79,6 +81,9 @@ class LangevinSampler:
         self.thinning = thinning
         self.clip_max_norm = clip_max_norm
         self.clip_max_value = clip_max_value
+        self.clamp_min = clamp_min
+        self.clamp_max = clamp_max
+
 
 
     def sample(self, energy_function, x_init=None, num_samples=None):
@@ -102,6 +107,8 @@ class LangevinSampler:
             thinning=self.thinning,
             clip_max_norm=self.clip_max_norm,
             clip_max_value=self.clip_max_value,
+            clamp_min=self.clamp_min,
+            clamp_max=self.clamp_max,
         )
      
         return langevin_samples, x_init

@@ -84,6 +84,8 @@ def langevin_mala_sample(
     num_samples,
     clip_max_norm=None,
     clip_max_value=None,
+    clamp_min=None,
+    clamp_max=None,
     burn_in=0,
     thinning=0,
 ):
@@ -100,6 +102,8 @@ def langevin_mala_sample(
             sigma,
             clip_max_norm=clip_max_norm,
             clip_max_value=clip_max_value,
+            clamp_max=clamp_max,
+            clamp_min=clamp_min,
         )
         iter_burn_in.set_postfix(accept=accept.item())
         iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
@@ -114,6 +118,8 @@ def langevin_mala_sample(
                 sigma,
                 clip_max_norm=clip_max_norm,
                 clip_max_value=clip_max_value,
+                clamp_max=clamp_max,
+                clamp_min=clamp_min,
             )
             iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
         x_samples.append(x_init)
@@ -135,6 +141,8 @@ class MetropolisAdjustedLangevinSampler:
         sigma=1e-2,
         clip_max_norm=None,
         clip_max_value=None,
+        clamp_min=None,
+        clamp_max=None,
         **kwargs,
     ):
         self.input_size = input_size
@@ -146,6 +154,8 @@ class MetropolisAdjustedLangevinSampler:
         self.thinning = thinning
         self.clip_max_norm = clip_max_norm
         self.clip_max_value = clip_max_value
+        self.clamp_min = clamp_min
+        self.clamp_max = clamp_max
 
     def sample(self, energy_function, x_init=None, num_samples=None):
         if num_samples is None:
@@ -167,6 +177,8 @@ class MetropolisAdjustedLangevinSampler:
             thinning=self.thinning,
             clip_max_norm=self.clip_max_norm,
             clip_max_value=self.clip_max_value,
+            clamp_min=self.clamp_min,
+            clamp_max=self.clamp_max,
         )
 
         return langevin_samples, x_init

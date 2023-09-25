@@ -5,6 +5,8 @@ def clip_grad_adam(parameters, optimizer, nb_sigmas = 3):
     with torch.no_grad():
         for group in optimizer.param_groups:
             for p in group['params']:
+                if p.grad is None or p.grad.data is None:
+                    continue
                 state = optimizer.state[p]
 
                 if 'step' not in state or state['step'] < 1:

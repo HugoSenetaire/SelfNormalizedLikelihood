@@ -61,7 +61,7 @@ class ImportanceWeightedEBM(nn.Module):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.f_theta = f_theta.to(device)
         self.proposal = proposal.to(device)
-        self.nb_sample_init_bias = 1
+        self.nb_sample_init_bias = nb_sample_init_bias
         self.base_dist = base_dist.to(device)
         self.explicit_bias = explicit_bias.to(device)
 
@@ -213,7 +213,7 @@ class ImportanceWeightedEBM(nn.Module):
 
         dic_output.update(
             {
-                "z_estimation/f_theta_on_sample_proposal_without_bias": f_theta_proposal_without_bias.detach(),
+                "z_estimation/f_theta_no_bias_on_sample_proposal": f_theta_proposal_without_bias.detach(),
                 "z_estimation/f_theta_on_sample_proposal": f_theta_proposal.detach(),
                 "z_estimation/base_dist_loglikelihood_on_sample_proposal": base_dist_log_prob.detach(),
                 "z_estimation/proposal_loglikelihood_on_sample_proposal": samples_proposal_log_prob.detach(),

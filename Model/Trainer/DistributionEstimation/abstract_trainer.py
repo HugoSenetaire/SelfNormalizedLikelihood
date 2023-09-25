@@ -96,7 +96,6 @@ class AbstractDistributionEstimation:
         self.samplers_dic = get_sampler(cfg,)
         self.device = device
         self.current_step = 0
-
         self.last_sample_step = -float('inf')
         
         if hasattr(complete_dataset, "transform_back"):
@@ -148,10 +147,14 @@ class AbstractDistributionEstimation:
             else :
                 n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
                 replay_sample, replay_id = self.replay_buffer.get(n_replay)
-                random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
-                random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
-                x_init = torch.cat([replay_sample, random_sample], 0).detach()
-                id_init = torch.cat([replay_id, random_id], 0)
+                if self.num_samples_train - n_replay > 0 :
+                    random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
+                    random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
+                    x_init = torch.cat([replay_sample, random_sample], 0).detach()
+                    id_init = torch.cat([replay_id, random_id], 0)
+                else :
+                    x_init = replay_sample.detach()
+                    id_init = replay_id
 
            
             for k in range(self.cfg.buffer.nb_steps_langevin):
@@ -197,8 +200,9 @@ class AbstractDistributionEstimation:
         else :
             target = torch.randint(0, 10, (x.shape[0],), device=x.device)
         self.update_sample_buffer(x, target)
+
         if (self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps > 0):
-            if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
+            if self.current_step % (self.cfg.train.nb_energy_steps + 1) != 0:
                 self.fix_proposal()
                 self.free_f_theta()
                 self.free_explicit_bias()
@@ -208,7 +212,6 @@ class AbstractDistributionEstimation:
                     self.fix_base_dist()
                 loss, dic_output = self.training_energy(x,)
             else:
-
                 self.fix_f_theta()
                 self.fix_explicit_bias()
                 self.fix_base_dist()
@@ -233,7 +236,7 @@ class AbstractDistributionEstimation:
 
         self.post_train_step_handler(x, dic_output,)
 
-    def grads_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
+    def backward_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
         '''
         Compute different gradients and regularization terms given the energy or the loss.
         '''
@@ -279,6 +282,9 @@ class AbstractDistributionEstimation:
             
 
 
+        return loss_total
+        
+    def grad_clipping(self, ):
         # Grad clipping 
         for i,type in enumerate(self.liste_optimizer_name):
             current_optim = self.optimizers[i]
@@ -307,9 +313,6 @@ class AbstractDistributionEstimation:
                 pass
             else :
                 raise NotImplementedError
-
-        return loss_total
-        
 
 
 
@@ -352,7 +355,8 @@ class AbstractDistributionEstimation:
         )
 
         proposal_loss.mean().backward()
-        # proposal_loss.backward()
+        self.grad_clipping()
+
 
         proposal_opt.step()
         self.log("train_proposal/extra_noise", current_noise)
@@ -710,32 +714,34 @@ class AbstractDistributionEstimation:
         parameters_explicit_bias = [self.ebm.explicit_bias.parameters()]
 
 
-        f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
-        explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
-        opt_list = [f_theta_opt, explicit_bias_opt]
+        self.f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
+        self.explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
+        opt_list = [self.f_theta_opt, self.explicit_bias_opt]
         feedback_sch = []
         standard_sch = []
-        get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-        get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+        get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=self.f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+        get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=self.explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
 
 
         # sch_list = [ebm_sch]
 
         if self.ebm.base_dist is not None:
             # print(self.ebm.base_dist.parameters())
-            base_dist_opt = get_optimizer(cfg=self.cfg.optim_base_dist, list_parameters_gen=[self.ebm.base_dist.parameters()])
-            get_scheduler(cfg=self.cfg.scheduler_base_dist, optim=base_dist_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-            opt_list.append(base_dist_opt)
+            self.base_dist_opt = get_optimizer(cfg=self.cfg.optim_base_dist, list_parameters_gen=[self.ebm.base_dist.parameters()])
+            get_scheduler(cfg=self.cfg.scheduler_base_dist, optim=self.base_dist_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+            opt_list.append(self.base_dist_opt)
         else :
+            self.base_dist_opt = None
             opt_list.append(None)
             feedback_sch.append(None)
             standard_sch.append(None)
 
         if self.ebm.proposal is not None:
-            proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.ebm.proposal.parameters()])
-            get_scheduler(cfg=self.cfg.scheduler_proposal, optim=proposal_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
-            opt_list.append(proposal_opt)
+            self.proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.ebm.proposal.parameters()])
+            get_scheduler(cfg=self.cfg.scheduler_proposal, optim=self.proposal_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+            opt_list.append(self.proposal_opt)
         else :
+            self.proposal_opt = None
             opt_list.append(None)
             feedback_sch.append(None)
             standard_sch.append(None)
@@ -857,6 +863,7 @@ class AbstractDistributionEstimation:
         """
         Sample from the EBM distribution using an MCMC sampler.
         """
+        
         if num_samples is None :
             num_samples = sampler.num_chains
         if sampler is not None:
@@ -869,7 +876,7 @@ class AbstractDistributionEstimation:
                     return None, None
                 x_init = self.ebm.proposal.sample(nb_sample = num_samples)
             elif "base_dist" in sampler_name:
-                if self.ebm.base_dist is None:
+                if self.ebm.base_dist is None or self.example_base_dist is None:
                     return None, None
                 num_samples = min(num_samples, self.example_base_dist.shape[0])
                 x_init = self.example_base_dist[:num_samples]
@@ -879,6 +886,7 @@ class AbstractDistributionEstimation:
         
             x_init = x_init.detach().to(self.device, self.dtype)
             samples, x_init = sampler.sample(self.ebm, x_init, num_samples=num_samples)
+            print(samples.shape)
         return samples, x_init
 
     def plot_samples(self, num_samples=None):
@@ -888,6 +896,8 @@ class AbstractDistributionEstimation:
         if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
             self.last_sample_step = self.current_step
             for sampler_name, sampler in self.samplers_dic.items():
+                print(sampler_name)
+                print(sampler)
                 if sampler is None:
                     continue
 
