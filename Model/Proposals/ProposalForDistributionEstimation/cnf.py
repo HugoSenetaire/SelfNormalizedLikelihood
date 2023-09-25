@@ -108,7 +108,7 @@ class Func(nn.Module):
 
 class NeuralODEProposal(AbstractProposal):
     def __init__(
-        selfw,
+        self,
         input_size,
         cfg,
         dataset,
