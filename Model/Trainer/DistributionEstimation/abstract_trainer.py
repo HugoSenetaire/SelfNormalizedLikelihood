@@ -15,6 +15,7 @@ from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
 from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam
+from ...Utils.RegularizationUtils.gradients_penalty import wgan_gradient_penalty
 from ...Utils.Buffer import SampleBuffer 
 from ...Sampler.Langevin.langevin import langevin_step
 
@@ -243,26 +244,30 @@ class AbstractDistributionEstimation:
         dic_loss = {}
 
         # Regularization
-        if self.cfg.regularization.pg_control_mix is not None and self.cfg.regularization.pg_control_mix > 0:
+        if self.cfg.regularization.l2_grad is not None and self.cfg.regularization.l2_grad > 0:
             if x_gen is None:
                 x_gen = self.ebm.proposal.sample(self.num_samples_train)
-            min_data_len = min(x.shape[0], x_gen.shape[0])
-            epsilon = torch.rand(min_data_len, device=x.device)
-            for i in range(len(x.shape) - 1):
-                epsilon = epsilon.unsqueeze(-1)
-            epsilon = epsilon.expand(min_data_len, *x.shape[1:])
-            aux_2 = (epsilon.sqrt() * x[:min_data_len,] + (1 - epsilon).sqrt() * x_gen[:min_data_len]).detach()
-            aux_2.requires_grad_(True)
-            f_theta_gen_2 = self.ebm.f_theta(aux_2).mean()
-            f_theta_gen_2.backward(retain_graph=True)
-            loss_grad_estimate_mix = self.gradient_control_l2(aux_2, -f_theta_gen_2, self.cfg.regularization.pg_control_mix)
-            dic_loss["loss_grad_estimate_mix"] = loss_grad_estimate_mix
-            self.log("train/loss_grad_estimate_mix", loss_grad_estimate_mix)
+            grad_norm = wgan_gradient_penalty(self.ebm, x, x_gen)
+            dic_loss["l2_grad"] = self.cfg.regularization.l2_grad * grad_norm
+            self.log("penalty/grad_norm", grad_norm)
+            self.log("penalty/regularization_l2_grad", dic_loss["l2_grad"])
 
-        if self.cfg.regularization.l2_control is not None and self.cfg.regularization.l2_control > 0:
-            loss_grad_estimate_l2 = self.cfg.regularization.l2_control * ((energy_data**2).mean() + (energy_samples**2).mean())
-            dic_loss["loss_grad_estimate_l2"] = loss_grad_estimate_l2
-            self.log("train/loss_grad_estimate_l2", loss_grad_estimate_l2)
+        if self.cfg.regularization.l2_output is not None and self.cfg.regularization.l2_output > 0:
+            l2_output = ((energy_data**2).mean() + (energy_samples**2).mean())
+            dic_loss["loss_l2_output"] = self.cfg.regularization.l2_output * l2_output
+            self.log("penalty/l2_output", l2_output)
+            self.log("penalty/regularization_l2_output", dic_loss["loss_l2_output"])
+
+        if self.cfg.regularization.l2_param is not None and self.cfg.regularization.l2_param > 0:
+            penalty = 0.
+            len_params = 0.
+            for params in self.ebm.f_theta.parameters():
+                len_params += params.numel()
+                penalty += torch.sum(params**2)
+            penalty = penalty / len_params
+            dic_loss["loss_l2_param"] = self.cfg.regularization.l2_param * penalty
+            self.log("penalty/l2_param", penalty)
+            self.log("penalty/regularization_l2_param", dic_loss["loss_l2_param"])
             
         loss_total = loss_energy + loss_samples
         for key in dic_loss:
@@ -800,20 +805,6 @@ class AbstractDistributionEstimation:
                 loss_for_scheduler = loss_total_SNL if cfg.feedback_loss == "SNL" else loss_total_IS
                 scheduler.step(loss_for_scheduler)
 
-
-    def gradient_control_l2(self, x, loss_energy, pg_control=0):
-        """
-        Add a gradient control term to the loss.
-        """
-        if pg_control == 0:
-            return 0
-        else:
-            grad_e_data = (
-                torch.autograd.grad(-loss_energy.sum(), x, create_graph=True)[0]
-                .flatten(start_dim=1)
-                .norm(2, 1)
-            )
-            return pg_control * (grad_e_data**2.0 / 2.0).mean()
 
     def plot_energy(
         self,
