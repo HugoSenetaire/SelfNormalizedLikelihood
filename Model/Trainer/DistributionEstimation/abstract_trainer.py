@@ -129,7 +129,7 @@ class AbstractDistributionEstimation:
             self.train_base_dist = False
 
         if self.cfg.buffer.size_replay_buffer>0:
-            self.replay_buffer = SampleBuffer(cfg=self.cfg)
+            self.replay_buffer = SampleBuffer(cfg=self.cfg.buffer,)
             self.prop_replay_buffer = self.cfg.buffer.prop_replay_buffer
 
 

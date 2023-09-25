@@ -11,12 +11,12 @@ class SampleBuffer:
         self.buffer_image = []
         self.buffer_ids = []
 
-        self.max_size_buffer = cfg.buffer.size_replay_buffer
-        self.nb_steps_langevin = cfg.buffer.nb_steps_langevin
-        self.step_size_langevin = cfg.buffer.step_size_langevin
-        self.sigma_langevin = cfg.buffer.sigma_langevin
-        self.clip_max_norm = cfg.buffer.clip_max_norm
-        self.clip_max_value = cfg.buffer.clip_max_value
+        self.max_size_buffer = cfg.size_replay_buffer
+        self.nb_steps_langevin = cfg.nb_steps_langevin
+        self.step_size_langevin = cfg.step_size_langevin
+        self.sigma_langevin = cfg.sigma_langevin
+        self.clip_max_norm = cfg.clip_max_norm
+        self.clip_max_value = cfg.clip_max_value
 
     def __len__(self):
         return len(self.buffer_image)
