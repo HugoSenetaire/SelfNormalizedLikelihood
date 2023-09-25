@@ -96,7 +96,6 @@ class AbstractDistributionEstimation:
         self.samplers_dic = get_sampler(cfg,)
         self.device = device
         self.current_step = 0
-
         self.last_sample_step = -float('inf')
         
         if hasattr(complete_dataset, "transform_back"):
@@ -201,8 +200,9 @@ class AbstractDistributionEstimation:
         else :
             target = torch.randint(0, 10, (x.shape[0],), device=x.device)
         self.update_sample_buffer(x, target)
+
         if (self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps > 0):
-            if self.global_step % (self.cfg.train.nb_energy_steps + 1) != 0:
+            if self.current_step % (self.cfg.train.nb_energy_steps + 1) != 0:
                 self.fix_proposal()
                 self.free_f_theta()
                 self.free_explicit_bias()
@@ -212,7 +212,6 @@ class AbstractDistributionEstimation:
                     self.fix_base_dist()
                 loss, dic_output = self.training_energy(x,)
             else:
-
                 self.fix_f_theta()
                 self.fix_explicit_bias()
                 self.fix_base_dist()
@@ -877,7 +876,7 @@ class AbstractDistributionEstimation:
                     return None, None
                 x_init = self.ebm.proposal.sample(nb_sample = num_samples)
             elif "base_dist" in sampler_name:
-                if self.ebm.base_dist is None:
+                if self.ebm.base_dist is None or self.example_base_dist is None:
                     return None, None
                 num_samples = min(num_samples, self.example_base_dist.shape[0])
                 x_init = self.example_base_dist[:num_samples]
