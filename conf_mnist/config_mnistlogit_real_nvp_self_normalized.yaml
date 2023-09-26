@@ -1,0 +1,27 @@
+defaults:
+  - base_config
+  - dataset: mnist_logittransformed_paddedto32
+  - buffer: buffer_mnist_logit
+  - base_distribution: proposal
+  - default_proposal: gaussian_larger # Only used when proposal is adaptive
+  - proposal: real_nvp
+  - proposal_training : log_prob
+  - energy: dc_gan_distribution_sn
+  - feature_extractor : null
+  - explicit_bias : scalar_explicit_bias
+  - train: self_normalized_distribution_multiple_energy_steps
+  - regularization: grad_param
+  - optim_f_theta: adamw
+  - optim_proposal: adamw
+  - optim_base_dist: adamw
+  - optim_explicit_bias: adamw
+  - scheduler_f_theta: null
+  - scheduler_proposal: null
+  - scheduler_base_dist: null
+  - scheduler_explicit_bias: null
+  - sampler_init_base_dist: langevin_replay_logit
+  - sampler_init_buffer: langevin_replay_logit
+  - sampler_init_data: langevin_replay_logit
+  - sampler_init_proposal: langevin_replay_logit
+  - machine: dtu_cluster
+

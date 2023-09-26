@@ -102,10 +102,9 @@ class AdamwConfig(BaseOptimConfig):
 @dataclass
 class BaseRegularizationConfig:
     coef_regul: Optional[float] = 0.0
-    pg_control_data: Optional[float] = 0.0
-    pg_control_gen: Optional[float] = 0.0
-    pg_control_mix: Optional[float] = 0.0
-    l2_control: Optional[float] = 1.0
+    l2_grad: Optional[float] = 0.0
+    l2_output: Optional[float] = 0.0
+    l2_param: Optional[float] = 0.0
     normalize_sample_grad: Optional[bool] = False
 
 
