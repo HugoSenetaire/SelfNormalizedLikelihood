@@ -10,15 +10,14 @@ from omegaconf import OmegaConf, open_dict
 from wandb import log, watch
 
 from ...Sampler import get_sampler
+from ...Sampler.Langevin.langevin import langevin_step
+from ...Utils.Buffer import SampleBuffer
+from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam
 from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
 from ...Utils.plot_utils import plot_energy_2d, plot_images
 from ...Utils.proposal_loss import proposal_loss_getter
-from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam
 from ...Utils.RegularizationUtils.gradients_penalty import wgan_gradient_penalty
-from ...Utils.Buffer import SampleBuffer 
-from ...Sampler.Langevin.langevin import langevin_step
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,7 +69,7 @@ class AbstractDistributionEstimation:
         cfg,
         device,
         logger,
-        dtype = torch.float32,
+        dtype=torch.float32,
         complete_dataset=None,
     ):
         """
@@ -97,8 +96,8 @@ class AbstractDistributionEstimation:
         self.samplers_dic = get_sampler(cfg,)
         self.device = device
         self.current_step = 0
-        self.last_sample_step = -float('inf')
-        
+        self.last_sample_step = -float("inf")
+
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
         else:
@@ -108,7 +107,6 @@ class AbstractDistributionEstimation:
         self.num_samples_train = cfg.proposal_training.num_sample_proposal
         self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
         self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
-
 
         if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
@@ -120,18 +118,17 @@ class AbstractDistributionEstimation:
             self.input_type = "other"
 
         self.proposal_loss_name = cfg.proposal_training.proposal_loss_name
-        
+
         self.proposal_loss = proposal_loss_getter(self.proposal_loss_name)
 
         self.train_proposal = cfg.proposal_training.train_proposal
         self.train_base_dist = cfg.base_distribution.train_base_dist
-        if self.ebm.base_dist == self.ebm.proposal and self.train_proposal :
+        if self.ebm.base_dist == self.ebm.proposal and self.train_proposal:
             self.train_base_dist = False
 
-        if self.cfg.buffer.size_replay_buffer>0:
+        if self.cfg.buffer.size_buffer > 0:
             self.replay_buffer = SampleBuffer(cfg=self.cfg.buffer,)
             self.prop_replay_buffer = self.cfg.buffer.prop_replay_buffer
-
 
         self.configure_optimizers()
         self.initialize_examples(complete_dataset=complete_dataset)
@@ -166,13 +163,15 @@ class AbstractDistributionEstimation:
                     sigma=self.cfg.buffer.sigma_langevin,
                     clip_max_norm=self.cfg.buffer.clip_max_norm,
                     clip_max_value=self.cfg.buffer.clip_max_value,
+                    clamp_max=self.cfg.buffer.clamp_max,
+                    clamp_min=self.cfg.buffer.clamp_min,
                 ).detach()
-                x_init.clamp_(self.cfg.buffer.clamp_min, self.cfg.buffer.clamp_max)
-        self.replay_buffer.push(x_init, id_init)
-        if self.current_step % self.cfg.buffer.save_buffer_every == 0:
-            if self.input_type == 'image':
-                self.replay_buffer.save_buffer(logger=self.logger, current_step=self.current_step)
-
+            self.replay_buffer.push(x_init, id_init)
+            if self.current_step % self.cfg.buffer.save_buffer_every == 0:
+                if self.input_type == "image":
+                    self.replay_buffer.save_buffer(
+                        logger=self.logger, current_step=self.current_step
+                    )
 
     def on_train_start(self):
         watch(self.ebm.f_theta, log="all", log_freq=self.cfg.train.log_every_n_steps)
@@ -180,7 +179,7 @@ class AbstractDistributionEstimation:
         watch(self.ebm.base_dist, log="all", log_freq=self.cfg.train.log_every_n_steps)
 
     def log(self, name, value):
-        self.logger.log({name :value}, step=self.current_step)
+        self.logger.log({name: value}, step=self.current_step)
 
     def training_energy(self, x):
         """
@@ -195,10 +194,14 @@ class AbstractDistributionEstimation:
         """
         The training step to be defined in inherited classes.
         """
-        x = batch["data"].to(self.device,)
+        x = batch["data"].to(
+            self.device,
+        )
         if "target" in batch.keys():
-            target = batch["target"].to(self.device,)
-        else :
+            target = batch["target"].to(
+                self.device,
+            )
+        else:
             target = torch.randint(0, 10, (x.shape[0],), device=x.device)
         self.update_sample_buffer(x, target)
 
@@ -319,9 +322,7 @@ class AbstractDistributionEstimation:
             else :
                 raise NotImplementedError
 
-
-
-    def proposal_step(self,x,):
+    def proposal_step(self, x,):
         """
         Update the parameters of the proposal to minimize the proposal loss.
 
@@ -362,13 +363,11 @@ class AbstractDistributionEstimation:
         proposal_loss.mean().backward()
         self.grad_clipping()
 
-
         proposal_opt.step()
         self.log("train_proposal/extra_noise", current_noise)
         self.log("train_proposal/proposal_log_likelihood", log_prob_proposal_data.mean())
         self.log("train_proposal/estimate_log_z", estimate_log_z.mean())
         self.log("train_proposal/proposal_loss", proposal_loss.mean())
-
 
         return proposal_loss.mean(), dic
 
@@ -381,7 +380,7 @@ class AbstractDistributionEstimation:
                 for batch in tqdm.tqdm(val_loader):
                     self.validation_step(batch, self.current_step, liste_val)
                 self.on_validation_epoch_end(outputs=liste_val)
-    
+
         nb_epochs = int(np.ceil(nb_steps / len(loader_train)))
         for epoch in range(nb_epochs):
             print(f"Epoch {epoch} / {nb_epochs}")
@@ -686,7 +685,7 @@ class AbstractDistributionEstimation:
                     self.free_base_dist()
                 else:
                     self.fix_base_dist()
-        elif task == 'bias':
+        elif task == "bias":
             self.fix_proposal()
             self.fix_base_dist()
             self.free_f_theta()

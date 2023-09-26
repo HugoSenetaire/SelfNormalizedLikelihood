@@ -1,13 +1,14 @@
 from .DistributionEstimation import (
     KALE,
     VERA,
+    AnnealedImportanceSampling,
     DenoisingScoreMatchingTrainer,
     NCETrainer,
+    PersistentReplayLangevin,
     ProposalTrainer,
     ScoreMatchingTrainer,
     SelfNormalizedTrainer,
     ShortTermLangevin,
-    PersistentReplayLangevin,
 )
 from .Regression import (
     ProposalRegressionTrainer,
@@ -25,6 +26,7 @@ dic_trainer = {
     "denoising_score_matching": DenoisingScoreMatchingTrainer,
     "vera": VERA,
     "kale": KALE,
+    "ais_self_normalized": AnnealedImportanceSampling,
 }
 
 dic_trainer_regression = {
