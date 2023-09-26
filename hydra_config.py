@@ -82,7 +82,7 @@ class BaseFeatureExtractorConfig:
 class BaseOptimConfig:
     optimizer: str = MISSING
     clip_grad_value: Optional[float] = None
-    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    clip_grad_type: Optional[Union[str, None]] = "norm"  # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
 
 
@@ -95,8 +95,9 @@ class AdamwConfig(BaseOptimConfig):
     b2: float = MISSING
     eps: float = MISSING
     clip_grad_value: Optional[float] = None
-    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    clip_grad_type: Optional[Union[str, None]] = "norm"  # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
+
 
 @dataclass
 class BaseRegularizationConfig:
@@ -106,6 +107,7 @@ class BaseRegularizationConfig:
     pg_control_mix: Optional[float] = 0.0
     l2_control: Optional[float] = 1.0
     normalize_sample_grad: Optional[bool] = False
+
 
 @dataclass
 class BaseBufferConfig:
@@ -117,10 +119,8 @@ class BaseBufferConfig:
     prop_replay_buffer: Optional[float] = 0.95
     size_replay_buffer: Optional[int] = 10000
     save_buffer_every: Optional[int] = 200
-    clamp_min : Optional[Union[float,None]] = None
-    clamp_max : Optional[Union[float,None]] = None
-
-
+    clamp_min: Optional[Union[float, None]] = None
+    clamp_max: Optional[Union[float, None]] = None
 
 
 @dataclass
@@ -197,10 +197,16 @@ class BaseProposalConfig:
     network_proposal_name: Optional[str] = "DCGAN"  # Used in network proposal
     noise_dim: Optional[int] = 2  # Used in vera proposal
     mcmc_lr: Optional[float] = 0.02  # Used in vera hmc proposal
-    post_lr: Optional[float] = 0.02  # Used in vera proposal, learning rate for learning eta
-    init_post_logsigma: Optional[float] = 0.1  # Used in vera proposal, initial sigma for learning eta
+    post_lr: Optional[
+        float
+    ] = 0.02  # Used in vera proposal, learning rate for learning eta
+    init_post_logsigma: Optional[
+        float
+    ] = 0.1  # Used in vera proposal, initial sigma for learning eta
 
-    activation: Optional[Union[str, None]] = None  # Used in network proposal, quite important, depends on where the data is relying
+    activation: Optional[
+        Union[str, None]
+    ] = None  # Used in network proposal, quite important, depends on where the data is relying
     # If data in [0,1], sigmoid, if data in [-1,1], tanh, else None
     ngf: Optional[int] = 64  # Number of channels after the first conv of DCGAN
     feats: Optional[int] = 128  # Features for the Resnet
@@ -217,10 +223,14 @@ class BaseProposalConfig:
     pytorch_flow_num_blocks: Optional[int] = 5  # Used in pytorch flows proposal
     pytorch_flow_act: Optional[str] = "relu"  # Used in pytorch flows proposal
 
-    cnf_divergence_fn: Optional[str] = "approximate"  # Used in CNF proposal CHoice approximate, exact
-    cnf_method: Optional[str] = "euler"  # Used in CNF proposal Choice euler, rk4, dopri5
-    cnf_nb_solver_step: Optional[int] = 100 # Used in CNF proposal
-    cnf_T: Optional[int] = 10 # Used in CNF proposal
+    cnf_divergence_fn: Optional[
+        str
+    ] = "approximate"  # Used in CNF proposal CHoice approximate, exact
+    cnf_method: Optional[
+        str
+    ] = "euler"  # Used in CNF proposal Choice euler, rk4, dopri5
+    cnf_nb_solver_step: Optional[int] = 100  # Used in CNF proposal
+    cnf_T: Optional[int] = 10  # Used in CNF proposal
 
 
 @dataclass
@@ -292,8 +302,31 @@ class LangevinConfig(BaseSamplerConfig):
     sigma: float = MISSING
     clip_max_norm: Union[float, None] = None
     clip_max_value: Union[float, None] = None
-    clamp_min : Optional[Union[float,None]] = None # Applied on the samples at each langevin step
-    clamp_max : Optional[Union[float,None]] = None # Applied on the samples at each langevin step
+    clamp_min: Optional[
+        Union[float, None]
+    ] = None  # Applied on the samples at each langevin step
+    clamp_max: Optional[
+        Union[float, None]
+    ] = None  # Applied on the samples at each langevin step
+
+
+@dataclass
+class LatentLangevinConfig(BaseSamplerConfig):
+    sampler_name: Optional[str] = "latent_langevin"
+    num_chains: int = MISSING
+    num_samples: int = MISSING
+    warmup_steps: int = MISSING
+    thinning: int = MISSING
+    step_size: float = MISSING
+    sigma: float = MISSING
+    clip_max_norm: Union[float, None] = None
+    clip_max_value: Union[float, None] = None
+    clamp_min: Optional[
+        Union[float, None]
+    ] = None  # Applied on the samples at each langevin step
+    clamp_max: Optional[
+        Union[float, None]
+    ] = None  # Applied on the samples at each langevin step
 
 
 @dataclass
@@ -326,12 +359,12 @@ class BaseTrainConfig:
 
     nb_energy_steps: Optional[int] = 0
 
-    nb_steps_langevin : Optional[int] = 100
-    step_size_langevin : Optional[float] = 1.0
-    sigma_langevin : Optional[float] = 1e-2
-    clip_max_norm : Optional[float] = None
-    clip_max_value : Optional[float] = None
-    sigma_data : Optional[float] = 1e-2
+    nb_steps_langevin: Optional[int] = 100
+    step_size_langevin: Optional[float] = 1.0
+    sigma_langevin: Optional[float] = 1e-2
+    clip_max_norm: Optional[float] = None
+    clip_max_value: Optional[float] = None
+    sigma_data: Optional[float] = 1e-2
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
@@ -430,23 +463,49 @@ def store_main():
     cs.store(name="base_buffer_config_name", group="buffer", node=BaseBufferConfig)
 
     # Regularization :
-    cs.store(name="base_regularization_config_name", group="regularization", node=BaseRegularizationConfig)
+    cs.store(
+        name="base_regularization_config_name",
+        group="regularization",
+        node=BaseRegularizationConfig,
+    )
 
     # Optimizers
     cs.store(name="base_optim_config_name", group="optim_f_theta", node=BaseOptimConfig)
     cs.store(name="adamw_name", group="optim_f_theta", node=AdamwConfig)
-    cs.store(name="base_optim_config_name", group="optim_explicit_bias", node=BaseOptimConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_explicit_bias", node=BaseOptimConfig
+    )
     cs.store(name="adamw_name", group="optim_explicit_bias", node=AdamwConfig)
-    cs.store(name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_proposal", node=BaseOptimConfig
+    )
     cs.store(name="adamw_name", group="optim_proposal", node=AdamwConfig)
-    cs.store(name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig)
+    cs.store(
+        name="base_optim_config_name", group="optim_base_dist", node=BaseOptimConfig
+    )
     cs.store(name="adamw_name", group="optim_base_dist", node=AdamwConfig)
 
     # Scheduler
-    cs.store(name="base_scheduler_config_name",group="scheduler_f_theta",node=BaseSchedulerConfig,)
-    cs.store(name="base_scheduler_config_name", group="scheduler_explicit_bias", node=BaseSchedulerConfig,)
-    cs.store(name="base_scheduler_config_name", group="scheduler_proposal",node=BaseSchedulerConfig,)
-    cs.store(name="base_scheduler_config_name",group ="scheduler_base_dist",node=BaseSchedulerConfig,)
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_f_theta",
+        node=BaseSchedulerConfig,
+    )
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_explicit_bias",
+        node=BaseSchedulerConfig,
+    )
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_proposal",
+        node=BaseSchedulerConfig,
+    )
+    cs.store(
+        name="base_scheduler_config_name",
+        group="scheduler_base_dist",
+        node=BaseSchedulerConfig,
+    )
 
     # Proposal training
     cs.store(
@@ -499,16 +558,37 @@ def store_main():
     cs.store(name="base_train_config_name", group="train", node=BaseTrainConfig)
 
     # Samplers
-    cs.store(name="base_sampler_config_name", group="sampler_init_base_dist", node=BaseSamplerConfig)
+    cs.store(
+        name="base_sampler_config_name",
+        group="sampler_init_base_dist",
+        node=BaseSamplerConfig,
+    )
     cs.store(name="nuts_name", group="sampler_init_base_dist", node=NutsConfig)
     cs.store(name="langevin_name", group="sampler_init_base_dist", node=LangevinConfig)
-    cs.store(name="base_sampler_config_name", group="sampler_init_buffer", node=BaseSamplerConfig)
+    cs.store(
+        name="base_sampler_config_name",
+        group="sampler_init_buffer",
+        node=BaseSamplerConfig,
+    )
     cs.store(name="nuts_name", group="sampler_init_buffer", node=NutsConfig)
     cs.store(name="langevin_name", group="sampler_init_buffer", node=LangevinConfig)
-    cs.store(name="base_sampler_config_name", group="sampler_init_data", node=BaseSamplerConfig)
+    cs.store(
+        name="latent_langevin",
+        group="sampler_latent_langevin",
+        node=LatentLangevinConfig,
+    )
+    cs.store(
+        name="base_sampler_config_name",
+        group="sampler_init_data",
+        node=BaseSamplerConfig,
+    )
     cs.store(name="nuts_name", group="sampler_init_data", node=NutsConfig)
     cs.store(name="langevin_name", group="sampler_init_data", node=LangevinConfig)
-    cs.store(name="base_sampler_config_name", group="sampler_init_proposal", node=BaseSamplerConfig)
+    cs.store(
+        name="base_sampler_config_name",
+        group="sampler_init_proposal",
+        node=BaseSamplerConfig,
+    )
     cs.store(name="nuts_name", group="sampler_init_proposal", node=NutsConfig)
     cs.store(name="langevin_name", group="sampler_init_proposal", node=LangevinConfig)
 
