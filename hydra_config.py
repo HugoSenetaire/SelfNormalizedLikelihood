@@ -82,7 +82,7 @@ class BaseFeatureExtractorConfig:
 class BaseOptimConfig:
     optimizer: str = MISSING
     clip_grad_value: Optional[float] = None
-    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    clip_grad_type: Optional[Union[str, None]] = "norm"  # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
 
 
@@ -95,8 +95,9 @@ class AdamwConfig(BaseOptimConfig):
     b2: float = MISSING
     eps: float = MISSING
     clip_grad_value: Optional[float] = None
-    clip_grad_type: Optional[Union[str, None]] = "norm" # norm, value, adam, none
+    clip_grad_type: Optional[Union[str, None]] = "norm"  # norm, value, adam, none
     nb_sigmas: Optional[float] = 3.0
+
 
 @dataclass
 class BaseRegularizationConfig:
@@ -106,6 +107,7 @@ class BaseRegularizationConfig:
     l2_param: Optional[float] = 0.0
     normalize_sample_grad: Optional[bool] = False
 
+
 @dataclass
 class BaseBufferConfig:
     nb_steps_langevin: Optional[int] = 100
@@ -114,12 +116,10 @@ class BaseBufferConfig:
     clip_max_norm: Union[float, None] = None
     clip_max_value: Union[float, None] = None
     prop_replay_buffer: Optional[float] = 0.95
-    size_replay_buffer: Optional[int] = 10000
+    size_buffer: Optional[int] = 10000
     save_buffer_every: Optional[int] = 200
-    clamp_min : Optional[Union[float,None]] = None
-    clamp_max : Optional[Union[float,None]] = None
-
-
+    clamp_min: Optional[Union[float, None]] = None
+    clamp_max: Optional[Union[float, None]] = None
 
 
 @dataclass
@@ -325,12 +325,18 @@ class BaseTrainConfig:
 
     nb_energy_steps: Optional[int] = 0
 
-    nb_steps_langevin : Optional[int] = 100
-    step_size_langevin : Optional[float] = 1.0
-    sigma_langevin : Optional[float] = 1e-2
-    clip_max_norm : Optional[float] = None
-    clip_max_value : Optional[float] = None
-    sigma_data : Optional[float] = 1e-2
+    nb_steps_langevin: Optional[int] = 100
+    step_size_langevin: Optional[float] = 1.0
+    sigma_langevin: Optional[float] = 1e-2
+    clip_max_norm: Optional[Union[float,None]] = None
+    clip_max_value: Optional[Union[float,None]] = None
+    prop_replay_buffer: Optional[float] = 1.0
+    size_buffer: Optional[int] = 256
+    save_buffer_every: Optional[int] = 200
+    clamp_min: Optional[Union[float, None]] = None
+    clamp_max: Optional[Union[float, None]] = None
+    batch_of_update: Optional[int] = 64
+    store_on_gpu: Optional[bool] = True
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
