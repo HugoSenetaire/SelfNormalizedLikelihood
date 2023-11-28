@@ -63,7 +63,6 @@ class AnnealedImportanceSampling(AbstractDistributionEstimation):
 
         x_gen, weights_x_gen = self.ais_sample_buffer.get(self.num_samples_train, device=self.device)
         x_gen = x_gen.detach()
-        self.ais_sample_buffer.update_buffer(self.ebm)
         energy_samples, dic = self.ebm.calculate_energy(x_gen.reshape(self.num_samples_train, *x.shape[1:]))
         
         energy_data, dic_output = self.ebm.calculate_energy(x)
@@ -71,7 +70,8 @@ class AnnealedImportanceSampling(AbstractDistributionEstimation):
         for key, value in dic.items():
             dic_output[key+"sample"] = value.mean()
 
-        loss_sample = (energy_samples-weights_x_gen).logsumexp(0) - torch.log(torch.tensor(self.num_samples_train, dtype=torch.float, device=self.device))
+        loss_sample = (-energy_samples.flatten()-weights_x_gen.flatten()).logsumexp(0)
+        loss_sample = loss_sample - torch.log(torch.tensor(self.num_samples_train, dtype=torch.float, device=self.device))
         # loss_sample = loss_sample.exp()
         loss_energy = energy_data.mean()
 
@@ -82,6 +82,7 @@ class AnnealedImportanceSampling(AbstractDistributionEstimation):
                         energy_data=energy_data,
                         energy_samples=energy_samples,)
         self.grad_clipping()
+        self.ais_sample_buffer.update_buffer(self.ebm)
 
         self.log("train/loss_total", loss_total)
         self.log("train/loss_energy", loss_energy)
@@ -95,7 +96,7 @@ class AnnealedImportanceSampling(AbstractDistributionEstimation):
         self.log("ais_buffer/buffer_weights_mean", torch.stack(self.ais_sample_buffer.buffer_weights).mean())
         self.log("ais_buffer/buffer_weights_std", torch.stack(self.ais_sample_buffer.buffer_weights).std())
         if self.current_step % self.cfg.train.save_buffer_every == 0:
-            self.ais_sample_buffer.save_buffer(self.logger, self.current_step)
+            self.ais_sample_buffer.save_buffer(self)
             
 
         return loss_total, dic_output

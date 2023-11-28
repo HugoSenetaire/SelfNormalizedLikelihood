@@ -1,0 +1,27 @@
+defaults:
+  - base_config
+  - dataset: pinwheel
+  - base_distribution: proposal
+  - default_proposal: gaussian
+  - proposal: ppca
+  - proposal_training : no_proposal_training
+  - energy: fc_distribution
+  - feature_extractor : null
+  - explicit_bias : scalar_explicit_bias
+  - train: self_normalized_distribution
+  - regularization: no_reg
+  - buffer: buffer_checkerboard
+  - optim_f_theta: adamw
+  - optim_proposal: adamw
+  - optim_base_dist: adamw
+  - optim_explicit_bias: adamw
+  - scheduler_f_theta: null
+  - scheduler_proposal: null
+  - scheduler_base_dist: null
+  - scheduler_explicit_bias: null
+  - sampler_init_base_dist: langevin
+  - sampler_init_buffer: langevin
+  - sampler_init_data: langevin
+  - sampler_init_proposal: langevin
+  - machine: dtu_cluster
+

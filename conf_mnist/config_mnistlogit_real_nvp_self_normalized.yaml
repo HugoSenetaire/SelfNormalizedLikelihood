@@ -10,7 +10,7 @@ defaults:
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: self_normalized_distribution_multiple_energy_steps
-  - regularization: grad_param
+  - regularization: lower_grad_param
   - optim_f_theta: adamw
   - optim_proposal: adamw
   - optim_base_dist: adamw

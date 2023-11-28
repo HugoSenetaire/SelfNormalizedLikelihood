@@ -38,7 +38,9 @@ class SampleBuffer:
         class_ids = torch.tensor([self.buffer_ids[i] for i in index]).to(device)
         return samples, class_ids
     
-    def save_buffer(self, logger, current_step):
+    def save_buffer(self,algo,):
+        logger= algo.logger
+        current_step = algo.current_step
         images = torch.stack(self.buffer_image[:64],)
         grid = torchvision.utils.make_grid(images,)
         image = wandb.Image(grid, caption="{}_{}.png".format(self.buffer_name, current_step))

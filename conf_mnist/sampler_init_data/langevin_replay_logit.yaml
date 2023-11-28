@@ -4,9 +4,9 @@ sampler_name: 'langevin'
 num_chains: 8
 num_samples: 8
 warmup_steps: 20
-thinning: 60
-step_size: 1.0
+thinning: 20
+step_size: 10.0
 sigma: 1e-1
-clip_max_norm: 1.0
+clip_max_norm: 10.0
 clamp_min: -14
 clamp_max: 14

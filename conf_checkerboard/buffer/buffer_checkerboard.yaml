@@ -5,7 +5,7 @@ step_size_langevin: 1.0
 sigma_langevin: 3e-2
 clip_max_norm: null
 clip_max_value: 0.01
-size_replay_buffer: 10000
+size_buffer: 10000
 prop_replay_buffer: 0.95
 save_buffer_every: 500
 clamp_min: -1.0

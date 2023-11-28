@@ -1,0 +1,6 @@
+defaults:
+  - base_scheduler_config_name
+scheduler_name: 'cyclic_lr'
+base_lr: 0.0001
+max_lr: 0.005
+step_size_up: 500

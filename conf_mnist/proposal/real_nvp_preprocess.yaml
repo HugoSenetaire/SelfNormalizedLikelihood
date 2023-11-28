@@ -2,7 +2,7 @@ defaults:
   - base_proposal_config_name
 proposal_name : 'real_nvp'
 real_nvp_num_scales : 2
-real_nvp_mid_channels : 32
+real_nvp_mid_channels : 16
 real_nvp_num_blocks : 3
 real_nvp_preprocess : True
 real_nvp_k : 256

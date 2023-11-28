@@ -2,7 +2,10 @@
 import torch
 import torchvision
 import wandb
+import numpy as np 
+import os
 
+from ...Utils.plot_utils import plot_energy_2d
 from ...Sampler.Langevin import langevin_step
 from .sample_buffer import SampleBuffer
 
@@ -64,17 +67,38 @@ class AIS_Sample_Buffer(SampleBuffer):
                     clamp_min=self.clamp_min,
                 ).detach()
 
-            log_prob = ebm.calculate_energy(x_init)[0]
+            log_prob = -ebm.f_theta(x_init).reshape(-1)
+            if hasattr(ebm, "base_dist") and ebm.base_dist is not None:
+                log_prob += ebm.base_dist.log_prob(x_init).reshape(-1)
             for k in range(index_update, min(index_update+self.batch_of_update, self.max_size_buffer)):
                 self.buffer_image[k] = x_init[k-index_update,None,].detach().to(self.device)
                 self.buffer_weights[k] = log_prob[k-index_update,None,].detach().to(self.device)
             index_update+=1
 
-    def save_buffer(self, logger, current_step):
-        images = torch.cat(self.buffer_image[:64],)
-        grid = torchvision.utils.make_grid(images,)
-        image = wandb.Image(grid, caption="{}_{}.png".format(self.buffer_name, current_step))
-        logger.log({"{}.png".format(self.buffer_name,): image},step=current_step,)
+    def save_buffer(self, algo,):
+        logger = algo.logger
+        current_step = algo.current_step
+        if np.prod(self.buffer_image[0].shape) == 2:
+            points = torch.cat(self.buffer_image,).reshape(-1,2)
+            save_dir = os.path.join(algo.cfg.train.save_dir, "buffer_ais")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            plot_energy_2d(
+                algo,
+                energy_function=lambda x: algo.ebm.calculate_energy(x)[0],
+                save_dir=save_dir,
+                samples=[algo.example, points],
+                samples_title=["data_point", "ais"],
+                name="buffer_ais",
+                step=current_step,
+            )
+
+
+        else :
+            images = torch.cat(self.buffer_image[:64],)
+            grid = torchvision.utils.make_grid(images,)
+            image = wandb.Image(grid, caption="{}_{}.png".format(self.buffer_name, current_step))
+            logger.log({"{}.png".format(self.buffer_name,): image},step=current_step,)
 
 
 

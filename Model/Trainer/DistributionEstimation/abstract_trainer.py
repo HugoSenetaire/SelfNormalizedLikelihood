@@ -138,7 +138,7 @@ class AbstractDistributionEstimation:
         self.base_dist_visualization()
 
     def update_sample_buffer(self, x, id):
-        if self.cfg.buffer.size_replay_buffer>0:
+        if self.cfg.buffer.size_buffer>0:
             if len(self.replay_buffer) < self.num_samples_train:  # In the original code, it's batch size here
                 x_init = self.ebm.proposal.sample(self.num_samples_train).detach()
                 id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
@@ -169,9 +169,7 @@ class AbstractDistributionEstimation:
             self.replay_buffer.push(x_init, id_init)
             if self.current_step % self.cfg.buffer.save_buffer_every == 0:
                 if self.input_type == "image":
-                    self.replay_buffer.save_buffer(
-                        logger=self.logger, current_step=self.current_step
-                    )
+                    self.replay_buffer.save_buffer(self,)
 
     def on_train_start(self):
         watch(self.ebm.f_theta, log="all", log_freq=self.cfg.train.log_every_n_steps)
