@@ -1,9 +1,0 @@
-
-max_epoch : 75
-save_energy_every : 5000
-samples_every: 10
-batch_size : 32
-explicit_bias_name : '2_layer_fc'
-num_sample_proposal : 64
-train_proposal : True
-proposal_loss_name : 'log_prob'

@@ -1,1 +1,0 @@
-from .network import MDNProposal_Network

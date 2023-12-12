@@ -1,3 +1,0 @@
-energy_name : 'toy'
-energy_param :
-  last_layer_bias : False

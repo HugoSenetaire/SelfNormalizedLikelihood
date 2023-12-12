@@ -1,9 +1,0 @@
-
-trainer_name : 'nce'
-max_epoch : 75
-save_energy_every : 10
-samples_every: 50000
-batch_size : 32
-explicit_bias_name : 'none'
-num_sample_proposal : 64
-train_proposal : False

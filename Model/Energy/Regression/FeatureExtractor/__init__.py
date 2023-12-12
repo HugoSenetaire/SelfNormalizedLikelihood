@@ -1,3 +1,0 @@
-from .resnet_extractor import get_Resnet18_FeatureExtractor
-from .toy_feature_extractor import get_ToyFeatureNet
-from .mock_feature_extractor import MockFeatureExtractor

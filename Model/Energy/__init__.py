@@ -1,2 +1,1 @@
-from .Regression.getter import  get_energy_regression, get_feature_extractor_regression, get_explicit_bias_regression
 from .Distribution import get_energy, get_explicit_bias
