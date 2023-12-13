@@ -243,6 +243,7 @@ class ImportanceWeightedEBM(nn.Module):
         energy : torch.tensor (shape : (x.shape[0], 1))
             The energy of each x.
         """
-
+        if isinstance(x, dict): # For NUTS sampler
+            x = x[0]
         energy, _ = self.calculate_energy(x)
         return energy
