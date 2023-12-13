@@ -264,9 +264,9 @@ class BaseSamplerConfig:
     sampler_name: str = MISSING
 
     def __post_init__(self):
-        if self.sampler_name not in ["no_sampler", "nuts", "langevin"]:
+        if self.sampler_name not in ["no_sampler", "nuts", "langevin", "mala"]:
             raise RuntimeError(
-                f"sampler_name should be in ['nuts'] but got {self.sampler_name}"
+                f"sampler_name should be in ['no_sampler', 'nuts', 'langevin', 'mala'] but got {self.sampler_name}"
             )
 
 
