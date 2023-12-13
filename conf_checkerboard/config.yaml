@@ -19,9 +19,9 @@ defaults:
   - scheduler_proposal: null
   - scheduler_base_dist: null
   - scheduler_explicit_bias: null
-  - sampler_init_base_dist: langevin
-  - sampler_init_buffer: langevin
-  - sampler_init_data: langevin
-  - sampler_init_proposal: langevin
+  - sampler_init_base_dist: mala
+  - sampler_init_buffer: mala
+  - sampler_init_data: mala
+  - sampler_init_proposal: mala
   - machine: dtu_cluster
 

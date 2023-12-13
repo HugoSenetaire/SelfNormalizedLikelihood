@@ -1,6 +1,6 @@
 defaults:
   - langevin_name
-sampler_name: 'langevin'
+sampler_name: 'mala'
 num_chains: 10
 num_samples: 500
 warmup_steps: 10
