@@ -10,11 +10,7 @@ from .DistributionEstimation import (
     SelfNormalizedTrainer,
     ShortTermLangevin,
 )
-from .Regression import (
-    ProposalRegressionTrainer,
-    RegressionTrainerNCE,
-    RegressionTrainerSelfNormalized,
-)
+
 
 dic_trainer = {
     "self_normalized": SelfNormalizedTrainer,
@@ -27,10 +23,4 @@ dic_trainer = {
     "vera": VERA,
     "kale": KALE,
     "ais_self_normalized": AnnealedImportanceSampling,
-}
-
-dic_trainer_regression = {
-    "self_normalized": RegressionTrainerSelfNormalized,
-    "just_proposal": ProposalRegressionTrainer,
-    "nce": RegressionTrainerNCE,
 }

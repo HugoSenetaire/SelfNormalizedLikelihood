@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..EBMsAndMethod import EBMRegression, ImportanceWeightedEBM
+from ..EBMsAndMethod import ImportanceWeightedEBM
 from ..Energy import get_energy, get_explicit_bias
 from ..Proposals import get_base_dist, get_proposal
 from .init_proposals import (

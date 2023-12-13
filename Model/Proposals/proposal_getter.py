@@ -25,10 +25,7 @@ from .ProposalForDistributionEstimation.real_nvp_proposal import get_RealNVPProp
 from .ProposalForDistributionEstimation.student import get_StudentProposal
 from .ProposalForDistributionEstimation.uniform import get_Uniform
 from .ProposalForDistributionEstimation.vera_proposal import get_vera, get_vera_hmc
-from .ProposalForRegression import get_UniformRegression
-from .ProposalForRegression.gaussian import get_GaussianRegression
-from .ProposalForRegression.MDNProposal import get_MDNProposalRegression
-from .ProposalForRegression.uniform import get_UniformRegression
+
 
 dic_proposals = {
     "gaussian": get_Gaussian,
@@ -108,54 +105,3 @@ def get_proposal(
 
     return proposal(input_size, dataset, cfg.proposal)
 
-
-dic_proposals_regression = {
-    "gaussian": get_GaussianRegression,
-    "mdn": get_MDNProposalRegression,
-    "uniform": get_UniformRegression,
-}
-
-
-def get_base_dist_regression(
-    cfg,
-    proposal,
-    input_size_x_feature,
-    input_size_y,
-    dataset,
-):
-    if not isinstance(dataset, list):
-        dataset = [dataset]
-    dataset = torch.utils.data.ConcatDataset(dataset)
-
-    # If there is no base distribution, we return None
-    if cfg.base_distribution is None or cfg.base_distribution.proposal_name is None:
-        return MockBaseDist()
-    # If the base distribution is the proposal, we return the proposal
-    if cfg.base_distribution.proposal_name == "proposal":
-        assert (
-            "adaptive" not in cfg.base_distribution.proposal_name
-        ), "Adaptive proposal should not be used as base distribution"
-        return proposal
-
-    base_dist = dic_proposals_regression[cfg.base_distribution.proposal_name]
-
-    base_dist = base_dist(
-        input_size_x_feature, input_size_y, dataset, cfg.base_distribution
-    )
-
-    return base_dist
-
-
-def get_proposal_regression(
-    cfg,
-    input_size_x_feature,
-    input_size_y,
-    dataset,
-):
-    if not isinstance(dataset, list):
-        dataset = [dataset]
-    dataset = torch.utils.data.ConcatDataset(dataset)
-
-    proposal = dic_proposals_regression[cfg.proposal.proposal_name]
-    proposal = proposal(input_size_x_feature, input_size_y, dataset, cfg.proposal)
-    return proposal
