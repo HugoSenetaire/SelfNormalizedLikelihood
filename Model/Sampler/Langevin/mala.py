@@ -44,7 +44,7 @@ def langevin_mala_step(
     y_mu = y - step_size * y_grad
     log_prob_backward = dist.Normal(y_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1) - energy_y
 
-    log_prob_accept = log_prob_forward - log_prob_backward
+    log_prob_accept = log_prob_backward - log_prob_forward
     p_accept = log_prob_accept.exp()
     accept = (torch.rand_like(p_accept) < p_accept).float().reshape(-1, *[1 for _ in range(len(x_init.shape) - 1)])
     y = accept * y + (1 - accept) * x_init
