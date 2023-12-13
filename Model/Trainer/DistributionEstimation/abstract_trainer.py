@@ -144,7 +144,7 @@ class AbstractDistributionEstimation:
                 id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
             else :
                 n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
-                replay_sample, replay_id = self.replay_buffer.get(n_replay)
+                replay_sample, replay_id = self.replay_buffer.get(n_replay, device=x.device)
                 if self.num_samples_train - n_replay > 0 :
                     random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
                     random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
@@ -851,30 +851,30 @@ class AbstractDistributionEstimation:
         """
         Sample from the EBM distribution using an MCMC sampler.
         """
-        
         if num_samples is None :
-            num_samples = sampler.num_chains
+            num_samples = sampler.num_samples
+        num_chains = sampler.num_chains
+
         if sampler is not None:
             if "buffer" in sampler_name:
                 if self.replay_buffer.buffer_image is None or len(self.replay_buffer.buffer_image) == 0:
                     return None, None
-                x_init = torch.stack(self.replay_buffer.buffer_image[:num_samples])
+                x_init = torch.stack(self.replay_buffer.buffer_image[:num_chains])
             elif "proposal" in sampler_name:
                 if self.ebm.proposal is None:
                     return None, None
-                x_init = self.ebm.proposal.sample(nb_sample = num_samples)
+                x_init = self.ebm.proposal.sample(nb_sample = num_chains)
             elif "base_dist" in sampler_name:
                 if self.ebm.base_dist is None or self.example_base_dist is None:
                     return None, None
-                num_samples = min(num_samples, self.example_base_dist.shape[0])
-                x_init = self.example_base_dist[:num_samples]
+                num_chains = min(num_chains, self.example_base_dist.shape[0])
+                x_init = self.example_base_dist[:num_chains]
             elif "data" in sampler_name:
-                num_samples = min(num_samples, self.example.shape[0])
-                x_init = self.example[:num_samples].reshape(num_samples, *self.cfg.dataset.input_size)
+                num_chains = min(num_chains, self.example.shape[0])
+                x_init = self.example[:num_chains].reshape(num_chains, *self.cfg.dataset.input_size)
         
             x_init = x_init.detach().to(self.device, self.dtype)
             samples, x_init = sampler.sample(self.ebm, x_init, num_samples=num_samples)
-            print(samples.shape)
         return samples, x_init
 
     def plot_samples(self, num_samples=None):
@@ -884,11 +884,8 @@ class AbstractDistributionEstimation:
         if self.current_step - self.last_sample_step > self.cfg.train.samples_every:
             self.last_sample_step = self.current_step
             for sampler_name, sampler in self.samplers_dic.items():
-                print(sampler_name)
-                print(sampler)
                 if sampler is None:
                     continue
-
                 # Required for MCMC sampling
 
                 save_dir = self.cfg.train.save_dir
