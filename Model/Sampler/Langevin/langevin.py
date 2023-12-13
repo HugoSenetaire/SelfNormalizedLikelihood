@@ -3,6 +3,7 @@ import torch
 import torch.autograd as autograd
 import torch.distributions as dist
 import tqdm
+from ..utils_sampler.clip_sampler import clip_grad, clip_data
 
 
 def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_max_value=None, clamp_min=None, clamp_max=None):
@@ -11,25 +12,17 @@ def langevin_step(x_init, energy, step_size, sigma,  clip_max_norm=None, clip_ma
     """
 
     x_init.requires_grad = True
+
     energy_value = energy(x_init)
     x_grad = autograd.grad(energy_value.sum(), x_init, )[0]
-    if clip_max_norm is not None and clip_max_norm != np.inf:
-        norm = torch.norm(x_grad.flatten(1), p=2, dim=1, keepdim=True)
-        while len(norm.shape) < len(x_grad.shape):
-            norm = norm.unsqueeze(-1)
-        x_grad = torch.where(norm > clip_max_norm, x_grad/norm * clip_max_norm, x_grad)
-    
-    if clip_max_value is not None and clip_max_value != np.inf:
-        x_grad.clamp_(min=-clip_max_value, max=clip_max_value)
+    x_grad = clip_grad(x_grad, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
+
 
     x_init.requires_grad = False
     noise = torch.randn_like(x_init) * sigma
     x_step = x_init - step_size * x_grad + np.sqrt(2*step_size)*noise
-
-    if clamp_min is not None:
-        x_step.clamp_(min=clamp_min)
-    if clamp_max is not None:
-        x_step.clamp_(max=clamp_max)
+    x_step = clip_data(x_step, clamp_min=clamp_min, clamp_max=clamp_max)
+   
 
     return x_step.detach()
 
@@ -38,7 +31,7 @@ def langevin_sample(x_init, energy, step_size, sigma, num_samples, clip_max_norm
     """
     Performs a single step of the Langevin algorithm.
     """
-    print("Burn in: ", burn_in)
+    print("Langevin sampling, burn in: {}, thinning: {}, num samples: {}".format(burn_in, thinning, num_samples))
     for k in tqdm.tqdm(range(burn_in)):
         x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value, clamp_min=clamp_min, clamp_max=clamp_max)
     x_samples = []

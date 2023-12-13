@@ -4,19 +4,7 @@ import torch.autograd as autograd
 import torch.distributions as dist
 import tqdm
 
-
-def apply_clip_grad(x_grad, clip_max_norm=None, clip_max_value=None):
-    if clip_max_norm is not None and clip_max_norm != np.inf:
-        norm = torch.norm(x_grad.flatten(1), p=2, dim=1, keepdim=True)
-        while len(norm.shape) < len(x_grad.shape):
-            norm = norm.unsqueeze(-1)
-        x_grad = torch.where(
-            norm > clip_max_norm, x_grad / norm * clip_max_norm, x_grad
-        )
-
-    if clip_max_value is not None and clip_max_value != np.inf:
-        x_grad.clamp_(min=-clip_max_value, max=clip_max_value)
-    return x_grad
+from ..utils_sampler.clip_sampler import clip_grad, clip_data
 
 
 def langevin_mala_step(
@@ -36,44 +24,34 @@ def langevin_mala_step(
     effective_std = (2 * step_size) ** 0.5 * sigma
 
     x_init.requires_grad = True
-    energy_init = energy(x_init)
-    x_grad_init = autograd.grad(
-        energy_init.sum(),
-        x_init,
-    )[0]
-    x_grad_init = apply_clip_grad(
-        x_grad_init, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value
-    )
+    energy_x = energy(x_init)
+    x_grad = autograd.grad(energy_x.sum(),x_init,)[0]
+    x_grad = clip_grad(x_grad, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
 
-    x_init.requires_grad = False
-    x_mu = x_init - step_size * x_grad_init
 
+    x_mu = x_init - step_size * x_grad
     noise = torch.randn_like(x_init) * effective_std
-    x_step = x_mu + noise
+    y = x_mu + noise
 
-    log_prob_forward = dist.Normal(x_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1)
+    y = y.detach()
+    y.requires_grad = True
+    energy_y = energy(y)
 
-    x_step = x_step.detach()
-    x_step.requires_grad = True
-    energy_step = energy(x_step)
-    x_grad_step = autograd.grad(energy_step.sum(),x_step,)[0]
-    x_grad_step = apply_clip_grad(x_grad_step, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
+    log_prob_forward = dist.Normal(x_mu, effective_std).log_prob(y).flatten(start_dim=1).sum(1) - energy_x
 
-    x_reverse_mu = x_step - step_size * x_grad_step
-    log_prob_backward = dist.Normal(x_reverse_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1)
+    y_grad = autograd.grad(energy_y.sum(),y,)[0]
+    y_grad = clip_grad(y_grad, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value)
+    y_mu = y - step_size * y_grad
+    log_prob_backward = dist.Normal(y_mu, effective_std).log_prob(x_init).flatten(start_dim=1).sum(1) - energy_y
 
-    log_prob_accept = log_prob_backward - log_prob_forward
+    log_prob_accept = log_prob_forward - log_prob_backward
     p_accept = log_prob_accept.exp()
     accept = (torch.rand_like(p_accept) < p_accept).float().reshape(-1, *[1 for _ in range(len(x_init.shape) - 1)])
-    x_step = accept * x_step + (1 - accept) * x_init
+    y = accept * y + (1 - accept) * x_init
+    y = y.detach()
+    y = clip_data(y, clamp_min=clamp_min, clamp_max=clamp_max)
 
-    x_step = x_step.detach()
-    if clamp_min is not None:
-        x_step.clamp_(min=clamp_min)
-    if clamp_max is not None:
-        x_step.clamp_(max=clamp_max)
-
-    return x_step, accept.mean()
+    return y, accept.mean()
 
 
 def langevin_mala_sample(
@@ -109,7 +87,9 @@ def langevin_mala_sample(
         iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
 
     x_samples = []
-    for k in tqdm.tqdm(range(num_samples)):
+    iter_sample = tqdm.tqdm(range(num_samples))
+
+    for k in iter_sample :
         for t in range(thinning):
             x_init, accept = langevin_mala_step(
                 x_init,
@@ -121,7 +101,8 @@ def langevin_mala_sample(
                 clamp_max=clamp_max,
                 clamp_min=clamp_min,
             )
-            iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
+            iter_sample.set_postfix(accept=accept.item())
+            iter_sample.set_description("Acceptance Rate {}".format(accept.item()))
         x_samples.append(x_init)
 
     x_samples = torch.cat(x_samples, dim=0)

@@ -37,7 +37,7 @@ class NutsSampler:
             adapt_step_size=True,
         )
 
-        print(f"Running NUTS with {self.num_chains} chains and multiprocess = {self.multiprocess}")
+        print(f"Running NUTS with {self.num_chains} chains and multiprocess = {self.multiprocess}, num_samples = {num_samples}, warmup_steps = {self.warmup_steps}")
         if not self.multiprocess:
             samples = []
             for x_init_i in x_init :  # Some issues exists with pyro when multiprocessing, I am always using the same x
