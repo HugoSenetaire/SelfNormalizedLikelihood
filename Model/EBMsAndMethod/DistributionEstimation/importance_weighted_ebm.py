@@ -193,14 +193,14 @@ class ImportanceWeightedEBM(nn.Module):
         if requires_grad:
             samples_proposal.requires_grad = True
 
-        # if noise_annealing > 1e-4:
-        #     epsilon = torch.rand_like(samples_proposal).to(x.device, x.dtype)
-        #     noise_to_add = epsilon * noise_annealing
-        #     log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
-        #     samples_proposal_noisy = samples_proposal + noise_to_add
-        # else:
-        log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
-        samples_proposal_noisy = samples_proposal
+        if noise_annealing > 1e-4:
+            epsilon = torch.rand_like(samples_proposal).to(x.device, x.dtype)
+            noise_to_add = epsilon * noise_annealing
+            log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
+            samples_proposal_noisy = samples_proposal + noise_to_add
+        else:
+            log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
+            samples_proposal_noisy = samples_proposal
 
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal_without_bias = self.f_theta(samples_proposal_noisy).flatten()
