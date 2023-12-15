@@ -126,9 +126,11 @@ class AbstractDistributionEstimation:
         if self.ebm.base_dist == self.ebm.proposal and self.train_proposal:
             self.train_base_dist = False
 
-        if self.cfg.buffer.size_buffer > 0:
+        if self.cfg.buffer.size_buffer > 0 and self.cfg.buffer.use_buffer:
             self.replay_buffer = SampleBuffer(cfg=self.cfg.buffer,)
             self.prop_replay_buffer = self.cfg.buffer.prop_replay_buffer
+        else : 
+            self.replay_buffer = None
 
         self.configure_optimizers()
         self.initialize_examples(complete_dataset=complete_dataset)
@@ -138,7 +140,7 @@ class AbstractDistributionEstimation:
         self.base_dist_visualization()
 
     def update_sample_buffer(self, x, id):
-        if self.cfg.buffer.size_buffer>0:
+        if self.replay_buffer is not None and self.cfg.buffer.size_buffer>0:
             if len(self.replay_buffer) < self.num_samples_train:  # In the original code, it's batch size here
                 x_init = self.ebm.proposal.sample(self.num_samples_train).detach()
                 id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
@@ -856,7 +858,7 @@ class AbstractDistributionEstimation:
         num_chains = sampler.num_chains
 
         if sampler is not None:
-            if "buffer" in sampler_name:
+            if "buffer" in sampler_name and self.replay_buffer is not None and self.cfg.buffer.size_buffer>0:
                 if self.replay_buffer.buffer_image is None or len(self.replay_buffer.buffer_image) == 0:
                     return None, None
                 x_init = torch.stack(self.replay_buffer.buffer_image[:num_chains])
@@ -885,6 +887,8 @@ class AbstractDistributionEstimation:
             self.last_sample_step = self.current_step
             for sampler_name, sampler in self.samplers_dic.items():
                 if sampler is None:
+                    continue
+                if "buffer" in sampler_name and self.replay_buffer is None and self.cfg.buffer.size_buffer==0:
                     continue
                 # Required for MCMC sampling
 

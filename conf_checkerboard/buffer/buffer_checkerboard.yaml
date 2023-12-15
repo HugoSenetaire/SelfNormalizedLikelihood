@@ -1,8 +1,10 @@
 defaults:
   - base_buffer_config_name
+use_buffer: False
 nb_steps_langevin: 10
-step_size_langevin: 1.0
-sigma_langevin: 3e-2
+step_size_langevin: 0.001
+steps_type_buffer: 'langevin'
+sigma_langevin: 1.0
 clip_max_norm: null
 clip_max_value: null
 size_buffer: 10000

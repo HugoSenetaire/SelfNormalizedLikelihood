@@ -110,9 +110,12 @@ class BaseRegularizationConfig:
 
 @dataclass
 class BaseBufferConfig:
+    use_buffer: Optional[bool] = False
+    sample_buffer: Optional[bool] = False
+    steps_type_buffer : Optional[str] = "langevin" # langevin, mala
     nb_steps_langevin: Optional[int] = 100
-    step_size_langevin: Optional[float] = 1.0
-    sigma_langevin: Optional[float] = 1e-2
+    step_size_langevin: Optional[float] = 0.001
+    sigma_langevin: Optional[float] = 1.0
     clip_max_norm: Union[float, None] = None
     clip_max_value: Union[float, None] = None
     prop_replay_buffer: Optional[float] = 0.95
@@ -324,19 +327,6 @@ class BaseTrainConfig:
     noise_annealing_gamma: Optional[float] = 0.999
 
     nb_energy_steps: Optional[int] = 0
-
-    nb_steps_langevin: Optional[int] = 100
-    step_size_langevin: Optional[float] = 1.0
-    sigma_langevin: Optional[float] = 1e-2
-    clip_max_norm: Optional[Union[float,None]] = None
-    clip_max_value: Optional[Union[float,None]] = None
-    prop_replay_buffer: Optional[float] = 1.0
-    size_buffer: Optional[int] = 256
-    save_buffer_every: Optional[int] = 200
-    clamp_min: Optional[Union[float, None]] = None
-    clamp_max: Optional[Union[float, None]] = None
-    batch_of_update: Optional[int] = 64
-    store_on_gpu: Optional[bool] = True
 
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
