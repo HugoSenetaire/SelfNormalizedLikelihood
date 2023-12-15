@@ -99,7 +99,7 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
     
         samples_proposal.requires_grad_(True)
         dist = torch.distributions.Normal(0, 1)
-        for k in range(self.nb_transitions_ais):
+        for k in range(1,self.nb_transitions_ais+1):
             eps = torch.randn_like(samples_proposal)
             target_density = self.get_target(k)
             density_init = target_density(samples_proposal)
