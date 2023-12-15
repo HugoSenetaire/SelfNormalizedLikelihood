@@ -70,8 +70,8 @@ def langevin_mala_sample(
     """
     Performs a single step of the Langevin algorithm.
     """
-    print("Burn in: ", burn_in)
-    iter_burn_in = tqdm.tqdm(range(burn_in))
+    
+    iter_burn_in = tqdm.tqdm(range(burn_in), desc="Burn in", position=3, leave=False)
     for k in iter_burn_in:
         x_init, accept = langevin_mala_step(
             x_init,
@@ -87,7 +87,7 @@ def langevin_mala_sample(
         iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
 
     x_samples = []
-    iter_sample = tqdm.tqdm(range(num_samples))
+    iter_sample = tqdm.tqdm(range(num_samples), desc="Sampling", position=3, leave=False)
 
     for k in iter_sample :
         for t in range(thinning):

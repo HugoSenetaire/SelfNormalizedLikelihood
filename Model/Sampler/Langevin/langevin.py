@@ -31,11 +31,12 @@ def langevin_sample(x_init, energy, step_size, sigma, num_samples, clip_max_norm
     """
     Performs a single step of the Langevin algorithm.
     """
-    print("Langevin sampling, burn in: {}, thinning: {}, num samples: {}".format(burn_in, thinning, num_samples))
-    for k in tqdm.tqdm(range(burn_in)):
+    ranger_burn_in = tqdm.tqdm(range(burn_in), desc="Burn in", position=3, leave=False)
+    for k in ranger_burn_in:
         x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value, clamp_min=clamp_min, clamp_max=clamp_max)
     x_samples = []
-    for k in tqdm.tqdm(range(num_samples)):
+    ranger_sample = tqdm.tqdm(range(num_samples), desc="Sampling", position=3, leave=False)
+    for k in ranger_sample:
         for t in range(thinning):
             x_init = langevin_step(x_init, energy, step_size, sigma, clip_max_norm=clip_max_norm, clip_max_value=clip_max_value, clamp_min=clamp_min, clamp_max=clamp_max)
         x_samples.append(x_init)
