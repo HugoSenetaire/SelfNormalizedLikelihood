@@ -97,6 +97,7 @@ class AbstractDistributionEstimation:
         self.device = device
         self.current_step = 0
         self.last_sample_step = -float("inf")
+        self.test_type = "test"
 
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
@@ -371,7 +372,9 @@ class AbstractDistributionEstimation:
 
         return proposal_loss.mean(), dic
 
-    def train(self, nb_steps, loader_train, val_loader=None):
+    def train(self, nb_steps, loader_train, val_loader=None, test_loader=None):
+        if not isinstance(test_loader, list):
+            test_loader = [test_loader]
         self.on_train_start()
         with torch.no_grad():
             self.ebm.eval()
@@ -395,6 +398,9 @@ class AbstractDistributionEstimation:
                     for batch in tqdm.tqdm(val_loader):
                         self.validation_step(batch, self.current_step, liste_val)
                     self.on_validation_epoch_end(outputs=liste_val)
+                if test_loader is not None:
+                    if self.cfg.train.test_every and epoch % self.cfg.train.test_every == 0:
+                        self.test(test_loader)
             if self.current_step >= nb_steps:
                 break
         
@@ -474,15 +480,16 @@ class AbstractDistributionEstimation:
     
     def test(self, dataloaders):
         for dataloader in dataloaders:
-            for batch in tqdm.tqdm(dataloader):
-                self.test_step(batch, self.current_step)
-            self.on_test_epoch_end()
+            liste_test = []
+            for batch_idx, batch in enumerate(tqdm.tqdm(dataloader)):
+                self.test_step(batch, batch_idx,liste_test=liste_test)
+            self.on_test_epoch_end(liste_test)
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, liste_test):
         """
         The test step is the same as the validation step.
         """
-        return self.validation_step(batch, batch_idx, type="test_" + self.test_type + "/")
+        return self.validation_step(batch, batch_idx, liste=liste_test)
 
 
 
@@ -499,14 +506,12 @@ class AbstractDistributionEstimation:
         self.plot_samples()
         self.validation_step_outputs = []
 
-    def on_test_epoch_end(self,):
+    def on_test_epoch_end(self, liste_test, name="test/"):
         """
         Gather the energy from the batches in the test step.
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         """
-        outputs = self.test_step_outputs
-        self.update_dic_logger(outputs, name="test_" + self.test_type + "/")
-        self.test_step_outputs = []
+        self.update_dic_logger(liste_test, name=name)
 
     def resample_base_dist(self,):
         """Base dist might be trained and need to be resampled during training"""

@@ -317,6 +317,7 @@ class BaseTrainConfig:
     sigma: Optional[float] = None
     entropy_weight: Optional[float] = 0.0001
     log_every_n_steps: int = MISSING
+    test_every: int = 1
     save_locally: Optional[bool] = False
     start_with_IS_until: Optional[Union[None, int]] = 0
 
