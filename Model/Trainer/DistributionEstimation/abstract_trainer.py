@@ -888,7 +888,7 @@ class AbstractDistributionEstimation:
             for sampler_name, sampler in self.samplers_dic.items():
                 if sampler is None:
                     continue
-                if "buffer" in sampler_name and self.replay_buffer is None and self.cfg.buffer.size_buffer==0:
+                if "buffer" in sampler_name and (self.replay_buffer is None or self.cfg.buffer.size_buffer==0 or not self.cfg.buffer.use_buffer):
                     continue
                 # Required for MCMC sampling
 
