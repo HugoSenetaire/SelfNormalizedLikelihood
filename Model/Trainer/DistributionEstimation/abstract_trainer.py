@@ -569,6 +569,12 @@ class AbstractDistributionEstimation:
         else:
             self.example = None
 
+    def get_liste_samples(self,):
+        liste_samples = [self.example, self.example_proposal, self.example_base_dist]
+        liste_samples_title = ["Samples from dataset", "Samples from proposal", "Samples from base_dist"]
+
+        return liste_samples, liste_samples_title
+
     def proposal_visualization(self):
         """Visualize the proposal distribution and associated density.
         Depending on the input type, the visualization is different.
@@ -612,20 +618,14 @@ class AbstractDistributionEstimation:
                 save_dir = os.path.join(self.cfg.train.save_dir, "base_dist")
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
+                liste_samples, liste_samples_title = self.get_liste_samples()
+
                 plot_energy_2d(
                     self,
                     energy_function=energy_function,
                     save_dir=save_dir,
-                    samples=[
-                        self.example,
-                        self.example_base_dist,
-                        self.example_proposal,
-                    ],
-                    samples_title=[
-                        "Samples from dataset",
-                        "Samples from base_dist",
-                        "Samples from proposal",
-                    ],
+                    samples=liste_samples,
+                    samples_title=liste_samples_title,
                     name="base_dist",
                     step=self.current_step,
                 )
@@ -822,33 +822,28 @@ class AbstractDistributionEstimation:
                 save_dir = os.path.join(save_dir, "contour_energy")
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
+                liste_samples, liste_samples_title = self.get_liste_samples()
                 plot_energy_2d(
                     self,
                     save_dir=save_dir,
-                    samples=[self.example, self.example_proposal],
-                    samples_title=["Samples from dataset", "Samples from proposal"],
+                    samples=liste_samples,
+                    samples_title=liste_samples_title,
                     name="contour",
                     step=self.current_step,
                 )
 
                 # Add auxiliary contour plots, might be useful if we use a base distribution.
                 ebm_function_list = [
-                    lambda x,: self.ebm.calculate_energy(
-                        x,
-                    )[
-                        1
-                    ]["f_theta_on_data"],
-                ]
-                ebm_function_name = [
-                    "f_theta",
-                ]
+                    lambda x,: self.ebm.calculate_energy(x,)[1]["f_theta_on_data"],
+                    ]
+                ebm_function_name = ["f_theta",]
                 for ebm_function, ebm_name in zip(ebm_function_list, ebm_function_name):
                     plot_energy_2d(
                         self,
                         save_dir=save_dir,
                         energy_function=ebm_function,
-                        samples=[self.example, self.example_proposal],
-                        samples_title=["Samples from dataset", "Samples from proposal"],
+                        samples=liste_samples,
+                        samples_title=liste_samples_title,
                         name=ebm_name,
                         step=self.current_step,
                         energy_type=False,
