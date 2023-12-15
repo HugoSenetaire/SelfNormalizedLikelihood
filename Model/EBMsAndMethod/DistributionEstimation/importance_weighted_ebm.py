@@ -55,6 +55,7 @@ class ImportanceWeightedEBM(nn.Module):
         proposal,
         base_dist,
         explicit_bias,
+        cfg_ebm,
         nb_sample_init_bias=1024,
     ):
         super(ImportanceWeightedEBM, self).__init__()
@@ -64,17 +65,29 @@ class ImportanceWeightedEBM(nn.Module):
         self.nb_sample_init_bias = nb_sample_init_bias
         self.base_dist = base_dist.to(device)
         self.explicit_bias = explicit_bias.to(device)
+        self.cfg_ebm = cfg_ebm
 
         # If we use explicit bias, set it to a first estimation of the normalization constant.
         if hasattr(self.explicit_bias, "bias"):
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
             self.explicit_bias.bias.data = log_z_estimate
 
-    def sample(self, nb_sample=1, return_log_prob=False):
+    def sample(self, nb_sample=1, return_log_prob=False, detach_sample=True):
         """
         Samples from the proposal distribution.
         """
-        return self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
+        if return_log_prob :
+            samples, samples_log_prob = self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
+            if detach_sample:
+                samples = samples.detach()
+            return samples, samples_log_prob
+            
+        else :
+            samples = self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
+            if detach_sample:
+                samples = samples.detach()
+            return samples
+            
 
     def calculate_energy(self, x, use_base_dist=True):
         """
@@ -132,11 +145,13 @@ class ImportanceWeightedEBM(nn.Module):
         dic_output["energy_on_data"] = current_energy.detach()
 
         return current_energy, dic_output
+    
 
     def estimate_log_z(
         self,
         x,
         nb_sample=1000,
+        sample_function = None,
         detach_sample=True,
         detach_base_dist=False,
         requires_grad=False,
@@ -169,22 +184,23 @@ class ImportanceWeightedEBM(nn.Module):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         x = x.to(device)
 
-        samples_proposal, samples_proposal_log_prob = self.sample(nb_sample, return_log_prob=True)
+        if sample_function is None:
+            sample_function = self.sample
+        
+        samples_proposal, samples_proposal_log_prob = sample_function(nb_sample, return_log_prob=True, detach_sample=detach_sample)
         samples_proposal = samples_proposal.to(x.device, x.dtype)
         samples_proposal_log_prob = samples_proposal_log_prob.to(x.device, x.dtype)
-        if detach_sample:
-            samples_proposal = samples_proposal.detach()
         if requires_grad:
             samples_proposal.requires_grad = True
 
-        if noise_annealing > 1e-4:
-            epsilon = torch.rand_like(samples_proposal).to(x.device, x.dtype)
-            noise_to_add = epsilon * noise_annealing
-            log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
-            samples_proposal_noisy = samples_proposal + noise_to_add
-        else:
-            log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
-            samples_proposal_noisy = samples_proposal
+        # if noise_annealing > 1e-4:
+        #     epsilon = torch.rand_like(samples_proposal).to(x.device, x.dtype)
+        #     noise_to_add = epsilon * noise_annealing
+        #     log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
+        #     samples_proposal_noisy = samples_proposal + noise_to_add
+        # else:
+        log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
+        samples_proposal_noisy = samples_proposal
 
         # Get the energy of the samples_proposal without base distribution
         f_theta_proposal_without_bias = self.f_theta(samples_proposal_noisy).flatten()

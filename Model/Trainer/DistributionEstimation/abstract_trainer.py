@@ -456,11 +456,20 @@ class AbstractDistributionEstimation:
 
             # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
             if (self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0):
-                estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate)
+                if hasattr(self.ebm,"sample_ais"):
+                    with torch.enable_grad():
+                        estimate_log_z_ais, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample_ais)
+                with torch.enable_grad():
+                    estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample)
                 log_likelihood_SNL = -dic_output["energy_on_data"].mean() - estimate_log_z.exp() + 1
                 log_likelihood_IS = -dic_output["energy_on_data"].mean() - estimate_log_z
+                log_likelihood_SNL_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais.exp() + 1
+                log_likelihood_IS_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais
                 self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL", log_likelihood_SNL)
                 self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS", log_likelihood_IS)
+                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL_AIS", log_likelihood_SNL_AIS)
+                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS_AIS", log_likelihood_IS_AIS)
+
 
             for key in dic_output:
                 self.log(f"train/{key}_mean", dic_output[key].mean().item())
@@ -536,6 +545,17 @@ class AbstractDistributionEstimation:
                 self.example_proposal = self.ebm.proposal.sample(64)
         else:
             self.example_proposal = None
+        
+        if hasattr(self.ebm, "sample_ais"):
+            with torch.enable_grad():
+                if self.input_type == "2d":
+                    self.example_ais = self.ebm.sample_ais(1000).flatten(1)
+                elif self.input_type == "1d":
+                    self.example_ais = self.ebm.sample_ais(1000)
+                elif self.input_type == "image":
+                    self.example_ais = self.ebm.sample_ais(64)
+        else :
+            self.example_ais = None
 
     def initialize_examples(self, complete_dataset):
         """
@@ -572,7 +592,9 @@ class AbstractDistributionEstimation:
     def get_liste_samples(self,):
         liste_samples = [self.example, self.example_proposal, self.example_base_dist]
         liste_samples_title = ["Samples from dataset", "Samples from proposal", "Samples from base_dist"]
-
+        if hasattr(self.ebm, "sample_ais") and self.example_ais is not None:
+            liste_samples.append(self.example_ais)
+            liste_samples_title.append("Samples from AIS")
         return liste_samples, liste_samples_title
 
     def proposal_visualization(self):
@@ -585,20 +607,33 @@ class AbstractDistributionEstimation:
             save_dir = os.path.join(self.cfg.train.save_dir, "proposal")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
+            liste_samples, liste_samples_title = self.get_liste_samples()
             plot_energy_2d(
                 self,
                 energy_function=energy_function,
                 save_dir=save_dir,
-                samples=[self.example, self.example_proposal],
-                samples_title=["Samples from dataset", "Samples from proposal"],
+                samples=liste_samples,
+                samples_title=liste_samples_title,
                 name="proposal",
                 step=self.current_step,
             )
+            # if hasattr(self.ebm, "sample_ais") and self.example_ais is not None:
+            #     for k in range(self.ebm.nb_transitions_ais):
+            #         plot_energy_2d(
+            #             self,
+            #             energy_function= lambda x: - self.ebm.get_target(k)(x),
+            #             save_dir=save_dir,
+            #             samples=liste_samples,
+            #             samples_title= liste_samples_title,
+            #             name="proposal_ais_{}".format(k),
+            #             step=self.current_step,
+            #         )
         elif self.input_type == "image":
             self.resample_proposal()
             save_dir = os.path.join(self.cfg.train.save_dir, "proposal")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
+
             plot_images(
                 images=self.example_proposal,
                 algo=self,
@@ -607,6 +642,15 @@ class AbstractDistributionEstimation:
                 transform_back=self.transform_back,
                 step=self.current_step,
             )
+            if self.example_ais is not None :
+                plot_images(
+                    images=self.example_ais,
+                    algo=self,
+                    save_dir=save_dir,
+                    name="ais_samples",
+                    transform_back=self.transform_back,
+                    step=self.current_step,
+                )
 
     def base_dist_visualization(self):
         """Visualize the base distribution and associated density.
@@ -783,25 +827,36 @@ class AbstractDistributionEstimation:
         with torch.no_grad():
             nb_sample = self.num_samples_val if name == "val/" else self.num_samples_test
             log_z_estimate, dic_output_estimate_z = self.ebm.estimate_log_z(
-                self.example,
-                nb_sample,
+                x = self.example,
+                nb_sample= nb_sample,
+                sample_function = self.ebm.sample,
                 detach_sample=True,
                 detach_base_dist=True,
                 return_samples=False,
             )
-            for key in dic_output_estimate_z:
-                self.log(name + key + "_mean", dic_output_estimate_z[key].mean())
-                self.log(name + key + "_std", dic_output_estimate_z[key].std())
-                # dic_output[name + key + "_mean"] = dic_output_estimate_z[key].mean()
-                # dic_output[name + key + "_std"] = dic_output_estimate_z[key].std()
+        for key in dic_output_estimate_z:
+            self.log(name + key + "_mean", dic_output_estimate_z[key].mean())
+            self.log(name + key + "_std", dic_output_estimate_z[key].std())
 
+        if hasattr(self.ebm,"sample_ais"):
+                with torch.enable_grad():
+                    estimate_log_z_ais, dic_output_estimate_z_ais = self.ebm.estimate_log_z(self.example,
+                                                nb_sample=self.nb_sample_train_estimate,
+                                                sample_function=self.ebm.sample_ais)
+                for key in dic_output_estimate_z_ais:
+                    self.log(name + key + "_mean_ais", dic_output_estimate_z_ais[key].mean())
+                    self.log(name + key + "_std_ais", dic_output_estimate_z_ais[key].std())
 
+        energy_data = dic_output[name + "energy_on_data"].flatten()
+        loss_total_SNL = - energy_data.mean() - log_z_estimate.exp() + 1
+        self.log(name + "log_likelihood_SNL", loss_total_SNL)
+        loss_total_IS = - energy_data.mean() - log_z_estimate.mean()
+        self.log(name + "log_likelihood_IS", loss_total_IS)
 
-            energy_data = dic_output[name + "energy_on_data"].flatten()
-            loss_total_SNL = - energy_data.mean() - log_z_estimate.exp() + 1
-            self.log(name + "log_likelihood_SNL", loss_total_SNL)
-            loss_total_IS = - energy_data.mean() - log_z_estimate.mean()
-            self.log(name + "log_likelihood_IS", loss_total_IS)
+        loss_total_SNL_AIS = - energy_data.mean() - estimate_log_z_ais.exp() + 1
+        self.log(name + "log_likelihood_SNL_AIS", loss_total_SNL_AIS)
+        loss_total_IS_AIS = - energy_data.mean() - estimate_log_z_ais.mean()
+        self.log(name + "log_likelihood_IS_AIS", loss_total_IS_AIS)
 
         
         for scheduler, cfg in zip(self.schedulers_feedback, self.cfg_scheduler):
@@ -810,9 +865,7 @@ class AbstractDistributionEstimation:
                 scheduler.step(loss_for_scheduler)
 
 
-    def plot_energy(
-        self,
-    ):
+    def plot_energy(self,):
         """
         If possible show the current energy function and the samples from the proposal and dataset
         """

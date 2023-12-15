@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..EBMsAndMethod import ImportanceWeightedEBM
+from ..EBMsAndMethod import dic_ebm
 from ..Energy import get_energy, get_explicit_bias
 from ..Proposals import get_base_dist, get_proposal
 from .init_proposals import (
@@ -105,11 +105,14 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
 
     # Get EBM :
     print("Get EBM")
-    ebm = ImportanceWeightedEBM(
+    
+    
+    ebm = dic_ebm[cfg.ebm.ebm_name](
         f_theta=energy,
         proposal=proposal,
         base_dist=base_dist,
         explicit_bias=explicit_bias,
+        cfg_ebm=cfg.ebm,
         nb_sample_init_bias=cfg.explicit_bias.nb_sample_init_bias,
     )
     print("Get EBM... end")

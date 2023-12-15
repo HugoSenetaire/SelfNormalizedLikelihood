@@ -1,2 +1,2 @@
-from .DistributionEstimation import ImportanceWeightedEBM
+from .DistributionEstimation import dic_ebm
 

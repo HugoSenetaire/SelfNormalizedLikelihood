@@ -358,6 +358,24 @@ class BaseTrainConfig:
 
 
 @dataclass
+class BaseEBM:
+    ebm_name: str = "standard"
+
+@dataclass
+class BaseAISEBM(BaseEBM):
+    ebm_name: str = "ais"
+    train_ais: Optional[bool] = True
+    nb_transitions_ais: Optional[int] = 20
+    nb_step_ais: Optional[int] = 1
+    step_size_ais: Optional[float] = 0.001
+    sigma_ais: Optional[float] = 1e-2
+    clip_max_norm_ais: Optional[Union[float,None]] = None
+    clip_max_value_ais: Optional[Union[float,None]] = None
+    clamp_min_ais: Optional[Union[float, None]] = None
+    clamp_max_ais: Optional[Union[float, None]] = None
+
+
+@dataclass
 class Machine:
     machine: str = MISSING
     wandb_path: Optional[str] = MISSING
@@ -376,6 +394,7 @@ class Config:
     base_distribution: BaseBaseDistributionConfig = MISSING
     dataset: BaseDatasetConfig = MISSING
     energy: BaseEnergyConfig = MISSING
+    ebm : BaseEBM = MISSING
     optim_f_theta: BaseOptimConfig = MISSING
     optim_explicit_bias: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
@@ -475,6 +494,18 @@ def store_main():
         name="base_energy_config_name",
         group="energy",
         node=BaseEnergyConfig,
+    )
+
+    # EBM 
+    cs.store(
+        name="base_ebm_config_name",
+        group="ebm",
+        node=BaseEBM,
+    )
+    cs.store(
+        name="base_ais_ebm_config_name",
+        group="ebm",
+        node=BaseAISEBM,
     )
 
     # Explicit bias
