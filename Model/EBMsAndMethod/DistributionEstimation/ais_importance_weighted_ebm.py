@@ -1,16 +1,13 @@
 import itertools
+import math
 
 import torch
 import torch.distributions as distributions
 import torch.nn as nn
-import math 
-from .importance_weighted_ebm import ImportanceWeightedEBM
+
+from ...Sampler.utils_sampler.clip_sampler import clip_data, clip_grad
 from .differentiable_sampler.differentiable_ula import ULA
-
-from ...Sampler.utils_sampler.clip_sampler import clip_grad, clip_data
-
-
-
+from .importance_weighted_ebm import ImportanceWeightedEBM
 
 
 class AISImportanceWeightedEBM(ImportanceWeightedEBM):
