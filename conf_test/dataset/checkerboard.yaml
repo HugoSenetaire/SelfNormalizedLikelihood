@@ -1,0 +1,4 @@
+defaults:
+  - base_dataset_config_name
+download : True
+dataset_name : 'checkerboard'

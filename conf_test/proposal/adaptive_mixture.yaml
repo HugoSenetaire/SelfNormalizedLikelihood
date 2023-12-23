@@ -1,0 +1,5 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'gaussian_mixture_adaptive'
+nb_sample_estimate: 10000 # Nb sample used to pretrain 
+std_multiplier : 1.0 # The std is estimated over the nb_sample_estimate samples, then multiplied by this value
