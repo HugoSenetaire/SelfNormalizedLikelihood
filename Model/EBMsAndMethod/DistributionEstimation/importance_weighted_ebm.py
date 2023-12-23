@@ -175,7 +175,7 @@ class ImportanceWeightedEBM(nn.Module):
         
         samples_proposal, samples_proposal_log_prob = sample_function(nb_sample, return_log_prob=True, detach_sample=detach_sample)
         samples_proposal = samples_proposal.to(x.device, x.dtype)
-        samples_proposal_log_prob = samples_proposal_log_prob.to(x.device, x.dtype)
+        samples_proposal_log_prob = samples_proposal_log_prob.to(x.device, x.dtype).reshape((nb_sample, 1, -1)).sum(1)
         if requires_grad:
             samples_proposal.requires_grad = True
 
@@ -185,49 +185,44 @@ class ImportanceWeightedEBM(nn.Module):
             log_prob_noise = torch.distributions.Normal(0, 1).log_prob(epsilon).reshape((samples_proposal.shape[0], -1)).sum(-1)
             samples_proposal_noisy = samples_proposal + noise_to_add
         else:
-            log_prob_noise = torch.zeros((nb_sample,)).to(x.device, x.dtype)
+            log_prob_noise = torch.zeros((nb_sample,1)).to(x.device, x.dtype)
             samples_proposal_noisy = samples_proposal
 
         # Get the energy of the samples_proposal without base distribution
-        f_theta_proposal_without_bias = self.f_theta(samples_proposal_noisy).flatten()
+        f_theta_proposal_without_bias = self.f_theta(samples_proposal_noisy).reshape(nb_sample, 1)
 
         # if self.explicit_bias:
-        f_theta_proposal = self.explicit_bias.add_bias(f_theta_proposal_without_bias).flatten()
+        f_theta_proposal = self.explicit_bias.add_bias(f_theta_proposal_without_bias).reshape(nb_sample, 1)
 
         # Add the base distribution and proposal contributions to the energy if they are different
         # if self.base_dist != self.proposal or noise_annealing > 1e-4:
-        base_dist_log_prob = self.base_dist.log_prob(samples_proposal_noisy).view(samples_proposal.size(0), -1).sum(1)
-
-        energy_samples = f_theta_proposal - base_dist_log_prob
+        base_dist_log_prob = self.base_dist.log_prob(samples_proposal_noisy).reshape(nb_sample, 1, -1).sum(-1)
         if detach_base_dist:
             base_dist_log_prob = base_dist_log_prob.detach()
-        aux_prob = base_dist_log_prob - samples_proposal_log_prob - log_prob_noise
 
-        if self.base_dist == self.proposal and not force_calculation:
-            log_z_estimate = -f_theta_proposal.flatten() - log_prob_noise.flatten()
-        else:
-            log_z_estimate = (-f_theta_proposal + aux_prob).flatten()
+        log_z_estimate = (-f_theta_proposal + base_dist_log_prob - samples_proposal_log_prob -log_prob_noise).flatten()
 
         ESS_estimate_num = log_z_estimate.logsumexp(0) * 2
         ESS_estimate_denom = (2 * log_z_estimate).logsumexp(0)
         ESS_estimate = (ESS_estimate_num - ESS_estimate_denom).exp()
         log_z_estimate = torch.logsumexp(log_z_estimate, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
-
         dic_output.update(
             {
                 "z_estimation/f_theta_no_bias_on_sample_proposal": f_theta_proposal_without_bias.detach(),
                 "z_estimation/f_theta_on_sample_proposal": f_theta_proposal.detach(),
                 "z_estimation/base_dist_loglikelihood_on_sample_proposal": base_dist_log_prob.detach(),
                 "z_estimation/proposal_loglikelihood_on_sample_proposal": samples_proposal_log_prob.detach(),
-                "z_estimation/aux_prob_on_sample_proposal": aux_prob.detach(),
-                "z_estimation/log_prob_noise": log_prob_noise.detach(),
+                # "z_estimation/aux_prob_on_sample_proposal": (base_dist_log_prob - samples_proposal_log_prob - log_prob_noise).detach(),
+                "z_estimation/aux_prob_on_sample_proposal": (base_dist_log_prob - samples_proposal_log_prob).detach(),
+                # "z_estimation/log_prob_noise": log_prob_noise.detach(),
                 "z_estimation/log_z_estimate": log_z_estimate.detach(),
                 "z_estimation/ESS_estimate": ESS_estimate.detach(),
             }
         )
         to_return = [log_z_estimate, dic_output]
         if return_samples:
-            to_return.extend([energy_samples, samples_proposal, samples_proposal_noisy])
+            to_return.extend([f_theta_proposal-base_dist_log_prob, samples_proposal, samples_proposal_noisy])
+            # to_return.extend([f_theta_proposal-base_dist_log_prob, samples_proposal, samples_proposal_noisy])
        
         return to_return
 
