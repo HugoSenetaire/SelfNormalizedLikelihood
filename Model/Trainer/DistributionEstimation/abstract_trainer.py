@@ -15,7 +15,7 @@ from ...Utils.Buffer import SampleBuffer
 from ...Utils.ClipGradUtils.clip_grads_utils import clip_grad_adam
 from ...Utils.noise_annealing import calculate_current_noise_annealing
 from ...Utils.optimizer_getter import get_optimizer, get_scheduler
-from ...Utils.plot_utils import plot_energy_2d, plot_images
+from ...Utils.plot_utils import plot_energy_2d, plot_images, plot_contour_evolution
 from ...Utils.proposal_loss import proposal_loss_getter
 from ...Utils.RegularizationUtils.gradients_penalty import wgan_gradient_penalty
 
@@ -617,17 +617,15 @@ class AbstractDistributionEstimation:
                 name="proposal",
                 step=self.current_step,
             )
-            # if hasattr(self.ebm, "sample_ais") and self.example_ais is not None:
-            #     for k in range(self.ebm.nb_transitions_ais):
-            #         plot_energy_2d(
-            #             self,
-            #             energy_function= lambda x: - self.ebm.get_target(k)(x),
-            #             save_dir=save_dir,
-            #             samples=liste_samples,
-            #             samples_title= liste_samples_title,
-            #             name="proposal_ais_{}".format(k),
-            #             step=self.current_step,
-            #         )
+            if hasattr(self.ebm, "sample_ais") and self.example_ais is not None and self.cfg.train.plot_contour_ais:
+                    plot_contour_evolution(
+                        self,
+                        save_dir=save_dir,
+                        samples=liste_samples,
+                        samples_title= liste_samples_title,
+                        name="contour_ais",
+                        step=self.current_step,
+                    )
         elif self.input_type == "image":
             self.resample_proposal()
             save_dir = os.path.join(self.cfg.train.save_dir, "proposal")

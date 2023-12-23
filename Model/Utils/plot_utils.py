@@ -5,8 +5,91 @@ import numpy as np
 import torch
 import torchvision
 import wandb
+
 # def plot_energy_1d(algo, save_dir, samples = [], samples_title = [], step, energy_type=True):
 
+
+def plot_contour_evolution(
+                        algo,
+                        save_dir,
+                        name="contour_best",
+                        samples=[],
+                        samples_title= [],
+                        step="",
+                        energy_type=True,
+                        ):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    nx = 1000
+    ny = 1000
+    min_x, max_x = algo.min_x - 1, algo.max_x + 1
+    min_y, max_y = algo.min_y - 1, algo.max_y + 1
+
+    min_x = -3
+    max_x = 3
+    min_y = -3
+    max_y = 3
+
+    x = np.linspace(min_x, max_x, nx)
+    y = np.linspace(min_y, max_y, ny)
+
+    fig, axs = plt.subplots(algo.ebm.nb_transitions_ais, 3 + len(samples), figsize=(15 + 5 * len(samples), 5*algo.ebm.nb_transitions_ais))
+
+
+    xx, yy = np.meshgrid(x, y)
+    xy = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=1)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    xy = torch.from_numpy(xy).float().to(device)
+    with torch.enable_grad():
+        samples_ais, samples_ais_log_prob = algo.ebm.sample_ais(nb_sample=1000, return_log_prob=True, detach_sample=False, return_full_list=True)
+    liste_energy_sample_ais = []
+    for k in range(len(samples_ais)):
+        energy_samples_ais = - algo.ebm.calculate_energy(samples_ais[k])[0].flatten() - samples_ais_log_prob[k].flatten()
+        liste_energy_sample_ais.append(energy_samples_ais.exp().detach().cpu().numpy())
+    for k in range(algo.ebm.nb_transitions_ais):
+        samples_title_aux = samples_title.copy() + ["AIS samples"]
+        samples_aux = samples.copy() + [samples_ais[k].reshape(-1, 2)]
+        energy_function = lambda x: - algo.ebm.get_target(k)(x)
+        z = (-energy_function(xy)).exp().detach().cpu().numpy()
+        z = z.reshape(nx, ny)
+        assert len(samples_title_aux) == len(samples_aux)
+
+        axs[k, 0].contourf(x, y, z, 100)
+        if k == 0:
+            axs[k, 0].set_title("Energy")
+        # Turn off axis
+        axs[k, 0].axis("off")
+
+        for i, (s, s_title) in enumerate(zip(samples_aux, samples_title_aux)):
+            if s is not None:
+                current_s = s[:1000].cpu().detach()
+                axs[k, i + 1].contourf(x, y, z, 100)
+                current_s.clamp_max_(max_y)
+                current_s.clamp_min_(min_y)
+                if i == len(samples_aux) - 1:
+                    # print(liste_energy_sample_ais[k].min(), liste_energy_sample_ais[k].max())
+                    # print(liste_energy_sample_ais[k].mean(), liste_energy_sample_ais.std())
+                    axs[k, i + 1].scatter(current_s[:, 0], current_s[:, 1], c=liste_energy_sample_ais[k].flatten(), alpha=0.1, )
+                else :
+                    axs[k, i + 1].scatter(current_s[:, 0], current_s[:, 1], c="r", alpha=0.1)
+                if k == 0:
+                    axs[k, i + 1].set_title(s_title)
+                axs[k, i + 1].set_ylim(min_y, max_y)
+                axs[k, i + 1].set_xlim(min_x, max_x)
+                axs[k, i + 1].axis("off")
+        fig.colorbar(axs[k, 0].contourf(x, y, z, 100), cax=axs[k, -1])
+    if algo.cfg.train.save_locally:
+        plt.savefig(os.path.join(save_dir, "{}_{}.png".format(name, step)))
+        plt.savefig(os.path.join(save_dir, "{}_{}.pdf".format(name, step)))
+    try:
+        image = wandb.Image(fig, caption = "{}_{}.png".format(name, step))
+        algo.logger.log({"{}.png".format(name,) :image}, step = step)
+
+    except AttributeError as e:
+        print(e,)
+    plt.close()
+                
 
 def plot_energy_2d(
     algo,

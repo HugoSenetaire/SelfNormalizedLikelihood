@@ -329,6 +329,8 @@ class BaseTrainConfig:
 
     nb_energy_steps: Optional[int] = 0
 
+    plot_contour_evolution: Optional[bool] = False
+
     def __post_init__(self):
         if self.task not in ["regression", "distribution_estimation"]:
             raise RuntimeError(
