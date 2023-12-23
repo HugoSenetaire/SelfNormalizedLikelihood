@@ -140,10 +140,11 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
         noise_annealing=0.0,
         force_calculation=False,
     ):
-        if sample_function is None and self.train_ais:
-            sample_function = self.sample_ais
-        else :
-            sample_function = self.sample
+        if sample_function is None :
+            if self.train_ais:
+                sample_function = self.sample_ais
+            else :
+                sample_function = self.sample
         return super().estimate_log_z(
             x,
             nb_sample= nb_sample,
