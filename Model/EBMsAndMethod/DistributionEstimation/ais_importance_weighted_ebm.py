@@ -68,17 +68,13 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
                                                         nb_sample_init_bias=nb_sample_init_bias,)
 
 
-
     def get_target(self, k,):
         """
         Get the annealed function to target at iteration k of the AIS algorithm.
         """
-        
+ 
         value = min(1.0, k / (self.nb_transitions_ais))
-        if self.base_dist is None :
-            return lambda x: - self.f_theta(x).flatten() * value + self.proposal.log_prob(x).flatten() * (1-value)
-        else :
-            return lambda x: - self.f_theta(x).flatten() * value + self.base_dist.log_prob(x).flatten()
+        return lambda x: -self.calculate_energy(x, use_base_dist=True)[0].flatten() * value + self.proposal.log_prob(x).flatten() * (1-value)
 
 
             
