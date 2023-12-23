@@ -5,20 +5,6 @@ import torch.distributions as distributions
 import torch.nn as nn
 
 
-class ExplicitBias(nn.Module):
-    """
-    Used to handle the explicit bias of the EBM model.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.explicit_bias = torch.nn.parameter.Parameter(
-            torch.zeros(1), requires_grad=True
-        )
-
-    def forward(self, x):
-        return self.explicit_bias
-
 
 class ImportanceWeightedEBM(nn.Module):
     """
