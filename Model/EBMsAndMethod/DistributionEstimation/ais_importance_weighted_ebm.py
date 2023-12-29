@@ -6,7 +6,6 @@ import torch.distributions as distributions
 import torch.nn as nn
 
 from ...Sampler.utils_sampler.clip_sampler import clip_data, clip_grad
-from .differentiable_sampler.differentiable_ula import ULA
 from .importance_weighted_ebm import ImportanceWeightedEBM
 
 
