@@ -9,6 +9,7 @@ from .DistributionEstimation import (
     ScoreMatchingTrainer,
     SelfNormalizedTrainer,
     ShortTermLangevin,
+    LogTrainer,
 )
 
 
@@ -23,4 +24,5 @@ dic_trainer = {
     "vera": VERA,
     "kale": KALE,
     "ais_self_normalized": AnnealedImportanceSampling,
+    "log_trainer": LogTrainer,
 }

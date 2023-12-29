@@ -3,7 +3,6 @@ import logging
 import os
 
 import numpy as np
-import pytorch_lightning as pl
 import torch
 import tqdm
 from omegaconf import OmegaConf, open_dict
@@ -617,7 +616,7 @@ class AbstractDistributionEstimation:
                 name="proposal",
                 step=self.current_step,
             )
-            if hasattr(self.ebm, "sample_ais") and self.example_ais is not None and self.cfg.train.plot_contour_ais:
+            if hasattr(self.ebm, "sample_ais") and self.example_ais is not None and self.cfg.train.plot_contour_evolution:
                     plot_contour_evolution(
                         self,
                         save_dir=save_dir,
