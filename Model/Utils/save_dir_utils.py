@@ -1,11 +1,28 @@
 import os
 
 import numpy as np
-import pytorch_lightning as pl
 import torch
-
-from .Callbacks import EMA
-
+import wandb
+import time
+def get_wandb_logger(cfg, my_cfg):
+    project_name = f"SNL_{cfg.dataset.dataset_name}"
+    experiment_name = f"{cfg.train.trainer_name}"
+    if cfg.ebm.ebm_name == 'ais':
+        experiment_name += f"_ais_{cfg.ebm.train_ais}"
+    experiment_name += f"_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
+    if cfg.machine is not None:
+            if cfg.machine.machine == "karolina":
+                print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
+                # logger_trainer = WandbLogger(project=f"SNL_{cfg.dataset}", save_dir=cfg.machine.wandb_path, config=my_cfg,)
+                logger_trainer = wandb.init(project=project_name, name= experiment_name, config=my_cfg, dir=cfg.machine.wandb_path)
+            else:
+                print(f"Working on {cfg.machine.machine = }")
+                # logger_trainer = WandbLogger(project=project_name, name= experiment_name,config=my_cfg,)
+                logger_trainer = wandb.init(project=project_name, name= experiment_name, config=my_cfg)
+    else:
+        print("You have not specified a machine")
+        logger_trainer = wandb.init(project=project_name, name= experiment_name, config=my_cfg)
+    return logger_trainer
 
 def find_last_version(dir):
     # Find all the version folders
@@ -22,7 +39,7 @@ def find_last_version(dir):
 
 
 def seed_everything(seed):
-    pl.seed_everything(seed)
+    # pl.seed_everything(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True

@@ -1,15 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pytorch_lightning as pl
 import torch
 
 from Dataset.MissingDataDataset.prepare_data import get_dataset
 from Model.Trainer import dic_trainer
-from Model.Utils.Callbacks import EMA
+# from Model.Utils.Callbacks import EMA
 from Model.Utils.dataloader_getter import get_dataloader
 from Model.Utils.model_getter_distributionestimation import get_model
 from Model.Utils.plot_utils import plot_energy_2d, plot_images
-from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks
+from Model.Utils.save_dir_utils import get_accelerator, seed_everything, setup_callbacks, get_wandb_logger
 
 import wandb
 import logging
@@ -30,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 
 @hydra.main(version_base="1.1", config_path="conf_checkerboard", config_name="config")
@@ -62,6 +61,17 @@ def main(cfg):
         device = torch.device("cpu")
         cfg.train.device = device
 
+    logger_trainer = get_wandb_logger(cfg, my_cfg)
+
+    algo = dic_trainer[cfg.train.trainer_name](
+        ebm=ebm,
+        cfg=cfg,
+        device = device,
+        logger=logger_trainer,
+        complete_dataset=complete_dataset,
+        )
+
+
     if cfg.train.load_from_checkpoint or cfg.train.just_test:
         ckpt_dir = os.path.join(cfg.train.save_dir, "val_checkpoint")
         last_checkpoint = os.listdir(ckpt_dir)[-1]
@@ -71,29 +81,6 @@ def main(cfg):
         algo.load_state_dict(torch.load(ckpt_path)["state_dict"])
     else:
         ckpt_path = None
-
-   
-    if cfg.machine is not None:
-        if cfg.machine.machine == "karolina":
-            print(f"Working on Karolina's machine, {cfg.machine.wandb_path = }")
-            # logger_trainer = WandbLogger(project="SelfNormalizedLikelihood", save_dir=cfg.machine.wandb_path, config=my_cfg,)
-            logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg, dir=cfg.machine.wandb_path)
-        else:
-            print(f"Working on {cfg.machine.machine = }")
-            # logger_trainer = WandbLogger(project="SelfNormalizedLikelihood",config=my_cfg,)
-            logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg)
-    else:
-        print("You have not specified a machine")
-        logger_trainer = wandb.init(project="SelfNormalizedLikelihood", config=my_cfg)
-        
-    algo = dic_trainer[cfg.train.trainer_name](
-        ebm=ebm,
-        cfg=cfg,
-        device = device,
-        logger=logger_trainer,
-        complete_dataset=complete_dataset,
-        )
-
 
 
     # Handle training duration :
