@@ -376,6 +376,16 @@ class BaseAISEBM(BaseEBM):
     clamp_min_ais: Optional[Union[float, None]] = None
     clamp_max_ais: Optional[Union[float, None]] = None
 
+    
+    adaptive_step_size: Optional[bool] = False
+    variance_sensitive_step: Optional[bool] = False
+    acceptance_rate_target: Optional[float] = 0.9
+    # restart_adaptive_step_size_ais: Optional[bool] = False
+    alpha_stepsize_increase: Optional[float] = 1.02
+    alpha_stepsize_decrease: Optional[float] = 0.99
+    step_size_min: Optional[float] = 0.001
+    step_size_max: Optional[float] = 0.05
+
 
 @dataclass
 class Machine:
