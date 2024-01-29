@@ -71,7 +71,7 @@ def langevin_mala_sample(
     Performs a single step of the Langevin algorithm.
     """
     
-    iter_burn_in = tqdm.tqdm(range(burn_in), desc="Burn in", position=3, leave=False)
+    iter_burn_in = range(burn_in)
     for k in iter_burn_in:
         x_init, accept = langevin_mala_step(
             x_init,
@@ -83,11 +83,9 @@ def langevin_mala_sample(
             clamp_max=clamp_max,
             clamp_min=clamp_min,
         )
-        iter_burn_in.set_postfix(accept=accept.item())
-        iter_burn_in.set_description("Acceptance Rate {}".format(accept.item()))
 
     x_samples = []
-    iter_sample = tqdm.tqdm(range(num_samples), desc="Sampling", position=3, leave=False)
+    iter_sample =range(num_samples)
 
     for k in iter_sample :
         for t in range(thinning):
@@ -101,8 +99,6 @@ def langevin_mala_sample(
                 clamp_max=clamp_max,
                 clamp_min=clamp_min,
             )
-            iter_sample.set_postfix(accept=accept.item())
-            iter_sample.set_description("Acceptance Rate {}".format(accept.item()))
         x_samples.append(x_init)
 
     x_samples = torch.cat(x_samples, dim=0)
