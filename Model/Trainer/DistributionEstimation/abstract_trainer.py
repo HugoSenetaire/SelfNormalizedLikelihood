@@ -1,4 +1,4 @@
-import itertools
+import time
 import logging
 import os
 
@@ -320,6 +320,8 @@ class AbstractDistributionEstimation:
             elif current_cfg_optim.clip_grad_type is None or current_cfg_optim.clip_grad_type == "none":
                 pass
             else :
+                print(current_cfg_optim.clip_grad_type)
+                print(current_cfg_optim.clip_grad_value)
                 raise NotImplementedError
 
     def proposal_step(self, x,):
@@ -471,7 +473,10 @@ class AbstractDistributionEstimation:
 
 
             for key in dic_output:
-                self.log(f"train/{key}_mean", dic_output[key].mean().item())
+                try :
+                    self.log(f"train/{key}_mean", dic_output[key].mean().item())
+                except AttributeError:
+                    self.log(f"train/{key}", dic_output[key])
 
             self.ebm.train()
 
@@ -507,11 +512,28 @@ class AbstractDistributionEstimation:
         Update the dictionary of outputs from the EBM by evaluating once the normalization constant.
         Visualize proposal, base_dist, energy and samples if number of step is sufficient.
         """
+        time_init = time.time()
+
         self.update_dic_logger(outputs, name=name)
+        print("Proposal visualization")
         self.proposal_visualization()
+        print("done in {}s".format(time.time() - time_init))
+
+        time_init = time.time()
+        print("Base dist visualization")
         self.base_dist_visualization()
+        print("done in {}s".format(time.time() - time_init))
+
+        time_init = time.time()
+        print("Energy visualization")
         self.plot_energy()
-        self.plot_samples()
+        print("done in {}s".format(time.time() - time_init))
+
+        time_init = time.time()
+        print("Samples visualization")
+        # self.plot_samples()
+        # print("done in {}s".format(time.time() - time_init))
+
         self.validation_step_outputs = []
 
     def on_test_epoch_end(self, liste_test, name="test/"):
@@ -942,6 +964,8 @@ class AbstractDistributionEstimation:
                     continue
                 # Required for MCMC sampling
 
+                # Print samples
+                print("Sampling from {}".format(sampler_name))
                 save_dir = self.cfg.train.save_dir
                 save_dir = os.path.join(save_dir,sampler_name)
                 if not os.path.exists(save_dir):
