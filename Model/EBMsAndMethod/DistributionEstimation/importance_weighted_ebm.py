@@ -58,21 +58,23 @@ class ImportanceWeightedEBM(nn.Module):
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
             self.explicit_bias.bias.data = log_z_estimate
 
-    def sample(self, nb_sample=1, return_log_prob=False, detach_sample=True):
+    def sample(self, nb_sample=1, return_log_prob=False, detach_sample=True, return_dic=False):
         """
         Samples from the proposal distribution.
         """
-        if return_log_prob :
-            samples, samples_log_prob = self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
-            if detach_sample:
-                samples = samples.detach()
-            return samples, samples_log_prob
-            
-        else :
-            samples = self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
-            if detach_sample:
-                samples = samples.detach()
-            return samples
+        to_return = []
+        samples, samples_log_prob = self.proposal.sample(nb_sample, return_log_prob=return_log_prob)
+        if detach_sample:
+            samples = samples.detach()
+        to_return.append(samples)
+        if return_log_prob:
+            to_return.append(samples_log_prob)
+
+        if return_dic:
+            dic = {}
+            to_return.append(dic)
+        
+        return to_return
             
 
     def calculate_energy(self, x, use_base_dist=True):
@@ -173,7 +175,8 @@ class ImportanceWeightedEBM(nn.Module):
         if sample_function is None:
             sample_function = self.sample
         
-        samples_proposal, samples_proposal_log_prob = sample_function(nb_sample, return_log_prob=True, detach_sample=detach_sample)
+        samples_proposal, samples_proposal_log_prob, dic_sampler = sample_function(nb_sample, return_log_prob=True, detach_sample=detach_sample, return_dic=True)
+        dic_output.update(dic_sampler)
         samples_proposal = samples_proposal.to(x.device, x.dtype)
         samples_proposal_log_prob = samples_proposal_log_prob.to(x.device, x.dtype).reshape((nb_sample, 1, -1)).sum(1)
         if requires_grad:
