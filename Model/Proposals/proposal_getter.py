@@ -5,7 +5,7 @@ import torch
 from .mock_base_dist import MockBaseDist
 from .ProposalForDistributionEstimation.categorical import get_Categorical
 from .ProposalForDistributionEstimation.cnf import get_NeuralODEProposal
-from .ProposalForDistributionEstimation.gaussian import get_Gaussian
+from .ProposalForDistributionEstimation.gaussian import get_Gaussian, get_GaussianUncentered
 from .ProposalForDistributionEstimation.gaussian_full import get_GaussianFull
 from .ProposalForDistributionEstimation.gaussian_mixture import (
     get_GaussianMixtureProposal,
@@ -29,6 +29,7 @@ from .ProposalForDistributionEstimation.vera_proposal import get_vera, get_vera_
 
 dic_proposals = {
     "gaussian": get_Gaussian,
+    "gaussian_uncentered": get_GaussianUncentered,
     "kernel_density": get_KernelDensity,
     "gaussian_mixture": get_GaussianMixtureProposal,
     "poisson": get_Poisson,
@@ -74,7 +75,7 @@ def get_proposal(
     if not isinstance(dataset, list):
         dataset = [dataset]
     dataset = torch.utils.data.ConcatDataset(dataset)
-
+    # proposal = dic_proposals["gaussian_uncentered"]
     proposal = dic_proposals[cfg.proposal.proposal_name]
     if "adaptive" in cfg.proposal.proposal_name:
         assert (

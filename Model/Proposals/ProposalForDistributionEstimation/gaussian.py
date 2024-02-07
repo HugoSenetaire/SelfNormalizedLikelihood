@@ -20,6 +20,19 @@ def get_Gaussian(
         cfg.std_multiplier,
     )
 
+def get_GaussianUncentered(
+        input_size,
+        dataset,
+        cfg,
+):
+    return Gaussian(
+        input_size,
+        dataset,
+        3,
+        1,
+        cfg.nb_sample_estimate,
+        cfg.std_multiplier,
+    )
 
 class Gaussian(AbstractProposal):
     def __init__(
@@ -41,15 +54,18 @@ class Gaussian(AbstractProposal):
 
         if mean == "dataset":
             self.mean = nn.parameter.Parameter(data.mean(0), requires_grad=True)
-        else:
-            raise NotImplementedError
+        else :
+            try :
+                self.mean = nn.parameter.Parameter(
+                torch.ones(self.input_size) * float(mean), requires_grad=False
+                )
+            except :
+                raise NotImplementedError
 
         if std == "dataset":
             self.log_std = nn.parameter.Parameter(
                 (data.std(0) * std_multiplier).log(), requires_grad=True
             )
-
-            
         else:
             try :
                 self.log_std = nn.parameter.Parameter(
@@ -58,7 +74,9 @@ class Gaussian(AbstractProposal):
             except :
                 raise NotImplementedError
 
+
         print("Init Standard Gaussian... end")
+
 
     def sample_simple(self, nb_sample=1):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
@@ -69,3 +87,4 @@ class Gaussian(AbstractProposal):
         self.distribution = dist.Normal(self.mean, self.log_std.exp())
         x = x.to(self.device)
         return self.distribution.log_prob(x).flatten(1).sum(1)
+    
