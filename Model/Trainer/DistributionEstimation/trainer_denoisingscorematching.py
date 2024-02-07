@@ -1,6 +1,7 @@
 import torch
 from .abstract_trainer import AbstractDistributionEstimation
 import logging
+import numpy as np
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,7 +74,7 @@ class DenoisingScoreMatchingTrainer(AbstractDistributionEstimation):
         energy_opt.zero_grad()
 
         estimate_log_z, dic = self.ebm.estimate_log_z(x, self.num_samples_train)
-        estimate_log_z = estimate_log_z.mean()
+        estimate_log_z = (estimate_log_z-np.log(self.num_samples_train)).logsumexp(dim=0)
         dic_output.update(dic)
 
         

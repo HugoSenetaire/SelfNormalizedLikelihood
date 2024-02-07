@@ -56,7 +56,7 @@ class ImportanceWeightedEBM(nn.Module):
         # If we use explicit bias, set it to a first estimation of the normalization constant.
         if hasattr(self.explicit_bias, "bias"):
             log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
-            self.explicit_bias.bias.data = log_z_estimate
+            self.explicit_bias.bias.data = (log_z_estimate - np.log(self.nb_sample_init_bias)).logsumexp(dim=0).exp().detach()
 
     def sample(self, nb_sample=1, return_log_prob=False, detach_sample=True, return_dic=False):
         """
@@ -208,7 +208,6 @@ class ImportanceWeightedEBM(nn.Module):
         ESS_estimate_num = log_z_estimate.logsumexp(0) * 2
         ESS_estimate_denom = (2 * log_z_estimate).logsumexp(0)
         ESS_estimate = (ESS_estimate_num - ESS_estimate_denom).exp()
-        log_z_estimate = torch.logsumexp(log_z_estimate, dim=0) - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))
         dic_output.update(
             {
                 "z_estimation/f_theta_no_bias_on_sample_proposal": f_theta_proposal_without_bias.detach(),

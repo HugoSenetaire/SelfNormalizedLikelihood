@@ -2,6 +2,7 @@ import torch
 
 from ...Utils.noise_annealing import calculate_current_noise_annealing
 from .abstract_trainer import AbstractDistributionEstimation
+import numpy as np
 
 
 def set_bn_to_eval(m):
@@ -62,7 +63,7 @@ class SelfNormalizedTrainer(AbstractDistributionEstimation):
             return_samples=True,
             noise_annealing=current_noise_annealing,
         )
-
+        estimate_log_z = (estimate_log_z-np.log(self.num_samples_train)).logsumexp(dim=0)
 
         energy_data, dic_output = self.ebm.calculate_energy(x)
         dic_output.update(dic)

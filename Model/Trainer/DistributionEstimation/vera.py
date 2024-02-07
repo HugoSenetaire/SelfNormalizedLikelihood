@@ -43,7 +43,7 @@ class VERA(AbstractDistributionEstimation):
         parameters_proposal = [
             child.parameters()
             for name, child in self.ebm.proposal.named_children()
-            if "signa" not in name
+            if "sigma" not in name
         ]
         proposal_opt = get_optimizer(
             cfg=self.cfg.optim_proposal, list_parameters_gen=parameters_proposal

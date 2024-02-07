@@ -349,6 +349,7 @@ class AbstractDistributionEstimation:
             detach_sample=True,
             detach_base_dist=True,
         )
+        estimate_log_z = (estimate_log_z- np.log(self.num_samples_train)).logsumexp(0)
 
         current_noise = calculate_current_noise_annealing(
             self.current_step,
@@ -418,7 +419,7 @@ class AbstractDistributionEstimation:
         for i in range(nb_iteration):   
             explicit_bias_opt.zero_grad()
             loss_estimate_z, _ = self.ebm.estimate_log_z(x, self.num_samples_train)
-            loss_estimate_z = loss_estimate_z.exp() - 1
+            loss_estimate_z = (loss_estimate_z- np.log(self.num_samples_train)).logsumexp(0).exp()
             if torch.isnan(loss_estimate_z) or torch.isinf(loss_estimate_z):
                 logger.info("Loss estimate z is nan or inf")
                 break
@@ -462,8 +463,10 @@ class AbstractDistributionEstimation:
                 if hasattr(self.ebm,"sample_ais"):
                     with torch.enable_grad():
                         estimate_log_z_ais, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample_ais)
+                        estimate_log_z_ais = (estimate_log_z_ais- np.log(self.nb_sample_train_estimate)).logsumexp(0).exp()
                 with torch.enable_grad():
                     estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample)
+                    estimate_log_z = (estimate_log_z- np.log(self.nb_sample_train_estimate)).logsumexp(0).exp()
                 log_likelihood_SNL = -dic_output["energy_on_data"].mean() - estimate_log_z.exp() + 1
                 log_likelihood_IS = -dic_output["energy_on_data"].mean() - estimate_log_z
                 log_likelihood_SNL_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais.exp() + 1
@@ -609,6 +612,8 @@ class AbstractDistributionEstimation:
                         transform_back=self.transform_back,
                         step = self.current_step,
                     )
+            else :
+                self.example = torch.cat([complete_dataset.dataset_train.__getitem__(i)["data"].unsqueeze(0) for i in range(64)],dim=0,)
         else:
             self.example = None
 
@@ -855,6 +860,7 @@ class AbstractDistributionEstimation:
                 detach_base_dist=True,
                 return_samples=False,
             )
+            log_z_estimate = (log_z_estimate- np.log(nb_sample)).logsumexp(0)
         for key in dic_output_estimate_z:
             self.log(name + key + "_mean", dic_output_estimate_z[key].mean())
             self.log(name + key + "_std", dic_output_estimate_z[key].std())
@@ -864,6 +870,7 @@ class AbstractDistributionEstimation:
                     estimate_log_z_ais, dic_output_estimate_z_ais = self.ebm.estimate_log_z(self.example,
                                                 nb_sample=self.nb_sample_train_estimate,
                                                 sample_function=self.ebm.sample_ais)
+                    estimate_log_z_ais = (estimate_log_z_ais- np.log(self.nb_sample_train_estimate)).logsumexp(0)
                 for key in dic_output_estimate_z_ais:
                     self.log(name + key + "_mean_ais", dic_output_estimate_z_ais[key].mean())
                     self.log(name + key + "_std_ais", dic_output_estimate_z_ais[key].std())
