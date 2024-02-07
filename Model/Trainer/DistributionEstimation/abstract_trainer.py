@@ -126,7 +126,9 @@ class AbstractDistributionEstimation:
         if self.ebm.base_dist == self.ebm.proposal and self.train_proposal:
             self.train_base_dist = False
 
-        if self.cfg.buffer.size_buffer > 0 and self.cfg.buffer.use_buffer:
+        if  self.cfg.buffer is not None and \
+            self.cfg.buffer.size_buffer > 0 and \
+            self.cfg.buffer.use_buffer:
             self.replay_buffer = SampleBuffer(cfg=self.cfg.buffer,)
             self.prop_replay_buffer = self.cfg.buffer.prop_replay_buffer
         else : 

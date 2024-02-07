@@ -418,7 +418,7 @@ class Config:
     train: BaseTrainConfig = MISSING
     feature_extractor: Optional[Union[BaseFeatureExtractorConfig, None]] = None
     explicit_bias: BaseExplicitBiasConfig = MISSING
-    buffer: BaseBufferConfig = MISSING
+    buffer: Optional[Union[BaseBufferConfig,None]] =  None
     sampler_init_proposal: Optional[Union[BaseSamplerConfig, None]] = None
     sampler_init_buffer: Optional[Union[BaseSamplerConfig, None]] = None
     sampler_init_data: Optional[Union[BaseSamplerConfig, None]] = None
