@@ -7,3 +7,4 @@ b2: 0.999
 eps: 1.0e-8
 weight_decay: 1e-4
 clip_grad_value: null
+clip_grad_type: norm

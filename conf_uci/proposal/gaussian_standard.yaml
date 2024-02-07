@@ -1,0 +1,6 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'gaussian'
+mean : 0
+std : 1
+

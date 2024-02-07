@@ -1,0 +1,11 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'vera'
+network_proposal_name: "mlp"  # Used in network proposal
+noise_dim:  10  # Used in vera proposal
+mcmc_lr: 0.02  # Used in vera hmc proposal
+post_lr: 0.00003  # Used in vera proposal, learning rate for learning eta
+init_post_logsigma: 1.0  # Used in vera proposal, initial sigma for learning eta
+activation: null  # Used in network proposal, quite important, depends on where the data is relying
+    # If data in [0,1], sigmoid, if data in [-1,1], tanh, else None
+h_dim: 64  # Number of channels after the first conv of DCGAN

@@ -3,7 +3,7 @@ defaults:
   - dataset: checkerboard
   - base_distribution: proposal
   - default_proposal: gaussian
-  - proposal: ppca
+  - proposal: gaussian
   - proposal_training : no_proposal_training
   - energy: fc_distribution
   - ebm : ais

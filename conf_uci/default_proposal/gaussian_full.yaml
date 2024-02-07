@@ -1,0 +1,6 @@
+defaults:
+  - base_default_proposal_config_name
+proposal_name : 'gaussian_full'
+mean : dataset
+std : dataset
+

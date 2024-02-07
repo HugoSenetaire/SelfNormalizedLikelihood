@@ -1,0 +1,12 @@
+defaults:
+  - langevin_name
+sampler_name: 'langevin'
+num_chains: 8
+num_samples: 8
+warmup_steps: 20
+thinning: 60
+step_size: 1.0
+sigma: 1e-2
+clip_max_norm: 0.01
+clamp_min: 0.0
+clamp_max: 1.0

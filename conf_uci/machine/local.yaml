@@ -1,0 +1,4 @@
+defaults:
+  - local_name
+machine: "local"
+wandb_path: null

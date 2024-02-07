@@ -1,0 +1,8 @@
+defaults:
+  - nuts_name
+sampler_name: 'nuts'
+num_chains: 2
+num_samples: 10
+warmup_steps: 10
+thinning: 5
+multiprocess : false

@@ -1,0 +1,8 @@
+defaults:
+  - base_proposal_training_config_name
+train_proposal: True
+num_sample_proposal: 128
+num_sample_proposal_val: 1024
+num_sample_proposal_test: 1024
+proposal_pretraining: false
+proposal_loss_name : 'kl'

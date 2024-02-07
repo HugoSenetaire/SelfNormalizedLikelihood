@@ -1,0 +1,3 @@
+defaults:
+  - base_scheduler_config_name
+scheduler_name: 'no_scheduler'

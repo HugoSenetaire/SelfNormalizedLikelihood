@@ -2,7 +2,6 @@ defaults:
   - base_dataset_config_name
 download : True
 dataset_name : 'power_maf'
-root : '/scratch/hhjs/data/'
 batch_size : 1024
 
 

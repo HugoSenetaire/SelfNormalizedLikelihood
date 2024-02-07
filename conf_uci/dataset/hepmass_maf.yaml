@@ -1,4 +1,9 @@
 defaults:
   - base_dataset_config_name
 download : True
-dataset_name : 'checkerboard'
+dataset_name : 'hepmass_maf'
+batch_size : 1024
+
+
+
+
