@@ -32,13 +32,12 @@ logger = logging.getLogger(__name__)
 # from tensorboardX import SummaryWriter
 
 
-@hydra.main(version_base="1.1", config_path="conf_mnist", config_name="config")
+@hydra.main(version_base="1.1", config_path="conf_uci", config_name="config")
 def main(cfg):
     logger.info(OmegaConf.to_yaml(cfg))
     my_cfg = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
     cfg = helpers._trigger_post_init(cfg)
     logger.info(os.linesep + pformat(cfg))
-
     if cfg.dataset.seed is not None:
         seed_everything(cfg.dataset.seed)
 
@@ -94,6 +93,8 @@ def main(cfg):
     wandb.finish(0, True)
 
 
+
 if __name__ == "__main__":
     hydra_config.store_main()
     main()
+

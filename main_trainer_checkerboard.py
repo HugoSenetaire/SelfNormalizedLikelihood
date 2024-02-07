@@ -91,6 +91,7 @@ def main(cfg):
         max_steps = cfg.train.max_steps
 
     algo.train(max_steps, train_loader, val_loader=val_loader, test_loader=test_loader,)
+    wandb.finish(0, True)
 
 
 
