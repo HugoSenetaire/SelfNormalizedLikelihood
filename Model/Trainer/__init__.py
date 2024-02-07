@@ -10,6 +10,8 @@ from .DistributionEstimation import (
     SelfNormalizedTrainer,
     ShortTermLangevin,
     LogTrainer,
+    LogTrainerSelfNormalized,
+    SelfNormalizedShortTermTrainer,
 )
 
 
@@ -25,4 +27,6 @@ dic_trainer = {
     "kale": KALE,
     "ais_self_normalized": AnnealedImportanceSampling,
     "log_trainer": LogTrainer,
+    "log_trainer_self_normalized": LogTrainerSelfNormalized,
+    "self_normalized_short_term": SelfNormalizedShortTermTrainer,
 }

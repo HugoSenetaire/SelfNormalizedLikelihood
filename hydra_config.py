@@ -320,6 +320,7 @@ class BaseTrainConfig:
     test_every: int = 1
     save_locally: Optional[bool] = False
     start_with_IS_until: Optional[Union[None, int]] = 0
+    start_with_short_term: Optional[Union[None, int]] = 5000
 
     bias_training_iter: Optional[int] = 0
     lr_bias: Optional[float] = 1e-3
