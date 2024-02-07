@@ -46,7 +46,7 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
         base_dist,
         explicit_bias,
         cfg_ebm,
-        nb_sample_init_bias=1024,
+        nb_sample_init_bias=50000,
     ):
         self.nb_transitions_ais = cfg_ebm.nb_transitions_ais
         self.train_ais = cfg_ebm.train_ais
@@ -179,7 +179,6 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
             target_density = self.get_target(k)
             density_init = target_density(listes_samples_proposal[-1]).reshape(-1, 1)
             forward_grad = torch.autograd.grad(density_init.sum(), listes_samples_proposal[-1], create_graph=True, only_inputs=True)[0]
-            # forward_grad = clip_grad(forward_grad, clip_max_norm=self.clip_max_norm_ais, clip_max_value=self.clip_max_value_ais)
             
 
             update = torch.sqrt(2 * self.epsilons[k-1]) * eps + self.epsilons[k-1] * forward_grad
@@ -191,15 +190,6 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
                 backward_prob = dist.log_prob(eps_reverse.flatten(1)).sum(1,keepdim=True).reshape(-1, 1)
                 forward_prob = dist.log_prob(eps.flatten(1)).sum(1, keepdim=True).reshape(-1, 1)
                 liste_samples_proposal_log_prob.append(liste_samples_proposal_log_prob[-1] - backward_prob + forward_prob)
-                # print("=================")
-                # print(backward_prob.shape)
-                # print(forward_prob.shape)
-                # print(density_step.shape)
-                # print(density_init.shape)
-                # print(torch.exp(backward_prob + density_step - forward_prob - density_init).mean(0))
-                # print((backward_prob + density_step - forward_prob + density_init).mean(0).exp())
-
-                # liste_acceptance_rate.append(((backward_prob + density_step - forward_prob - density_init).logsumexp(0) - math.log(nb_sample)).exp())
                 liste_acceptance_rate.append((backward_prob + density_step - forward_prob - density_init).exp().mean(0))
                 
                 dic_step_size = self.update_stepsize(accept_rate=liste_acceptance_rate, current_tran_id=k-1, current_gradient_batch=forward_grad)
@@ -212,11 +202,6 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
                     dic[f'ais/samples_proposal_log_prob_{k-1}'] = liste_samples_proposal_log_prob[-1].mean().detach().cpu()
                     dic[f'ais/density_step_{k-1}'] = density_step.mean().detach().cpu()
                     dic[f'ais/density_init_{k-1}'] = density_init.mean().detach().cpu()
-                    # print(backward_prob.shape)
-                    # print(forward_prob.shape)
-                    # print(density_step.shape)
-                    # print(density_init.shape)
-                    # assert False
                     dic[f'ais/log_accept_rate_{k-1}'] = (backward_prob + density_step - forward_prob - density_init).mean()
                 listes_samples_proposal[-1] = listes_samples_proposal[-1].detach()
                 liste_samples_proposal_log_prob[-1] = liste_samples_proposal_log_prob[-1].detach()
@@ -232,7 +217,6 @@ class AISImportanceWeightedEBM(ImportanceWeightedEBM):
                     dic['ais/accept_rate'+str(k)] = liste_acceptance_rate[k].detach().cpu()
             else :
                 acceptance_rate_stacked = torch.stack(liste_acceptance_rate)
-                # print(acceptance_rate_stackeds.shape)
                 dic['ais/accept_rate_mean'] = acceptance_rate_stacked.mean(0).detach().cpu()
                 dic['ais/accept_rate_max'] = acceptance_rate_stacked.max(0)[0].detach().cpu()
                 dic['ais/accept_rate_min'] = acceptance_rate_stacked.min(0)[0].detach().cpu()

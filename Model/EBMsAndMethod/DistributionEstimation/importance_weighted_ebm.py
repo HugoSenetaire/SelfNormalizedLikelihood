@@ -3,6 +3,7 @@ import itertools
 import torch
 import torch.distributions as distributions
 import torch.nn as nn
+import numpy as np
 
 
 
@@ -42,7 +43,7 @@ class ImportanceWeightedEBM(nn.Module):
         base_dist,
         explicit_bias,
         cfg_ebm,
-        nb_sample_init_bias=1024,
+        nb_sample_init_bias=50000,
     ):
         super(ImportanceWeightedEBM, self).__init__()
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -53,9 +54,10 @@ class ImportanceWeightedEBM(nn.Module):
         self.explicit_bias = explicit_bias.to(device)
         self.cfg_ebm = cfg_ebm
 
+
         # If we use explicit bias, set it to a first estimation of the normalization constant.
         if hasattr(self.explicit_bias, "bias"):
-            log_z_estimate, dic = self.estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
+            log_z_estimate, dic = self.multiple_batch_estimate_log_z(torch.zeros(1,dtype=torch.float32,).to(device),nb_sample=self.nb_sample_init_bias,)
             self.explicit_bias.bias.data = (log_z_estimate - np.log(self.nb_sample_init_bias)).logsumexp(dim=0).exp().detach()
 
     def sample(self, nb_sample=1, return_log_prob=False, detach_sample=True, return_dic=False):
@@ -134,6 +136,42 @@ class ImportanceWeightedEBM(nn.Module):
 
         return current_energy, dic_output
     
+    def multiple_batch_estimate_log_z(self, x, nb_sample=1000, noise_annealing=0.0, force_calculation=False,):
+        """
+        Estimate the log normalization constant of the EBM by sampling a large number of element from the proposal sequentially
+        and then computing the log normalization constant using the importance weighted estimator.
+
+        Parameters :
+        ------------
+
+        x : torch.tensor (shape : (x.shape[0], *input_dim))
+            The input to the energy function. Not really useful here.
+
+        nb_sample : int
+            The number of samples to use to estimate the log-normalization.
+
+        Returns :
+        ---------
+        log_z_estimate : torch.tensor (shape : (1,))
+            The log-normalization estimate.
+        dic_output : dict
+            A dictionary containing the different components of the log-normalization estimate
+            (ie, f_theta of the samples, log-prob of the samples under the base distribution,
+            log-prob of the samples under the proposal, auxilary prob of the samples, log-normalization estimate)
+        """
+
+        batch_size_max = 1000
+        nb_batch = int(np.ceil(nb_sample/batch_size_max))
+        current_sample_size = min(batch_size_max, nb_sample)
+        log_z_estimate, _ = self.estimate_log_z(x, nb_sample=current_sample_size, noise_annealing=noise_annealing, force_calculation=force_calculation)
+        log_z_estimate = (log_z_estimate - torch.log(torch.tensor(nb_sample, dtype=x.dtype, device=x.device))).logsumexp(dim=0, keepdim=True)
+        for i in range(nb_batch):
+            nb_sample_current = min(batch_size_max, nb_sample - current_sample_size)
+            log_z_estimate_current, dic_output = self.estimate_log_z(x, nb_sample=nb_sample_current, noise_annealing=noise_annealing, force_calculation=force_calculation)
+            log_z_estimate = torch.cat([log_z_estimate + torch.log(torch.tensor(current_sample_size, dtype=x.dtype, device=x.device)), log_z_estimate_current]).logsumexp(dim=0, keepdim=True)
+            current_sample_size += nb_sample_current
+            log_z_estimate = (log_z_estimate - torch.log(torch.tensor(current_sample_size, dtype=x.dtype, device=x.device))).logsumexp(dim=0, keepdim=True)
+        return log_z_estimate, dic_output
 
     def estimate_log_z(
         self,
