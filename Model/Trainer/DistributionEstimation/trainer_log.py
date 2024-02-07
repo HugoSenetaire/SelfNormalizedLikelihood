@@ -1,6 +1,6 @@
 from .abstract_trainer import AbstractDistributionEstimation
-
 from ...Utils.noise_annealing import calculate_current_noise_annealing
+import numpy as np
 
 class LogTrainer(AbstractDistributionEstimation):
     """
@@ -48,6 +48,7 @@ class LogTrainer(AbstractDistributionEstimation):
             return_samples=True,
             noise_annealing=current_noise_annealing,
         )
+        estimate_log_z = (estimate_log_z-np.log(self.num_samples_train)).logsumexp(dim=0)
 
 
         energy_data, dic_output = self.ebm.calculate_energy(x)
