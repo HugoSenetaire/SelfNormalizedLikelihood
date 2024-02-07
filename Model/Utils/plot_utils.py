@@ -109,8 +109,8 @@ def plot_energy_2d(
         os.makedirs(save_dir)
     if energy_function is None:
         energy_function = lambda x: algo.ebm.calculate_energy(x)[0]
-    nx = 1000
-    ny = 1000
+    nx = 100
+    ny = 100
     min_x, max_x = algo.min_x - 1, algo.max_x + 1
     min_y, max_y = algo.min_y - 1, algo.max_y + 1
 
