@@ -1,5 +1,0 @@
-base_dist_name : 'Normal'
-base_dist_parameters :
-  mode_cov : 'spherical'
-  learn_mu : False
-  learn_logstd : False

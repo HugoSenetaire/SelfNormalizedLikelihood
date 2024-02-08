@@ -1,3 +1,0 @@
-base_dist_name : 'gaussian_mixture'
-base_dist_parameters :
-  n_components : 5

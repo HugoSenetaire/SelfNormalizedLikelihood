@@ -1,9 +1,0 @@
-
-trainer_name : 'score_matching'
-max_epoch : 75
-save_energy_every : 9
-samples_every: 500
-batch_size : 512
-nb_sample_init_bias : 1024
-explicit_bias : True
-num_sample_proposal : 512

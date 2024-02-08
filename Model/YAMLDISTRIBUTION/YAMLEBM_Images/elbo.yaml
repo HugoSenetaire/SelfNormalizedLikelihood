@@ -1,6 +1,0 @@
-max_steps : 10000
-save_energy_every : 1000
-samples_every: 100
-batch_size : 64
-nb_sample_init_bias : 1024
-explicit_bias : True

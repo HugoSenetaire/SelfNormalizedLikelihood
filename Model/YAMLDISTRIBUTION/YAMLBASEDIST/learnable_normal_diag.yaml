@@ -1,5 +1,0 @@
-base_dist_name : 'Normal'
-base_dist_parameters :
-  mode_cov : 'diag'
-  learn_mu : True
-  learn_logstd : True

@@ -1,4 +1,0 @@
-energy_name: 'ising'
-energy_parameters :
-  learn_W: true
-  learn_b: true
