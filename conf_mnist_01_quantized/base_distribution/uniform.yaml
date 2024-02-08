@@ -1,0 +1,7 @@
+defaults:
+  - base_distribution_config_name
+proposal_name : 'uniform'
+train_base_dist: false
+min_data : 0.0
+max_data : 1.0
+

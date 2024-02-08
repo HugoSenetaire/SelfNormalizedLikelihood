@@ -1,0 +1,5 @@
+defaults:
+  - base_default_proposal_config_name
+proposal_name : 'uniform'
+min_data : 0.0
+max_data : 1.0

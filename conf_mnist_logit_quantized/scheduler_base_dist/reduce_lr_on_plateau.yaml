@@ -1,0 +1,7 @@
+defaults:
+  - base_scheduler_config_name
+scheduler_name: 'reduce_lr_on_plateau'
+factor : 0.5
+patience : 5
+cooldown : 5
+feedback_loss : 'SNL'

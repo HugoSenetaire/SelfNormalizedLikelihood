@@ -1,4 +1,0 @@
-defaults:
-  - base_energy_config_name
-energy_name: 'fc'
-ebm_pretraining: null

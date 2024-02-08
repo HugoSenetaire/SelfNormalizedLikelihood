@@ -1,4 +1,0 @@
-defaults:
-  - dtu_cluster_name
-machine: "dtu_cluster"
-wandb_path: null

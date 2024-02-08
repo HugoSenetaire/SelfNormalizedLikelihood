@@ -1,7 +1,0 @@
-defaults:
-  - base_proposal_config_name
-proposal_name : 'gaussian_full'
-mean : dataset
-std : dataset
-nb_sample_estimate : 50000
-

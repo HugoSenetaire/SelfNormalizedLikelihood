@@ -1,6 +1,0 @@
-defaults:
-  - base_default_proposal_config_name
-proposal_name : 'gaussian'
-mean : dataset
-std : dataset
-

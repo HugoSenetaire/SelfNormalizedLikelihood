@@ -1,0 +1,9 @@
+defaults:
+  - adamw_name
+optimizer: "adamw"
+lr: 1e-3
+b1: 0.0
+b2: 0.999
+eps: 1.0e-8
+weight_decay: 1e-2
+clip_grad_type: null

@@ -1,7 +1,0 @@
-defaults:
-  - base_proposal_config_name
-proposal_name : 'pytorch_flows'
-pytorch_flow_name : 'maf'
-pytorch_flow_hidden_dim : 512
-pytorch_flow_num_blocks : 5
-pytorch_flow_act : 'tanh'

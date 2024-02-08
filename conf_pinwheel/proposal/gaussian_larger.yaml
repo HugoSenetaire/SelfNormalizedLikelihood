@@ -1,6 +1,0 @@
-defaults:
-  - base_proposal_config_name
-proposal_name : 'gaussian'
-mean : dataset
-std : dataset
-std_multiplier : 3.0 # After estimation, multiply the std by this value

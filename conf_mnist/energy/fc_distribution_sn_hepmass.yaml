@@ -1,5 +1,0 @@
-defaults:
-  - base_energy_config_name
-energy_name: 'fc_sn'
-ebm_pretraining: null
-dims : [512, 512, 512, 512, 512]

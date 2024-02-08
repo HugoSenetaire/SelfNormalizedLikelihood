@@ -1,0 +1,5 @@
+defaults:
+  - base_dataset_config_name
+download : True
+dataset_name : 'FashionMNIST'
+batch_size : 128

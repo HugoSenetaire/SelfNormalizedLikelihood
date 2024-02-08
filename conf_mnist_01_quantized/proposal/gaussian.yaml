@@ -1,0 +1,7 @@
+defaults:
+  - base_proposal_config_name
+proposal_name : 'gaussian'
+train_base_dist: false
+mean : dataset
+std : dataset
+
