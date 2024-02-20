@@ -1,6 +1,6 @@
 defaults:
   - base_energy_config_name
-energy_name: 'fc'
+energy_name: 'fc_sn'
 ebm_pretraining: null
-dims: [256, 256, 256,]
+dims: [256, 256, 256, 256]
 last_layer_bias: false

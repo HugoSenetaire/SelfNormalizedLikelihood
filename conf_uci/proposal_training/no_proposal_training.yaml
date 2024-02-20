@@ -2,7 +2,7 @@ defaults:
   - base_proposal_training_config_name
 train_proposal: false
 num_sample_proposal: 128
-num_sample_proposal_val: 1024
+num_sample_proposal_val: 10000
 num_sample_proposal_test: 20000
-num_sample_train_estimate : 1024
+num_sample_train_estimate: 1000
 proposal_pretraining: false

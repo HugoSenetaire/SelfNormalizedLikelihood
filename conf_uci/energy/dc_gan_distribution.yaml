@@ -1,5 +1,0 @@
-defaults:
-  - base_energy_config_name
-energy_name: 'dc_gan'
-ebm_pretraining: null
-activation: null
