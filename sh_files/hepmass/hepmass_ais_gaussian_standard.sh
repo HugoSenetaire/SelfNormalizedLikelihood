@@ -13,7 +13,7 @@ echo -e "Working dir: $(pwd)\n"
 
 source ~/.bashrc
 conda activate /scratch/project/dd-23-138/conda_envs/pytorch_env
-python main_trainer_uci.py --multirun dataset=hepmass_maf base_distributon=no_base_distribution \
+python main_trainer_uci.py --multirun dataset=hepmass_maf proposal=gaussian \
 ebm.train_ais=True ebm.nb_transitions_ais=10,20,50 \
 ebm.step_size_ais=0.05,0.1,0.01 regularization.l2_output=0. \
 regularization.l2_grad=0.1,1.0,0.01 train.max_epochs=50 

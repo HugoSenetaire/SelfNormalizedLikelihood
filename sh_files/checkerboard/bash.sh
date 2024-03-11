@@ -1,0 +1,4 @@
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/checkerboard/fullshort_term_checkerboard_ais_no_base.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/checkerboard/fullshort_term_checkerboard_ais.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/checkerboard/fullshort_term_checkerboard_noais_no_base.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/checkerboard/fullshort_term_checkerboard_noais.sh

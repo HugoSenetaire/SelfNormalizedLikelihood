@@ -52,8 +52,8 @@ class SelfNormalizedShortTermTrainer(AbstractDistributionEstimation):
             self.cfg.train.noise_annealing_gamma,
         )
 
-        if hasattr(self.ebm.proposal, "set_x"):
-            self.ebm.proposal.set_x(x)
+        if hasattr(self.proposal, "set_x"):
+            self.proposal.set_x(x)
 
         estimate_log_z, dic, energy_samples, x_gen, x_gen_noisy = self.ebm.estimate_log_z(
             x,
@@ -69,6 +69,9 @@ class SelfNormalizedShortTermTrainer(AbstractDistributionEstimation):
         dic_output.update(dic)
         # estimate_log_z = estimate_log_z.mean()
 
+        if self.cfg.train.start_with_short_term is not None and self.current_step == self.cfg.train.start_with_short_term:
+            self.ebm.explicit_bias.requires_grad = True
+            self.ebm.initialize_explicit_bias()
         if (
             self.cfg.train.start_with_short_term is not None
             and self.current_step < self.cfg.train.start_with_short_term
@@ -76,7 +79,6 @@ class SelfNormalizedShortTermTrainer(AbstractDistributionEstimation):
             self.ebm.explicit_bias.requires_grad = False
             loss_estimate_z = -self.ebm.calculate_energy(x_gen)[0].mean()
         else:
-            self.ebm.explicit_bias.requires_grad = True
             loss_estimate_z = estimate_log_z.exp() - 1
 
 

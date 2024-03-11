@@ -45,7 +45,7 @@ class PersistentReplayLangevin(AbstractDistributionEstimation):
 
         self.sigma_data = cfg.train.sigma_data
 
-        assert self.ebm.proposal is not None, "The proposal should not be None"
+        assert self.proposal is not None, "The proposal should not be None"
 
 
     def training_energy(self, x):

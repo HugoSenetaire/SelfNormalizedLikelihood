@@ -1,5 +1,5 @@
 from .categorical import get_EnergyCategoricalDistrib
-from .conv import get_ConvEnergy, get_ConvEnergy_nijkamp
+from .conv import get_ConvEnergy, get_ConvEnergy_nijkamp, get_ConvEnergy_nijkamp_sn
 from .dcgan_discriminator import get_BNDC_GAN_Discriminator, get_DC_GAN_Discriminator
 from .dcgan_discriminator_SN import (
     get_DC_GAN_DiscriminatorSN,

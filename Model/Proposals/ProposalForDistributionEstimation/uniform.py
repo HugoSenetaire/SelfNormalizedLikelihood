@@ -30,8 +30,8 @@ class Uniform(AbstractProposal):
         min_uniform="dataset",
         max_uniform="dataset",
         nb_sample_estimate=10000,
-        shift_min=-1,
-        shift_max=1,
+        shift_min=0,
+        shift_max=0,
         **kwargs
     ) -> None:
         super().__init__(input_size=input_size)
@@ -53,6 +53,7 @@ class Uniform(AbstractProposal):
         else :
             self.max_data= nn.parameter.Parameter(data.min(0)[0]+torch.tensor(shift_max, device=data.device), requires_grad=False)
 
+        print(self.min_data, self.max_data)
 
         print("Init Standard Gaussian... end")
 

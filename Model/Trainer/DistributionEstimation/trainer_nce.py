@@ -55,8 +55,8 @@ class NCETrainer(AbstractDistributionEstimation):
         x = x.requires_grad_()
 
         batch_size = x.shape[0]
-        if hasattr(self.ebm.proposal, "set_x"):
-            self.ebm.proposal.set_x(x)
+        if hasattr(self.proposal, "set_x"):
+            self.proposal.set_x(x)
 
         energy_data, dic_output = self.ebm.calculate_energy(
             x,
@@ -64,7 +64,7 @@ class NCETrainer(AbstractDistributionEstimation):
         energy_data = energy_data.reshape(
             x.shape[0],
         )
-        log_prob_proposal_data = self.ebm.proposal.log_prob(x).reshape(
+        log_prob_proposal_data = self.proposal.log_prob(x).reshape(
             x.shape[0],
         )
 
@@ -88,7 +88,7 @@ class NCETrainer(AbstractDistributionEstimation):
             base_dist_log_prob = torch.zeros_like(energy_samples).detach()
         energy_samples = energy_samples - base_dist_log_prob
         log_prob_proposal_samples = (
-            self.ebm.proposal.log_prob(samples)
+            self.proposal.log_prob(samples)
             .reshape(samples.shape[0], -1)
             .sum(1)
             .unsqueeze(1)

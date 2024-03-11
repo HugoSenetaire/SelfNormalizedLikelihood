@@ -42,7 +42,7 @@ class ShortTermLangevin(AbstractDistributionEstimation):
         self.clip_max_value = cfg.train.clip_max_value
         self.sigma_data = cfg.train.sigma_data
 
-        assert self.ebm.proposal is not None, "The proposal should not be None"
+        assert self.proposal is not None, "The proposal should not be None"
 
     def training_energy(self, x):
         # Get parameters
@@ -51,7 +51,7 @@ class ShortTermLangevin(AbstractDistributionEstimation):
         explicit_bias_opt.zero_grad()
 
         x_data = x + torch.randn_like(x) * self.sigma_data
-        x_init = self.ebm.proposal.sample(self.num_samples_train)
+        x_init = self.proposal.sample(self.num_samples_train)
 
         for k in range(self.nb_steps_langevin):
             x_init = langevin_step(

@@ -1,7 +1,7 @@
 import numpy as np
 
-from ..EBMsAndMethod import dic_ebm
-from ..Energy import get_energy, get_explicit_bias
+from ..ZEstimator import dic_z_estimator
+from ..Energy import get_energy, get_explicit_bias, FullEBM
 from ..Proposals import get_base_dist, get_proposal
 from .init_proposals import (
     init_energy_to_gaussian,
@@ -15,11 +15,10 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
 
     # Get energy function :
     print("Get energy function")
-    energy = get_energy(input_size, cfg)
+    fnn = get_energy(input_size, cfg)
     print("Get energy function... end")
 
 
-    
 
     if cfg.base_distribution.proposal_name == "proposal":
         # Get proposal :
@@ -66,7 +65,6 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
             raise ValueError("No proposal given")
 
     # Get base_dist :
-    print("Get base_dist")
     base_dist = get_base_dist(
         cfg=cfg,
         proposal=proposal,
@@ -75,7 +73,6 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
     )
     if cfg.base_distribution.proposal_name == "proposal":
         assert proposal == base_dist, "Proposal and base_dist should be the same"
-    print("Get base_dist... end")
 
     # if base_dist is None and ('ebm_pretraining' not in args_dict.keys() or args_dict['ebm_pretraining'] is None):
     if base_dist is None and cfg.energy.ebm_pretraining is None:
@@ -103,18 +100,18 @@ def get_model(cfg, complete_dataset, complete_masked_dataset, loader_train):
 
     explicit_bias = get_explicit_bias(cfg)
 
-    # Get EBM :
+    ebm = FullEBM(fnn, base_dist, explicit_bias)
+
+    # Get z_estimator :
     print("Get EBM")
     
     
-    ebm = dic_ebm[cfg.ebm.ebm_name](
-        f_theta=energy,
+    z_estimator = dic_z_estimator[cfg.ebm.z_estimator_name](
+        energy=energy,
         proposal=proposal,
-        base_dist=base_dist,
-        explicit_bias=explicit_bias,
         cfg_ebm=cfg.ebm,
         nb_sample_init_bias=cfg.explicit_bias.nb_sample_init_bias,
     )
     print("Get EBM... end")
 
-    return ebm
+    return ebm, z_estimator

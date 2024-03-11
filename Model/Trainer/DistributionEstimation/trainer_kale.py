@@ -51,7 +51,7 @@ class KALE(AbstractDistributionEstimation):
         energy_data = self.ebm.f_theta(x)
         bias = self.ebm.explicit_bias(x)
 
-        sample = self.ebm.proposal.sample(self.num_samples_train)
+        sample = self.proposal.sample(self.num_samples_train)
         energy_sample = self.ebm.f_theta(sample)
 
         loss_data = -energy_data.mean() - bias

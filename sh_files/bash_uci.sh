@@ -1,0 +1,12 @@
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/gas/gas_ais_gaussian_standard.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/gas/gas_ais_gaussian_standard_nobase.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/hepmass/hepmass_ais_gaussian_standard_nobase.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/hepmass/hepmass_ais_gaussian_standard.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/power/power_ais_gaussian_standard.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/power/power_ais_gaussian_standard_nobase.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/gas/gas_ais_gaussian_full.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/gas/gas_ais_gaussian_full_nobase.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/hepmass/hepmass_ais_gaussian_full_nobase.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/hepmass/hepmass_ais_gaussian_full.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/power/power_ais_gaussian_full.sh
+sbatch /scratch/project/dd-23-138/SelfNormalizedLikelihood/sh_files/power/power_ais_gaussian_full_nobase.sh

@@ -46,7 +46,7 @@ class AnnealedImportanceSampling(AbstractDistributionEstimation):
 
 
 
-        assert (self.ebm.proposal is not None or self.ebm.base_dist is not None), "The proposal or the base dist should not be None"
+        assert (self.proposal is not None or self.ebm.base_dist is not None), "The proposal or the base dist should not be None"
         assert not self.train_base_dist, "The base dist should not be trained"
         assert not self.train_proposal, "The proposal should not be trained"
 

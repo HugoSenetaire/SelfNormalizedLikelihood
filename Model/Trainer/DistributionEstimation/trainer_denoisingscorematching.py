@@ -61,8 +61,8 @@ class DenoisingScoreMatchingTrainer(AbstractDistributionEstimation):
     def training_step(self, x,):
         energy_opt, base_dist_opt, proposal_opt = self.optimizers
 
-        if hasattr(self.ebm.proposal, 'set_x'):
-            self.ebm.proposal.set_x(x)
+        if hasattr(self.proposal, 'set_x'):
+            self.proposal.set_x(x)
 
         loss_total, dic_output = self.denoising_score_matching(x)
         self.log("train_loss", loss_total.mean())

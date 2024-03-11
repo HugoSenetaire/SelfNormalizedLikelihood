@@ -9,7 +9,7 @@ class MockBias(nn.Module):
     def __init__(self, input_size_x_feature=1, ):
         super().__init__()
         self.input_size_x_feature = input_size_x_feature
-        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=True)
+        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=False)
     
     def add_bias(self, x):
         return x
@@ -21,7 +21,7 @@ class ScalarBias(nn.Module):
     def __init__(self, input_size_x_feature=1, ):
         super().__init__()
         self.input_size_x_feature = input_size_x_feature
-        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=True)
+        self.bias = nn.Parameter(torch.zeros(1, dtype=torch.float32), requires_grad=False)
 
     def add_bias(self, x):
         return x + self.bias

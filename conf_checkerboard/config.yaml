@@ -6,7 +6,7 @@ defaults:
   - proposal: gaussian
   - proposal_training : no_proposal_training
   - energy: fc_distribution
-  - ebm : ais
+  - z_estimator : ais
   - feature_extractor : null
   - explicit_bias : scalar_explicit_bias
   - train: self_normalized_short_term

@@ -37,8 +37,8 @@ class LogTrainer(AbstractDistributionEstimation):
             self.cfg.train.noise_annealing_gamma,
         )
 
-        if hasattr(self.ebm.proposal, "set_x"):
-            self.ebm.proposal.set_x(x)
+        if hasattr(self.proposal, "set_x"):
+            self.proposal.set_x(x)
 
         estimate_log_z, dic, energy_samples, x_gen, x_gen_noisy = self.ebm.estimate_log_z(
             x,

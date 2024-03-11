@@ -1,1 +1,1 @@
-from .Distribution import get_energy, get_explicit_bias
+from .Distribution import get_energy, get_explicit_bias, FullEBM

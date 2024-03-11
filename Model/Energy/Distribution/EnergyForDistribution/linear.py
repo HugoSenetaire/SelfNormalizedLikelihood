@@ -73,7 +73,7 @@ class fc_energy_sn(nn.Module):
         input_size=(1, 10),
         dims=[100, 100, 100],
         activation=None,
-        last_layer_bias=True,
+        last_layer_bias=False,
     ) -> None:
         super().__init__()
         self.input_size = input_size

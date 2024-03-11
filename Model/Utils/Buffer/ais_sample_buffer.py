@@ -31,9 +31,9 @@ class AIS_Sample_Buffer(SampleBuffer):
             ebm.base_dist.eval()
             to_sample_from = ebm.base_dist
         else:
-            ebm.proposal.eval()
+            proposal.eval()
             use_base_dist = False
-            to_sample_from = ebm.proposal
+            to_sample_from = proposal
 
         for _ in range(self.max_size_buffer):
             with torch.no_grad():

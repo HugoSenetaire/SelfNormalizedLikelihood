@@ -27,7 +27,7 @@ class VERA(AbstractDistributionEstimation):
 
         self.entropy_weight = cfg.train.entropy_weight
         assert (
-            self.ebm.proposal != self.ebm.base_dist
+            self.proposal != self.ebm.base_dist
         ), "The proposal and the base distribution should be different"
 
     def configure_optimizers(self):
@@ -42,7 +42,7 @@ class VERA(AbstractDistributionEstimation):
         opt_list = super().configure_optimizers()
         parameters_proposal = [
             child.parameters()
-            for name, child in self.ebm.proposal.named_children()
+            for name, child in self.proposal.named_children()
             if "sigma" not in name
         ]
         proposal_opt = get_optimizer(
@@ -59,7 +59,7 @@ class VERA(AbstractDistributionEstimation):
         energy_opt, base_dist_opt, proposal_opt = self.optimizers
 
 
-        x_gen, h_gen = self.ebm.proposal.sample_vera(self.num_samples_train)
+        x_gen, h_gen = self.proposal.sample_vera(self.num_samples_train)
         x_gen_detach = x_gen.detach()
 
         # Energy loss :
@@ -94,7 +94,7 @@ class VERA(AbstractDistributionEstimation):
         ebm_gn = grad_e_gen.norm(2, 1).mean()
         dic_output["ebm_gn"] = ebm_gn
         if self.entropy_weight != 0.0:
-            entropy_obj, ent_gn = self.ebm.proposal.entropy_obj(x_gen, h_gen)
+            entropy_obj, ent_gn = self.proposal.entropy_obj(x_gen, h_gen)
             dic_output["ent_gn"] = ent_gn
 
         logq_obj = -energy_gen.mean() + self.entropy_weight * entropy_obj

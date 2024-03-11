@@ -6,9 +6,9 @@ import wandb
 import time
 def get_wandb_logger(cfg, my_cfg):
     project_name = f"SNL_{cfg.dataset.dataset_name}"
-    experiment_name = f"{cfg.train.trainer_name}"
-    if cfg.ebm.ebm_name == 'ais':
-        experiment_name += f"_ais_{cfg.ebm.train_ais}"
+    experiment_name = f"{cfg.train.trainer_name}_q_{cfg.proposal.proposal_name}_b_{cfg.base_distribution.proposal_name}"
+    if cfg.ebm.z_estimator_name == 'ais':
+        experiment_name += f"_aisk_{cfg.ebm.nb_step_ais}_aistr_{cfg.ebm.nb_transitions_ais}"
     experiment_name += f"_{time.strftime('%Y-%m-%d_%H-%M-%S')}"
     if cfg.machine is not None:
             if cfg.machine.machine == "karolina":

@@ -42,7 +42,7 @@ def plot_contour_evolution(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     xy = torch.from_numpy(xy).float().to(device)
     with torch.enable_grad():
-        samples_ais, samples_ais_log_prob = algo.ebm.sample_ais(nb_sample=1000, return_log_prob=True, detach_sample=False, return_full_list=True)
+        samples_ais, samples_ais_log_prob = algo.ebm.sample_ais(nb_sample=1000, return_log_prob=True, detach_sample=False,)
     liste_energy_sample_ais = []
     for k in range(len(samples_ais)):
         energy_samples_ais = - algo.ebm.calculate_energy(samples_ais[k])[0].flatten() - samples_ais_log_prob[k].flatten()
@@ -68,8 +68,6 @@ def plot_contour_evolution(
                 current_s.clamp_max_(max_y)
                 current_s.clamp_min_(min_y)
                 if i == len(samples_aux) - 1:
-                    # print(liste_energy_sample_ais[k].min(), liste_energy_sample_ais[k].max())
-                    # print(liste_energy_sample_ais[k].mean(), liste_energy_sample_ais.std())
                     axs[k, i + 1].scatter(current_s[:, 0], current_s[:, 1], c=liste_energy_sample_ais[k].flatten(), alpha=0.1, )
                 else :
                     axs[k, i + 1].scatter(current_s[:, 0], current_s[:, 1], c="r", alpha=0.1)

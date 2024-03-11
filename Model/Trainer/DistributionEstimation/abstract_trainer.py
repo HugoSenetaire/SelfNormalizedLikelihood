@@ -5,7 +5,6 @@ import os
 import numpy as np
 import torch
 import tqdm
-from omegaconf import OmegaConf, open_dict
 from wandb import log, watch
 
 from ...Sampler import get_sampler
@@ -35,6 +34,7 @@ class AbstractDistributionEstimation:
     Attributes:
     ----------
         ebm (EBM): The energy based model to train
+        proposal (Proposal): The proposal distribution used to train the EBM
         cfg (dataclass): The dataclass containing all the arguments
         complete_dataset (Dataset): One of the dataset to sample from for visualization
         sampler (Sampler): The sampler to use for the visualization of the samples
@@ -65,6 +65,7 @@ class AbstractDistributionEstimation:
     def __init__(
         self,
         ebm,
+        z_estimator,
         cfg,
         device,
         logger,
@@ -89,6 +90,7 @@ class AbstractDistributionEstimation:
         """
         super().__init__()
         self.ebm = ebm
+        self.z_estimator = z_estimator
         self.cfg = cfg
         self.dtype = dtype
         self.logger = logger
@@ -96,8 +98,9 @@ class AbstractDistributionEstimation:
         self.device = device
         self.current_step = 0
         self.last_sample_step = -float("inf")
-        self.test_type = "test"
 
+        # Depending on the type of transform of the dataset, we might want to visualize the samples back to their original domain
+        # This is defined by transformed back in the dataset
         if hasattr(complete_dataset, "transform_back"):
             self.transform_back = complete_dataset.transform_back
         else:
@@ -108,6 +111,7 @@ class AbstractDistributionEstimation:
         self.num_samples_val = cfg.proposal_training.num_sample_proposal_val
         self.num_samples_test = cfg.proposal_training.num_sample_proposal_test
 
+        # Depending on the type of input, we might want to visualize the samples differently
         if np.prod(cfg.dataset.input_size) == 2:
             self.input_type = "2d"
         elif len(cfg.dataset.input_size) == 1:
@@ -118,14 +122,13 @@ class AbstractDistributionEstimation:
             self.input_type = "other"
 
         self.proposal_loss_name = cfg.proposal_training.proposal_loss_name
-
         self.proposal_loss = proposal_loss_getter(self.proposal_loss_name)
 
         self.train_proposal = cfg.proposal_training.train_proposal
         self.train_base_dist = cfg.base_distribution.train_base_dist
-        if self.ebm.base_dist == self.ebm.proposal and self.train_proposal:
+        if self.ebm.base_dist == self.proposal and self.train_proposal:
             self.train_base_dist = False
-
+        
         if  self.cfg.buffer is not None and \
             self.cfg.buffer.size_buffer > 0 and \
             self.cfg.buffer.use_buffer:
@@ -144,13 +147,13 @@ class AbstractDistributionEstimation:
     def update_sample_buffer(self, x, id):
         if self.replay_buffer is not None and self.cfg.buffer.size_buffer>0:
             if len(self.replay_buffer) < self.num_samples_train:  # In the original code, it's batch size here
-                x_init = self.ebm.proposal.sample(self.num_samples_train).detach()
+                x_init = self.z_estimator.sample(self.num_samples_train).detach()
                 id_init = torch.randint(0, 10, (self.num_samples_train,), device=x.device)
             else :
                 n_replay = (np.random.rand(self.num_samples_train) < self.prop_replay_buffer).sum()
                 replay_sample, replay_id = self.replay_buffer.get(n_replay, device=x.device)
                 if self.num_samples_train - n_replay > 0 :
-                    random_sample = self.ebm.proposal.sample(self.num_samples_train - n_replay)
+                    random_sample = self.z_estimator.sample(self.num_samples_train - n_replay)
                     random_id = torch.randint(0, 10, (self.num_samples_train - n_replay,), device=x.device)
                     x_init = torch.cat([replay_sample, random_sample], 0).detach()
                     id_init = torch.cat([replay_id, random_id], 0)
@@ -162,7 +165,7 @@ class AbstractDistributionEstimation:
             for k in range(self.cfg.buffer.nb_steps_langevin):
                 x_init = langevin_step(
                     x_init=x_init,
-                    energy=lambda x: self.ebm.calculate_energy(x, None)[0],
+                    energy=lambda x: self.ebm(x)[0],
                     step_size=self.cfg.buffer.step_size_langevin,
                     sigma=self.cfg.buffer.sigma_langevin,
                     clip_max_norm=self.cfg.buffer.clip_max_norm,
@@ -176,12 +179,10 @@ class AbstractDistributionEstimation:
                     self.replay_buffer.save_buffer(self,)
 
     def on_train_start(self):
-        watch(self.ebm.f_theta, log="all", log_freq=self.cfg.train.log_every_n_steps)
-        watch(self.ebm.proposal, log="all", log_freq=self.cfg.train.log_every_n_steps)
+        watch(self.ebm.fnn, log="all", log_freq=self.cfg.train.log_every_n_steps)
         watch(self.ebm.base_dist, log="all", log_freq=self.cfg.train.log_every_n_steps)
-
-    def log(self, name, value):
-        self.logger.log({name: value}, step=self.current_step)
+        watch(self.ebm.bias, log="all", log_freq=self.cfg.train.log_every_n_steps)
+        watch(self.z_estimator.proposal, log="all", log_freq=self.cfg.train.log_every_n_steps)
 
     def training_energy(self, x):
         """
@@ -196,50 +197,19 @@ class AbstractDistributionEstimation:
         """
         The training step to be defined in inherited classes.
         """
-        x = batch["data"].to(
-            self.device,
-        )
+        x = batch["data"].to(self.device,)
+        
+        # If the batch has a target, use it, otherwise, use a random target
         if "target" in batch.keys():
-            target = batch["target"].to(
-                self.device,
-            )
+            target = batch["target"].to(self.device,)
         else:
             target = torch.randint(0, 10, (x.shape[0],), device=x.device)
+        
+        # Update the sample buffer
         self.update_sample_buffer(x, target)
-
-        if (self.train_proposal and self.cfg.train.nb_energy_steps is not None and self.cfg.train.nb_energy_steps > 0):
-            if self.current_step % (self.cfg.train.nb_energy_steps + 1) != 0:
-                self.fix_proposal()
-                self.free_f_theta()
-                self.free_explicit_bias()
-                if self.train_base_dist:
-                    self.free_base_dist()
-                else:
-                    self.fix_base_dist()
-                loss, dic_output = self.training_energy(x,)
-            else:
-                self.fix_f_theta()
-                self.fix_explicit_bias()
-                self.fix_base_dist()
-                self.free_proposal()
-                loss, dic_output = self.proposal_step(x,)
-        else:
+        if self.train_proposal:
             self.fix_proposal()
-            self.free_f_theta()
-            self.free_explicit_bias()
-            if self.train_base_dist:
-                self.free_base_dist()
-            else:
-                self.fix_base_dist()
-            loss, dic_output = self.training_energy(x)
-            if self.train_proposal:
-                self.fix_f_theta()
-                self.fix_explicit_bias()
-                self.fix_base_dist()
-                self.free_proposal()
-                loss, dic_output_proposal = self.proposal_step(x)
-                dic_output.update(dic_output_proposal)
-
+        loss, dic_output = self.training_energy(x,)
         self.post_train_step_handler(x, dic_output,)
 
     def backward_and_reg(self, loss_energy, loss_samples, x, x_gen = None, energy_data = torch.zeros(1), energy_samples = torch.zeros(1),):
@@ -251,7 +221,7 @@ class AbstractDistributionEstimation:
         # Regularization
         if self.cfg.regularization.l2_grad is not None and self.cfg.regularization.l2_grad > 0:
             if x_gen is None:
-                x_gen = self.ebm.proposal.sample(self.num_samples_train)
+                x_gen = self.z_estimator.sample(self.num_samples_train)
             grad_norm = wgan_gradient_penalty(self.ebm, x, x_gen)
             dic_loss["l2_grad"] = self.cfg.regularization.l2_grad * grad_norm
             self.log("penalty/grad_norm", grad_norm)
@@ -289,9 +259,6 @@ class AbstractDistributionEstimation:
                 dic_loss[key].backward(retain_graph=True)
         else :
             loss_total.backward()
-            
-
-
         return loss_total
         
     def grad_clipping(self, ):
@@ -343,23 +310,22 @@ class AbstractDistributionEstimation:
         base_dist_opt.zero_grad()
         proposal_opt.zero_grad()
 
-        estimate_log_z, dic = self.ebm.estimate_log_z(
+        estimate_log_z, samples, dic = self.z_estimator.estimate_log_z(
             x,
             self.num_samples_train,
             detach_sample=True,
             detach_base_dist=True,
         )
-        estimate_log_z = (estimate_log_z- np.log(self.num_samples_train)).logsumexp(0)
+        estimate_log_z = (estimate_log_z- np.log(self.num_samples_train)).logsumexp()
 
-        current_noise = calculate_current_noise_annealing(
-            self.current_step,
-            self.cfg.proposal_training.noise_annealing_init,
-            self.cfg.proposal_training.noise_annealing_gamma,
-        )
+        # current_noise = calculate_current_noise_annealing(
+        #     self.current_step,
+        #     self.cfg.proposal_training.noise_annealing_init,
+        #     self.cfg.proposal_training.noise_annealing_gamma,
+        # )
+        # noisy_data = x + torch.randn_like(x) * current_noise
 
-        noisy_data = x + torch.randn_like(x) * current_noise
-
-        log_prob_proposal_data = self.ebm.proposal.log_prob(noisy_data)
+        log_prob_proposal_data = self.z_estimator.proposal.log_prob(x)
         proposal_loss = self.proposal_loss(
             log_prob_proposal_data,
             estimate_log_z,
@@ -369,7 +335,6 @@ class AbstractDistributionEstimation:
         self.grad_clipping()
 
         proposal_opt.step()
-        self.log("train_proposal/extra_noise", current_noise)
         self.log("train_proposal/proposal_log_likelihood", log_prob_proposal_data.mean())
         self.log("train_proposal/estimate_log_z", estimate_log_z.mean())
         self.log("train_proposal/proposal_loss", proposal_loss.mean())
@@ -387,14 +352,13 @@ class AbstractDistributionEstimation:
                 for batch in tqdm.tqdm(val_loader):
                     self.validation_step(batch, self.current_step, liste_val)
                 self.on_validation_epoch_end(outputs=liste_val)
-
+        
         nb_epochs = int(np.ceil(nb_steps / len(loader_train)))
         for epoch in range(nb_epochs):
-            print(f"Epoch {epoch} / {nb_epochs}")
+            print(f"Epoch {epoch+1} / {nb_epochs}")
             self.ebm.train()
             for batch in tqdm.tqdm(loader_train):
                 self.training_step(batch, self.current_step)
-                self.current_step += 1
             with torch.no_grad():
                 self.ebm.eval()
                 if val_loader is not None:
@@ -407,25 +371,7 @@ class AbstractDistributionEstimation:
                         self.test(test_loader)
             if self.current_step >= nb_steps:
                 break
-        
 
-    def train_bias(self, x, nb_iteration,):
-        self.fix_base_dist()
-        self.fix_f_theta()
-        self.fix_proposal()
-        self.free_explicit_bias()
-
-        f_theta_opt, explicit_bias_opt, base_dist_opt, proposal_opt = self.optimizers
-        for i in range(nb_iteration):   
-            explicit_bias_opt.zero_grad()
-            loss_estimate_z, _ = self.ebm.estimate_log_z(x, self.num_samples_train)
-            loss_estimate_z = (loss_estimate_z- np.log(self.num_samples_train)).logsumexp(0).exp()
-            if torch.isnan(loss_estimate_z) or torch.isinf(loss_estimate_z):
-                logger.info("Loss estimate z is nan or inf")
-                break
-            loss_estimate_z.mean().backward()
-            explicit_bias_opt.step()
-        explicit_bias_opt.zero_grad()
 
 
     def post_train_step_handler(self, x, dic_output):
@@ -446,44 +392,53 @@ class AbstractDistributionEstimation:
             if scheduler is not None :
                 scheduler.step()
         
+        if self.current_step % self.cfg.train.log_every_n_steps == 0:
+            for name, optim in zip(self.liste_optimizer_name, self.optimizers):
+                for group in optim.param_groups:
+                    self.log(f"optim/{name}_lr", group["lr"])
+                    break
 
-        for name, optim in zip(self.liste_optimizer_name, self.optimizers):
-            for group in optim.param_groups:
-                self.log(f"optim/{name}_lr", group["lr"])
-                break
+            with torch.no_grad():
+                # Just in case it's an adaptive proposal that requires x
+                if hasattr(self.z_estimator.proposal, "set_x"):
+                    self.z_estimator.proposal.set_x(None)
+                self.z_estimator.eval()
 
-        with torch.no_grad():
-            # Just in case it's an adaptive proposal that requires x
-            if hasattr(self.ebm.proposal, "set_x"):
-                self.ebm.proposal.set_x(None)
-            self.ebm.eval()
+                # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
+                if (self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0) :
+                    if hasattr(self.z_estimator,"sample_ais"):
+                        with torch.enable_grad():
+                            estimate_log_z_ais, _ = self.z_estimator.multiple_batch_estimate_log_z(
+                                                    x,
+                                                    nb_sample=self.nb_sample_train_estimate,
+                                                    sample_function=self.ebm.sample_ais
+                                                    )
+                        log_likelihood_SNL_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais.exp() + 1
+                        log_likelihood_IS_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais
+                        self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL_AIS", log_likelihood_SNL_AIS)
+                        self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS_AIS", log_likelihood_IS_AIS)
 
-            # Add some estimates of the log likelihood with a fixed number of samples independent from num samples proposal
-            if (self.nb_sample_train_estimate is not None and self.nb_sample_train_estimate > 0):
-                if hasattr(self.ebm,"sample_ais"):
                     with torch.enable_grad():
-                        estimate_log_z_ais, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample_ais)
-                        estimate_log_z_ais = (estimate_log_z_ais- np.log(self.nb_sample_train_estimate)).logsumexp(0).exp()
-                with torch.enable_grad():
-                    estimate_log_z, _ = self.ebm.estimate_log_z(x, nb_sample=self.nb_sample_train_estimate, sample_function=self.ebm.sample)
-                    estimate_log_z = (estimate_log_z- np.log(self.nb_sample_train_estimate)).logsumexp(0).exp()
-                log_likelihood_SNL = -dic_output["energy_on_data"].mean() - estimate_log_z.exp() + 1
-                log_likelihood_IS = -dic_output["energy_on_data"].mean() - estimate_log_z
-                log_likelihood_SNL_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais.exp() + 1
-                log_likelihood_IS_AIS = -dic_output["energy_on_data"].mean() - estimate_log_z_ais
-                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL", log_likelihood_SNL)
-                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS", log_likelihood_IS)
-                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL_AIS", log_likelihood_SNL_AIS)
-                self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS_AIS", log_likelihood_IS_AIS)
+                        estimate_log_z, _ = self.z_estimator.multiple_batch_estimate_log_z(
+                                                                x, 
+                                                                nb_sample=self.nb_sample_train_estimate,
+                                                                sample_function=self.ebm.sample
+                                                                )
+                    log_likelihood_SNL = -dic_output["energy_on_data"].mean() - estimate_log_z.exp() + 1
+                    log_likelihood_IS = -dic_output["energy_on_data"].mean() - estimate_log_z
+
+                    self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_SNL", log_likelihood_SNL)
+                    self.log(f"train_fixed_{self.nb_sample_train_estimate}/log_likelihood_IS", log_likelihood_IS)
 
 
-            for key in dic_output:
-                try :
-                    self.log(f"train/{key}_mean", dic_output[key].mean().item())
-                except AttributeError:
-                    self.log(f"train/{key}", dic_output[key])
 
-            self.ebm.train()
+                for key in dic_output:
+                    try :
+                        self.log(f"train/{key}_mean", dic_output[key].mean().item())
+                    except AttributeError:
+                        self.log(f"train/{key}", dic_output[key])
+
+                self.ebm.train()
 
     def validation_step(self, batch, batch_idx, liste = None):
         """
@@ -491,10 +446,10 @@ class AbstractDistributionEstimation:
         """
         x = batch["data"].to(self.device, self.dtype)
         with torch.no_grad():
-            loss, dic_output = self.ebm.calculate_energy(x)
+            _, dic_output_energy = self.ebm(x)
         if liste is not None :
-            liste.append(dic_output)
-        return dic_output
+            liste.append(dic_output_energy)
+        return dic_output_energy
     
     def test(self, dataloaders):
         for dataloader in dataloaders:
@@ -536,10 +491,10 @@ class AbstractDistributionEstimation:
 
         time_init = time.time()
         print("Samples visualization")
+        print("Not done yet")
         # self.plot_samples()
-        # print("done in {}s".format(time.time() - time_init))
+        print("done in {}s".format(time.time() - time_init))
 
-        self.validation_step_outputs = []
 
     def on_test_epoch_end(self, liste_test, name="test/"):
         """
@@ -562,24 +517,24 @@ class AbstractDistributionEstimation:
 
     def resample_proposal(self,):
         """Proposal might be changing and need to be resampled during training"""
-        if self.ebm.proposal is not None:
+        if self.proposal is not None:
             if self.input_type == "2d":
-                self.example_proposal = self.ebm.proposal.sample(1000).flatten(1)
+                self.example_proposal = self.z_estimator.proposal.sample(1000).flatten(1)
             elif self.input_type == "1d":
-                self.example_proposal = self.ebm.proposal.sample(1000)
+                self.example_proposal = self.z_estimator.proposal.sample(1000)
             elif self.input_type == "image":
-                self.example_proposal = self.ebm.proposal.sample(64)
+                self.example_proposal = self.z_estimator.proposal.sample(64)
         else:
             self.example_proposal = None
         
-        if hasattr(self.ebm, "sample_ais"):
+        if hasattr(self.z_estimator, "sample_ais"):
             with torch.enable_grad():
                 if self.input_type == "2d":
-                    self.example_ais = self.ebm.sample_ais(1000).flatten(1)
+                    self.example_ais,_,_ = self.z_estimator.sample_ais(1000).flatten(1)
                 elif self.input_type == "1d":
-                    self.example_ais = self.ebm.sample_ais(1000)
+                    self.example_ais,_,_ = self.z_estimator.sample_ais(1000)
                 elif self.input_type == "image":
-                    self.example_ais = self.ebm.sample_ais(64)
+                    self.example_ais,_,_ = self.z_estimator.sample_ais(64)
         else :
             self.example_ais = None
 
@@ -629,7 +584,7 @@ class AbstractDistributionEstimation:
         """Visualize the proposal distribution and associated density.
         Depending on the input type, the visualization is different.
         """
-        energy_function = lambda x: -self.ebm.proposal.log_prob(x)
+        energy_function = lambda x: -self.proposal.log_prob(x)
         if self.input_type == "2d":
             self.resample_proposal()
             save_dir = os.path.join(self.cfg.train.save_dir, "proposal")
@@ -713,63 +668,7 @@ class AbstractDistributionEstimation:
                     step=self.current_step,
                 )
 
-    def fix_f_theta(self,):
-        for param in self.ebm.f_theta.parameters():
-            param.requires_grad = False
 
-    def free_f_theta(self,):
-        for param in self.ebm.f_theta.parameters():
-            param.requires_grad = True
-
-    def fix_explicit_bias(self,):
-        for param in self.ebm.explicit_bias.parameters():
-            param.requires_grad = False
-    
-    def free_explicit_bias(self,):
-        for param in self.ebm.explicit_bias.parameters():
-            param.requires_grad = True
-
-    def fix_proposal(self,):
-        for param in self.ebm.proposal.parameters():
-            param.requires_grad = False
-
-    def free_proposal(self,):
-        for param in self.ebm.proposal.parameters():
-            param.requires_grad = True
-
-    def fix_base_dist(self,):
-        for param in self.ebm.base_dist.parameters():
-            param.requires_grad = False
-
-    def free_base_dist(self,):
-        for param in self.ebm.base_dist.parameters():
-            param.requires_grad = True
-
-    def configure_gradient_flow(self, task="energy"):
-        if task == "energy":
-            self.free_f_theta()
-            if self.ebm.base_dist == self.ebm.proposal:
-                if self.train_base_dist:
-                    self.free_base_dist()
-                else:
-                    self.fix_base_dist()
-                    self.fix_proposal()
-            else:
-                self.fix_proposal()
-                if self.train_base_dist:
-                    self.free_base_dist()
-                else:
-                    self.fix_base_dist()
-        elif task == "bias":
-            self.fix_proposal()
-            self.fix_base_dist()
-            self.free_f_theta()
-        elif task == "proposal":
-            self.fix_base_dist()
-            self.fix_f_theta()
-            self.free_proposal()
-        else:
-            raise NotImplementedError
 
     def configure_optimizers(self):
         """
@@ -789,23 +688,26 @@ class AbstractDistributionEstimation:
         """
         self.liste_optimizer_name = ['f_theta', 'explicit_bias', 'base_dist', 'proposal']
         self.cfg_scheduler = [self.cfg.scheduler_f_theta, self.cfg.scheduler_explicit_bias, self.cfg.scheduler_base_dist, self.cfg.scheduler_proposal]
-        parameters_f_theta = [self.ebm.f_theta.parameters()]
-        parameters_explicit_bias = [self.ebm.explicit_bias.parameters()]
-
-
-        self.f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
-        self.explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
-        opt_list = [self.f_theta_opt, self.explicit_bias_opt]
+        opt_list = []
         feedback_sch = []
         standard_sch = []
+
+
+        # Get the parameters of the nn part of the EBM 
+        parameters_f_theta = [self.ebm.f_theta.parameters()]
+        self.f_theta_opt = get_optimizer(cfg=self.cfg.optim_f_theta, list_parameters_gen=parameters_f_theta)
+        opt_list.append(self.f_theta_opt)
         get_scheduler(cfg=self.cfg.scheduler_f_theta, optim=self.f_theta_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
+
+
+        # Get the parameters of the explicit bias
+        parameters_explicit_bias = [self.ebm.explicit_bias.parameters()]
+        self.explicit_bias_opt = get_optimizer(cfg=self.cfg.optim_explicit_bias, list_parameters_gen=parameters_explicit_bias)
+        opt_list.append(self.explicit_bias_opt)
         get_scheduler(cfg=self.cfg.scheduler_explicit_bias, optim=self.explicit_bias_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
 
-
-        # sch_list = [ebm_sch]
-
+        # Get the parameters of the base distribution
         if self.ebm.base_dist is not None:
-            # print(self.ebm.base_dist.parameters())
             self.base_dist_opt = get_optimizer(cfg=self.cfg.optim_base_dist, list_parameters_gen=[self.ebm.base_dist.parameters()])
             get_scheduler(cfg=self.cfg.scheduler_base_dist, optim=self.base_dist_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
             opt_list.append(self.base_dist_opt)
@@ -815,8 +717,9 @@ class AbstractDistributionEstimation:
             feedback_sch.append(None)
             standard_sch.append(None)
 
-        if self.ebm.proposal is not None:
-            self.proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.ebm.proposal.parameters()])
+        # Get the parameters of the proposal
+        if self.z_estimator.proposal is not None:
+            self.proposal_opt = get_optimizer(cfg=self.cfg.optim_proposal, list_parameters_gen=[self.proposal.parameters()])
             get_scheduler(cfg=self.cfg.scheduler_proposal, optim=self.proposal_opt, feedback_scheduler=feedback_sch, standard_scheduler=standard_sch)
             opt_list.append(self.proposal_opt)
         else :
@@ -825,6 +728,7 @@ class AbstractDistributionEstimation:
             feedback_sch.append(None)
             standard_sch.append(None)
 
+        # Set the optimizers and schedulers
         self.optimizers = opt_list
         self.schedulers_no_feedback = standard_sch
         self.schedulers_feedback = feedback_sch
@@ -850,41 +754,41 @@ class AbstractDistributionEstimation:
             self.log(name + key + "_mean", dic_output[name + key].mean())
             self.log(name + key + "_std", dic_output[name + key].std())
 
+        energy_data = dic_output[name + "energy_on_data"].flatten()
+
         with torch.no_grad():
             nb_sample = self.num_samples_val if name == "val/" else self.num_samples_test
-            log_z_estimate, dic_output_estimate_z = self.ebm.estimate_log_z(
+            log_z_estimate, dic_output_estimate_z = self.z_estimator.multiple_batch_estimate_log_z(
                 x = self.example,
                 nb_sample= nb_sample,
-                sample_function = self.ebm.sample,
-                detach_sample=True,
-                detach_base_dist=True,
-                return_samples=False,
+                sample_function = self.z_estimator.sample,
             )
-            log_z_estimate = (log_z_estimate- np.log(nb_sample)).logsumexp(0)
+        loss_total_SNL = - energy_data.mean() - log_z_estimate.exp() + 1
+        self.log(name + "log_likelihood_SNL", loss_total_SNL)
+        loss_total_IS = - energy_data.mean() - log_z_estimate.mean()
+        self.log(name + "log_likelihood_IS", loss_total_IS)
+
         for key in dic_output_estimate_z:
             self.log(name + key + "_mean", dic_output_estimate_z[key].mean())
             self.log(name + key + "_std", dic_output_estimate_z[key].std())
 
         if hasattr(self.ebm,"sample_ais"):
                 with torch.enable_grad():
-                    estimate_log_z_ais, dic_output_estimate_z_ais = self.ebm.estimate_log_z(self.example,
+                    estimate_log_z_ais, dic_output_estimate_z_ais = self.z_estimator.multiple_batch_estimate_log_z(
+                                                self.example,
                                                 nb_sample=self.nb_sample_train_estimate,
-                                                sample_function=self.ebm.sample_ais)
-                    estimate_log_z_ais = (estimate_log_z_ais- np.log(self.nb_sample_train_estimate)).logsumexp(0)
+                                                sample_function=self.z_estimator.sample_ais)
+                loss_total_SNL_AIS = - energy_data.mean() - estimate_log_z_ais.exp() + 1
+                self.log(name + "log_likelihood_SNL_AIS", loss_total_SNL_AIS)
+                loss_total_IS_AIS = - energy_data.mean() - estimate_log_z_ais.mean()
+                self.log(name + "log_likelihood_IS_AIS", loss_total_IS_AIS)
                 for key in dic_output_estimate_z_ais:
                     self.log(name + key + "_mean_ais", dic_output_estimate_z_ais[key].mean())
                     self.log(name + key + "_std_ais", dic_output_estimate_z_ais[key].std())
 
-        energy_data = dic_output[name + "energy_on_data"].flatten()
-        loss_total_SNL = - energy_data.mean() - log_z_estimate.exp() + 1
-        self.log(name + "log_likelihood_SNL", loss_total_SNL)
-        loss_total_IS = - energy_data.mean() - log_z_estimate.mean()
-        self.log(name + "log_likelihood_IS", loss_total_IS)
+            
 
-        loss_total_SNL_AIS = - energy_data.mean() - estimate_log_z_ais.exp() + 1
-        self.log(name + "log_likelihood_SNL_AIS", loss_total_SNL_AIS)
-        loss_total_IS_AIS = - energy_data.mean() - estimate_log_z_ais.mean()
-        self.log(name + "log_likelihood_IS_AIS", loss_total_IS_AIS)
+
 
         
         for scheduler, cfg in zip(self.schedulers_feedback, self.cfg_scheduler):
@@ -914,18 +818,16 @@ class AbstractDistributionEstimation:
                 )
 
                 # Add auxiliary contour plots, might be useful if we use a base distribution.
-                ebm_function_list = [
-                    lambda x,: self.ebm.calculate_energy(x,)[1]["f_theta_on_data"],
-                    ]
+                ebm_function_list = [lambda x,: self.ebm.calculate_energy(x,)[1]["f_theta_on_data"],]
                 ebm_function_name = ["f_theta",]
-                for ebm_function, ebm_name in zip(ebm_function_list, ebm_function_name):
+                for ebm_function, z_estimator_name in zip(ebm_function_list, ebm_function_name):
                     plot_energy_2d(
                         self,
                         save_dir=save_dir,
                         energy_function=ebm_function,
                         samples=liste_samples,
                         samples_title=liste_samples_title,
-                        name=ebm_name,
+                        name=z_estimator_name,
                         step=self.current_step,
                         energy_type=False,
                     )
@@ -944,9 +846,9 @@ class AbstractDistributionEstimation:
                     return None, None
                 x_init = torch.stack(self.replay_buffer.buffer_image[:num_chains])
             elif "proposal" in sampler_name:
-                if self.ebm.proposal is None:
+                if self.proposal is None:
                     return None, None
-                x_init = self.ebm.proposal.sample(nb_sample = num_chains)
+                x_init = self.proposal.sample(nb_sample = num_chains)
             elif "base_dist" in sampler_name:
                 if self.ebm.base_dist is None or self.example_base_dist is None:
                     return None, None
@@ -992,3 +894,8 @@ class AbstractDistributionEstimation:
                     plot_images(algo=self, save_dir=save_dir, images=samples, name=sampler_name, step=self.current_step, init_samples=init_samples,transform_back=self.transform_back,)
                 else:
                     raise NotImplementedError
+
+
+    
+    def log(self, name, value):
+        self.logger.log({name: value}, step=self.current_step)

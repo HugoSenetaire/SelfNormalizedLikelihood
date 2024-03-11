@@ -68,8 +68,8 @@ class ScoreMatchingTrainer(AbstractDistributionEstimation):
 
 
         x = batch['data']
-        if hasattr(self.ebm.proposal, 'set_x'):
-            self.ebm.proposal.set_x(x)
+        if hasattr(self.proposal, 'set_x'):
+            self.proposal.set_x(x)
 
         loss_total, dic_output = self.exact_score_matching(x)
         self.log("train_loss", loss_total.mean())

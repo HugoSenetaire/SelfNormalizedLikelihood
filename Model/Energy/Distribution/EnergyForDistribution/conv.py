@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-
+from torch.nn.utils.parametrizations import spectral_norm
 
 def get_ConvEnergy(input_size, cfg, ):
     return ConvEnergy(input_size,
@@ -15,6 +15,15 @@ def get_ConvEnergy_nijkamp(input_size, cfg, ):
                         cfg.nijkamp_n_c,
                         cfg.nijkamp_n_f,
                         cfg.nijkamp_l,
+                        sn=False
+                        )
+
+def get_ConvEnergy_nijkamp_sn(input_size, cfg, ):
+    return conv_nijkamp(
+                        cfg.nijkamp_n_c,
+                        cfg.nijkamp_n_f,
+                        cfg.nijkamp_l,
+                        sn=True
                         )
 
 class ConvEnergy(nn.Module):
@@ -60,19 +69,33 @@ class ConvEnergy(nn.Module):
 
 
 class conv_nijkamp(nn.Module):
-    def __init__(self, n_c = 1, n_f = 64, l = 0.2):
+    def __init__(self, n_c = 1, n_f = 64, l = 0.2, sn = False):
         super(conv_nijkamp, self).__init__()
-        self.f = nn.Sequential(
-            nn.Conv2d(n_c, n_f, 3, 1, 1),
-            nn.LeakyReLU(l),
-            nn.Conv2d(n_f, n_f*2, 4, 2, 1),
-            nn.LeakyReLU(l),
-            nn.Conv2d(n_f*2, n_f*4, 4, 2, 1),
-            nn.LeakyReLU(l),
-            nn.Conv2d(n_f*4, n_f*8, 4, 2, 1),
-            nn.LeakyReLU(l),
-            nn.Conv2d(n_f*8, 1, 4, 1, 0),
-        )
+        if not sn :
+            self.f = nn.Sequential(
+                nn.Conv2d(n_c, n_f, 3, 1, 1),
+                nn.LeakyReLU(l),
+                nn.Conv2d(n_f, n_f*2, 4, 2, 1),
+                nn.LeakyReLU(l),
+                nn.Conv2d(n_f*2, n_f*4, 4, 2, 1),
+                nn.LeakyReLU(l),
+                nn.Conv2d(n_f*4, n_f*8, 4, 2, 1),
+                nn.LeakyReLU(l),
+                nn.Conv2d(n_f*8, 1, 4, 1, 0),
+            )
+        else :
+            self.f = nn.Sequential(
+                spectral_norm(nn.Conv2d(n_c, n_f, 3, 1, 1)),
+                nn.LeakyReLU(l),
+                spectral_norm(nn.Conv2d(n_f, n_f * 2, 4, 2, 1)),
+                nn.LeakyReLU(l),
+                spectral_norm(nn.Conv2d(n_f * 2, n_f * 4, 4, 2, 1)),
+                nn.LeakyReLU(l),
+                spectral_norm(nn.Conv2d(n_f * 4, n_f * 8, 4, 2, 1)),
+                nn.LeakyReLU(l),
+                spectral_norm(nn.Conv2d(n_f * 8, 1, 4, 1, 0)))
+
+
     def forward(self, x):
         return self.f(x).squeeze()
     
