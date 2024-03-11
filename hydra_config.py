@@ -68,7 +68,7 @@ class BaseEnergyConfig:
 @dataclass
 class BaseExplicitBiasConfig:
     explicit_bias_name: Union[str, None] = MISSING
-    nb_sample_init_bias: Optional[int] = 64
+    nb_sample_init_bias: Optional[int] = 50000
 
 
 @dataclass
@@ -236,9 +236,7 @@ class BaseBaseDistributionConfig(BaseProposalConfig):
 
 @dataclass
 class BaseProposalTrainingConfig:
-    num_sample_train_estimate: Optional[
-        int
-    ] = None  # This is used to compare multiple training at once.
+    num_sample_train_estimate: Optional[int] = None  # This is used to compare multiple training at once.
     num_sample_proposal: int = MISSING
     num_sample_proposal_val: int = MISSING
     num_sample_proposal_test: int = MISSING
@@ -361,12 +359,12 @@ class BaseTrainConfig:
 
 
 @dataclass
-class BaseEBM:
-    ebm_name: str = "standard"
+class BaseZEstimator:
+    z_estimator_name: str = "standard"
 
 @dataclass
-class BaseAISEBM(BaseEBM):
-    ebm_name: str = "ais"
+class BaseAISZEstimator(BaseZEstimator):
+    z_estimator_name: str = "ais"
     train_ais: Optional[bool] = True
     nb_transitions_ais: Optional[int] = 20
     nb_step_ais: Optional[int] = 1
@@ -407,7 +405,7 @@ class Config:
     base_distribution: BaseBaseDistributionConfig = MISSING
     dataset: BaseDatasetConfig = MISSING
     energy: BaseEnergyConfig = MISSING
-    ebm : BaseEBM = MISSING
+    z_estimator : BaseZEstimator = MISSING
     optim_f_theta: BaseOptimConfig = MISSING
     optim_explicit_bias: BaseOptimConfig = MISSING
     optim_proposal: BaseOptimConfig = MISSING
@@ -513,7 +511,7 @@ def store_main():
     cs.store(
         name="base_ebm_config_name",
         group="ebm",
-        node=BaseEBM,
+        node=BaseZEstimator,
     )
     cs.store(
         name="base_ais_ebm_config_name",

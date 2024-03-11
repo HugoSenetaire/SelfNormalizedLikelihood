@@ -133,3 +133,8 @@ dmypy.json
 /outputs/*
 .DS_Store
 /data
+
+*.log
+/multirun/*
+/outputs
+Model/YAML*
